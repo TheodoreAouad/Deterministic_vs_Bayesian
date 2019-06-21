@@ -57,7 +57,6 @@ def init_same_baynet_detnet():
     This function returns the models, initiated the same way.
     :return: tuple: (BayNet, DetNet)
     '''
-
     DetNet = DeterministClassifierSequential(10)
     BayNet = DeterministClassifierFunctional(10)
 

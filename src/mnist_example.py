@@ -1,21 +1,19 @@
 #%% Imports
 
-import os
-import numpy as np
 import matplotlib.pyplot as plt
-from tqdm import tqdm
-import math
 from importlib import reload
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 import torch.optim as optim
 
 import src.utils as u
-import src.determinist_models as m
+from src.models.determinist_models import DeterministClassifierSequential, DeterministClassifierFunctional
+from src.trains import train
+from src.get_data import get_mnist
+
 reload(u)
 reload(m)
 
@@ -28,13 +26,7 @@ print(device)
 
 #%% Datasets
 
-transform = transforms.ToTensor()
-
-trainset = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=True)
-
-testset = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
-testloader = torch.utils.data.DataLoader(testset, batch_size=16, shuffle=True)
+trainloader, testloader = get_mnist()
 #%% Plot image
 
 iter_train = iter(trainloader)
@@ -44,68 +36,6 @@ print(label)
 plt.show()
 image = image.to(device)
 label = label.to(device)
-
-
-#%% Def training
-
-def train(model, optimizer, criterion, number_of_epochs, device, verbose = False):
-    model.train()
-    loss_accs = [[]]*number_of_epochs
-    train_accs = [[]]*number_of_epochs
-    for epoch in range(number_of_epochs):  # loop over the dataset multiple times
-
-        number_of_data = len(trainloader)
-        interval = number_of_data // 10
-        running_loss = 0.0
-        number_of_correct_labels = 0
-        number_of_labels = 0
-
-        for i, data in enumerate(trainloader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = [x.to(device) for x in data]
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
-
-            # forward + backward + optimize
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            # print statistics
-            running_loss += loss.item()
-            predicted_labels = outputs.argmax(1)
-            number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
-            number_of_labels += labels.size(0)
-            if i % interval == interval - 1:
-                if verbose:
-                    print(f'Train: [{epoch + 1}, {i + 1}/{number_of_data}] loss: {running_loss / number_of_data}, '
-                          f'Acc: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
-                running_loss = 0.0
-                loss_accs[epoch].append([running_loss / number_of_data])
-                train_accs[epoch].append([round(100 * number_of_correct_labels / number_of_labels, 2)])
-
-    print('Finished Training')
-    return loss_accs, train_accs
-
-
-def test(model):
-    running_loss = 0.0
-    number_of_correct_labels = 0
-    number_of_labels = 0
-    for i, data in enumerate(testloader, 0):
-
-        inputs, labels = [x.to(device) for x in data]
-        outputs = model(inputs)
-        predicted_labels = outputs.argmax(1)
-        number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
-        number_of_labels += labels.size(0)
-        if i % 2000 == 1999:  # print every 2000 mini-batches
-            print(f' Test: {i + 1} loss: {running_loss / 2000}, '
-                  f'Acc: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
-            running_loss = 0.0
-    print(f'Test accuracy: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
 
 
 #%% gpu vs cpu
@@ -175,7 +105,14 @@ adam_proba = optim.Adam(BayNet.parameters())
 adam_det = optim.Adam(DetNet.parameters())
 
 seed1 = u.set_and_print_random_seed()
-train(BayNet,adam_proba,criterion,1, device="cpu", verbose=True)
+train(BayNet, adam_proba, criterion, 1, device="cpu", verbose=True)
 u.set_and_print_random_seed(seed1)
-train(DetNet,adam_det,criterion,1, device="cpu", verbose=True)
+train(DetNet, adam_det, criterion, 1, device="cpu", verbose=True)
+
+#%%
+mu1 = nn.Parameter(data=torch.Tensor(16, 1, 3, 3)), requires_grad=True)
+bias1 = nn.Parameter(data=torch.Tensor(16), requires_grad=True)
+output1 = F.conv2d(image, weight=mu1, bias=bias1, padding=1)
+
+#%%
 
