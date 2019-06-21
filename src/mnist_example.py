@@ -129,12 +129,12 @@ torch.sum(torch.abs(w1-w2))
 mu1 = nn.Parameter(data=torch.Tensor(16, 1, 3, 3), requires_grad=True).to(device)
 bias1 = nn.Parameter(data=torch.Tensor(16), requires_grad=True).to(device)
 
-BayNet = ProbabilistClassifier(10).to(device)
+BayNet = m.ProbabilistClassifier(10).to(device)
 
 seed1 = u.set_and_print_random_seed(3616524511)
-reset_parameters_conv(mu1,bias1)
+u.reset_parameters_conv(mu1,bias1)
 u.set_and_print_random_seed(seed1)
-reset_parameters_conv(BayNet.mu1,BayNet.bias1)
+u.reset_parameters_conv(BayNet.mu1,BayNet.bias1)
 
 print("BayNet.mu1 vs mu1: ", torch.sum(torch.abs(mu1-BayNet.mu1)))
 
@@ -180,10 +180,7 @@ print("Bias: ", torch.sum(torch.abs(b1-b2)))
 # %% Baynet ini vs DetNet ini
 
 DetNet = DeterministClassifier(10)
-BayNet = ProbabilistClassifier(10)
-
-DetNet
-BayNet
+BayNet = m.ProbabilistClassifier(10)
 
 seed1 = u.set_and_print_random_seed()
 DetNet.conv1.reset_parameters()
@@ -200,17 +197,18 @@ print("Bias: ", torch.sum(torch.abs(b11-b21)))
 
 # %%Test conv identity
 
-DetNet = DeterministClassifier(10)
-weight1, bias1 = DetNet.conv1.weight.data, DetNet.conv1.bias.data
-weight2, bias2 = DetNet.conv2.weight.data, DetNet.conv2.bias.data
+DetNet = m.DeterministClassifier(10)
+BayNet = m.ProbabilistClassifier(10)
 
-BayNet = ProbabilistClassifier(10)
+seed1 = u.set_and_print_random_seed()
+DetNet.conv1.reset_parameters()
+u.set_and_print_random_seed(seed1)
+u.reset_parameters_conv(BayNet.mu1, BayNet.bias1)
 
-DetNet.to(device)
-BayNet.to(device)
+x = torch.rand(16,1,3,3)
 
-output1 = F.conv2d(image, weight = BayNet.mu1, bias = BayNet.bias1, padding=1)
-output2 = DetNet.conv1(image)
+output1 = F.conv2d(x, weight = BayNet.mu1, bias = BayNet.bias1, padding=1)
+output2 = DetNet.conv1(x)
 
 torch.abs(torch.sum(output1-output2))
 
