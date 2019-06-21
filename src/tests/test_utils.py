@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from src.models import *
+from src.determinist_models import *
 from src.utils import *
 
 
@@ -11,7 +11,7 @@ class TestResetParametersConv:
         mu1 = nn.Parameter(data=torch.Tensor(16, 1, 3, 3), requires_grad=True)
         bias1 = nn.Parameter(data=torch.Tensor(16), requires_grad=True)
 
-        BayNet = ProbabilistClassifier(10)
+        BayNet = DeterministClassifierFunctional(10)
 
         seed1 = set_and_print_random_seed()
         reset_parameters_conv(mu1, bias1)
@@ -23,7 +23,7 @@ class TestResetParametersConv:
     @staticmethod
     def test_DetNet_conv_vs_Conv2d():
         conv1 = nn.Conv2d(1, 16, 3)
-        DetNet = DeterministClassifier(10)
+        DetNet = DeterministClassifierSequential(10)
 
         seed1 = set_and_print_random_seed()
         DetNet.conv1.reset_parameters()

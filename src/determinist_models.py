@@ -5,10 +5,10 @@ import torch.nn.functional as F
 from src.utils import *
 
 
-class DeterministClassifier(nn.Module):
+class DeterministClassifierSequential(nn.Module):
 
     def __init__(self, number_of_classes):
-        super(DeterministClassifier, self).__init__()
+        super(DeterministClassifierSequential, self).__init__()
         self.conv1 = nn.Conv2d(1, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
@@ -24,10 +24,10 @@ class DeterministClassifier(nn.Module):
         return output
 
 
-class ProbabilistClassifier(nn.Module):
+class DeterministClassifierFunctional(nn.Module):
 
     def __init__(self, number_of_classes):
-        super(ProbabilistClassifier, self).__init__()
+        super(DeterministClassifierFunctional, self).__init__()
 
         self.mu1 = nn.Parameter(data=torch.Tensor(16, 1, 3, 3), requires_grad=True)
         self.mu2 = nn.Parameter(data=torch.Tensor(32, 16, 3, 3), requires_grad=True)
@@ -58,8 +58,8 @@ def init_same_baynet_detnet():
     :return: tuple: (BayNet, DetNet)
     '''
 
-    DetNet = DeterministClassifier(10)
-    BayNet = ProbabilistClassifier(10)
+    DetNet = DeterministClassifierSequential(10)
+    BayNet = DeterministClassifierFunctional(10)
 
     seed1 = set_and_print_random_seed()
     DetNet.conv1.reset_parameters()

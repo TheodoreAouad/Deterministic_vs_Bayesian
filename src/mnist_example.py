@@ -15,7 +15,7 @@ import torchvision.transforms as transforms
 import torch.optim as optim
 
 import src.utils as u
-import src.models as m
+import src.determinist_models as m
 reload(u)
 reload(m)
 
@@ -126,11 +126,11 @@ torch.sum(torch.abs(w1-w2))
 
 #%% Test Training identity
 
-DetNet = m.DeterministClassifier(10)
+DetNet = m.DeterministClassifierSequential(10)
 weight1, bias1 = DetNet.conv1.weight.data, DetNet.conv1.bias.data
 weight2, bias2 = DetNet.conv2.weight.data, DetNet.conv2.bias.data
 
-BayNet = m.ProbabilistClassifier(10)
+BayNet = m.DeterministClassifierFunctional(10)
 
 criterion = nn.CrossEntropyLoss()
 seed1 = u.set_and_print_random_seed()
@@ -153,7 +153,7 @@ det_losses, det_accs = train(DetNet, det_adam, criterion, 1, verbose=True)
 u.set_and_print_random_seed(seed1)
 bay_losses, bay_accs = train(BayNet, bay_adam, criterion, 1, verbose=True)
 #%%
-model_proba = m.ProbabilistClassifier(10)
+model_proba = m.DeterministClassifierFunctional(10)
 model_proba.to(device)
 adam_proba = optim.Adam(model_proba.parameters())
 criterion = nn.CrossEntropyLoss()
