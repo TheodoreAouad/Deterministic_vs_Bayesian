@@ -19,7 +19,7 @@ class DeterministClassifier(nn.Module):
         x = self.pool1(F.relu(self.conv1(x)))
         x = self.pool2(F.relu(self.conv2(x)))
         x = x.view(-1, 32 * 7 * 7)
-        output = F.softmax(self.fc1(x))
+        output = F.softmax(self.fc1(x), dim=1)
 
         return output
 
@@ -37,7 +37,7 @@ class ProbabilistClassifier(nn.Module):
         self.pool1 = nn.MaxPool2d(2, 2)
         self.pool2 = nn.MaxPool2d(2, 2)
 
-        self.mu_fc = nn.Parameter(data=torch.Tensor(10, 16*14*14), requires_grad=True)
+        self.mu_fc = nn.Parameter(data=torch.Tensor(10, 32*7*7), requires_grad=True)
         self.bias_fc = nn.Parameter(data=torch.Tensor(10), requires_grad=True)
 
         reset_parameters_conv(self.mu1, self.bias1)
@@ -48,5 +48,32 @@ class ProbabilistClassifier(nn.Module):
         x = self.pool1(F.relu(F.conv2d(x, weight=self.mu1, bias=self.bias1, padding=1)))
         x = self.pool2(F.relu(F.conv2d(x, weight=self.mu2, bias=self.bias2, padding=1)))
         x = x.view(-1, 32 * 7 * 7)
-        output = F.softmax(F.linear(x, self.mu_fc, self.bias_fc))
+        output = F.softmax(F.linear(x, self.mu_fc, self.bias_fc), dim=1)
         return output
+
+
+def init_same_baynet_detnet():
+    '''
+    This function returns the models, initiated the same way.
+    :return: tuple: (BayNet, DetNet)
+    '''
+
+    DetNet = DeterministClassifier(10)
+    BayNet = ProbabilistClassifier(10)
+
+    seed1 = set_and_print_random_seed()
+    DetNet.conv1.reset_parameters()
+    set_and_print_random_seed(seed1)
+    reset_parameters_conv(BayNet.mu1, BayNet.bias1)
+
+    set_and_print_random_seed(seed1)
+    DetNet.conv2.reset_parameters()
+    set_and_print_random_seed(seed1)
+    reset_parameters_conv(BayNet.mu2, BayNet.bias2)
+
+    set_and_print_random_seed(seed1)
+    DetNet.fc1.reset_parameters()
+    set_and_print_random_seed(seed1)
+    reset_parameters_linear(BayNet.mu_fc, BayNet.bias_fc)
+
+    return BayNet, DetNet

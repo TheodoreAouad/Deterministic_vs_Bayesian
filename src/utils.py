@@ -25,7 +25,7 @@ def reset_parameters_linear(weight, bias=None):
         bias.data.uniform_(-stdv, stdv)
 
 
-def set_and_print_random_seed(random_seed=None, save=False, checkpoint_dir='./'):
+def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoint_dir='./'):
     '''
     Set and print numpy random seed, for reproducibility of the training,
     and set torch seed based on numpy random seed
@@ -43,8 +43,9 @@ def set_and_print_random_seed(random_seed=None, save=False, checkpoint_dir='./')
     torch.manual_seed(np.random.randint(0, 2**32-1))
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    prompt = 'Random seed : {}\n'.format(random_seed)
-    print(prompt)
+    if show:
+        prompt = 'Random seed : {}\n'.format(random_seed)
+        print(prompt)
 
     if save:
         with open(os.path.join(checkpoint_dir, 'seeds.txt'), 'a') as f:
@@ -53,5 +54,3 @@ def set_and_print_random_seed(random_seed=None, save=False, checkpoint_dir='./')
     return random_seed
 
 
-def to_delete():
-    print("SDD")
