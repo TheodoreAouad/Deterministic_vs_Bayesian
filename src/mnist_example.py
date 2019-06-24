@@ -77,7 +77,7 @@ t.train(DetNet, adam_det, criterion, 1, trainloader, device="cpu", verbose=True)
 reload(bm)
 rhos = [-5, -3, -1]
 for rho in rhos:
-    BayNet = bm.BayesianClassifier(rho=rho, number_of_classes=10, determinist=False)
+    BayNet = bm.GaussianClassifier(rho=rho, number_of_classes=10, determinist=False)
     BayNet.to(device)
     criterion = nn.CrossEntropyLoss()
     adam_proba = optim.Adam(BayNet.parameters())
@@ -87,7 +87,7 @@ for rho in rhos:
 # %%
 
 rho = -5
-BayNet = bm.BayesianClassifier(rho=rho, number_of_classes=10, determinist=False)
+BayNet = bm.GaussianClassifier(rho=rho, number_of_classes=10, determinist=False)
 BayNet.to(device)
 criterion = nn.CrossEntropyLoss()
 adam_proba = optim.Adam(BayNet.parameters())

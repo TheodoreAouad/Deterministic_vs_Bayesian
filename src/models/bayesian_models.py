@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class BayesianCNN(nn.Conv2d):
+class GaussianCNN(nn.Conv2d):
 
     def __init__(self, rho, in_channels, out_channels, kernel_size, stride=1, padding=0, bias=True):
         super().__init__(in_channels, out_channels, kernel_size, stride=stride, padding=padding,
@@ -33,10 +33,10 @@ class BayesianCNN(nn.Conv2d):
         return torch.log(1+torch.exp(self.rho))
 
 
-class BayesianLinear(nn.Linear):
+class GaussianLinear(nn.Linear):
 
     def __init__(self, rho, in_features, out_features):
-        super(BayesianLinear, self).__init__(in_features, out_features)
+        super(GaussianLinear, self).__init__(in_features, out_features)
         self.mu = nn.Parameter(data=torch.Tensor(out_features, in_features), requires_grad=True)
         self.rho = nn.Parameter(data=torch.Tensor(out_features, in_features), requires_grad=True)
         self.reset_parameters(rho)
@@ -50,7 +50,7 @@ class BayesianLinear(nn.Linear):
         return F.linear(x, weight, self.bias)
 
     def reset_parameters(self, rho=1):
-        super(BayesianLinear,self).reset_parameters()
+        super(GaussianLinear, self).reset_parameters()
         if hasattr(self, "mu"):
             self.mu.data = self.weight.data
             self.rho.data = rho*torch.ones_like(self.rho.data)
@@ -59,17 +59,18 @@ class BayesianLinear(nn.Linear):
         return torch.log(1+torch.exp(self.rho))
 
 
-class BayesianClassifier(nn.Module):
+class GaussianClassifier(nn.Module):
 
-    def __init__(self, rho, number_of_classes, determinist=False):
+    def __init__(self, rho, dim_input, number_of_classes, determinist=False):
         super().__init__()
         self.determinist = determinist
+        self.dim_input = dim_input
 
-        self.bay_conv1 = BayesianCNN(rho, 1, 16, 3, padding=1)
+        self.bay_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.bay_conv2 = BayesianCNN(rho, 16, 32, 3, padding=1)
+        self.bay_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.bay_linear = BayesianLinear(rho, 32*7*7, number_of_classes)
+        self.bay_linear = GaussianLinear(rho, 32 * self.dim_input/4*self.dim_input/4, number_of_classes)
 
     def forward(self, x, determinist=None):
         if determinist is not None:
@@ -78,7 +79,7 @@ class BayesianClassifier(nn.Module):
             do_determinist = self.determinist
         output = self.pool1(F.relu(self.bay_conv1(x, determinist=do_determinist)))
         output = self.pool2(F.relu(self.bay_conv2(output, determinist=do_determinist)))
-        output = output.view(-1, 32*7*7)
+        output = output.view(-1, 32*self.dim_input/4*self.dim_input/4)
         output = F.softmax(self.bay_linear(output, determinist=do_determinist), dim=1)
 
         return output
