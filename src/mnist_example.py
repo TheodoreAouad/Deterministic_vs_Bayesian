@@ -75,7 +75,28 @@ t.train(DetNet, adam_det, criterion, 1, trainloader, device="cpu", verbose=True)
 # %%
 
 reload(bm)
-BayNet = bm.BayesianClassifier(10, determinist=True)
+rhos = [-5, -3, -1]
+for rho in rhos:
+    BayNet = bm.BayesianClassifier(rho=rho, number_of_classes=10, determinist=False)
+    BayNet.to(device)
+    criterion = nn.CrossEntropyLoss()
+    adam_proba = optim.Adam(BayNet.parameters())
+    losses2, accs2 = t.train(BayNet, adam_proba, criterion, 10, trainloader, device=device, verbose=True)
+    torch.save(losses2,"results/loss-rho-"+str(rho)+".pt")
+    torch.save(accs2,"results/accs-rho-"+str(rho)+".pt")
+# %%
+
+rho = -5
+BayNet = bm.BayesianClassifier(rho=rho, number_of_classes=10, determinist=False)
+BayNet.to(device)
 criterion = nn.CrossEntropyLoss()
 adam_proba = optim.Adam(BayNet.parameters())
-t.train(BayNet, adam_proba, criterion, 1, trainloader, device="cpu", verbose=True)
+losses2, accs2 = t.train(BayNet, adam_proba, criterion, 5, trainloader, device=device, verbose=True)
+
+# %%
+t.test(BayNet, testloader, device)
+
+#%%
+random_noise = torch.randn(16,1,28,28).to(device)
+#%%
+BayNet(random_noise).argmax(1)

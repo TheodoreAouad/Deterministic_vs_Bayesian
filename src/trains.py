@@ -3,8 +3,8 @@ import torch
 
 def train(model, optimizer, criterion, number_of_epochs, trainloader, device="cpu", verbose = False):
     model.train()
-    loss_accs = [[]]*number_of_epochs
-    train_accs = [[]]*number_of_epochs
+    loss_accs = [list() for _ in range(number_of_epochs)]
+    train_accs = [list() for _ in range(number_of_epochs)]
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
 
         number_of_data = len(trainloader)
@@ -35,8 +35,8 @@ def train(model, optimizer, criterion, number_of_epochs, trainloader, device="cp
                 if verbose:
                     print(f'Train: [{epoch + 1}, {i + 1}/{number_of_data}] loss: {running_loss / number_of_data}, '
                           f'Acc: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
-                loss_accs[epoch].append([running_loss / number_of_data])
-                train_accs[epoch].append([round(100 * number_of_correct_labels / number_of_labels, 2)])
+                loss_accs[epoch].append(running_loss / number_of_data)
+                train_accs[epoch].append(round(100 * number_of_correct_labels / number_of_labels, 2))
                 running_loss = 0.0
 
     print('Finished Training')
