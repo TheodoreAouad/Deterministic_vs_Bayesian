@@ -59,3 +59,4 @@ def test(model, testloader, device):
                   f'Acc: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
             running_loss = 0.0
     print(f'Test accuracy: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
+    return number_of_correct_labels / number_of_labels

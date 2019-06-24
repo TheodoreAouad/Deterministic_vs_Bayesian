@@ -70,7 +70,7 @@ class GaussianClassifier(nn.Module):
         self.pool1 = nn.MaxPool2d(2, 2)
         self.bay_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.bay_linear = GaussianLinear(rho, 32 * self.dim_input/4*self.dim_input/4, number_of_classes)
+        self.bay_linear = GaussianLinear(rho, 32 * self.dim_input//4*self.dim_input//4, number_of_classes)
 
     def forward(self, x, determinist=None):
         if determinist is not None:
@@ -79,7 +79,7 @@ class GaussianClassifier(nn.Module):
             do_determinist = self.determinist
         output = self.pool1(F.relu(self.bay_conv1(x, determinist=do_determinist)))
         output = self.pool2(F.relu(self.bay_conv2(output, determinist=do_determinist)))
-        output = output.view(-1, 32*self.dim_input/4*self.dim_input/4)
+        output = output.view(-1, 32*self.dim_input//4*self.dim_input//4)
         output = F.softmax(self.bay_linear(output, determinist=do_determinist), dim=1)
 
         return output
