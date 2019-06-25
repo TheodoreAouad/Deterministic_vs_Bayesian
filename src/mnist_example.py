@@ -1,7 +1,9 @@
 #%% Imports
+import os
 
 import matplotlib.pyplot as plt
 from importlib import reload
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -118,4 +120,48 @@ t.test(BayNet, testloader, device)
 #%%
 random_noise = torch.randn(16,1,28,28).to(device)
 #%%
-BayNet(random_noise).argmax(1)
+polyaxon_results = "polyaxon_results"
+single = "experiments"
+group = "groups"
+group_nb = "62"
+exp_nb = "985"
+path_to_results = os.path.join(polyaxon_results, group, group_nb, exp_nb, "experience01.pt")
+
+res = torch.load(path_to_results)
+for key, value in res[0].items():
+    if key != "random output":
+        if "train" in key:
+            print(key, value[-1][-1])
+        else:
+            print(key, value)
+
+#%%
+
+def compute_entropy(count):
+    normalized = count / count.sum()
+    return -np.sum(normalized * np.log(normalized))
+
+def compute_dkl_uniform(count, number_of_possibilities):
+    normalized = count / count.sum()
+    return np.sum(normalized * np.log(number_of_possibilities * normalized))
+
+random_output = res[0]["random output"].numpy().T
+entropies = np.zeros(16)
+entropies_rand = np.zeros(16)
+dkls = np.zeros(16)
+dkls_rand = np.zeros(16)
+for i, output in enumerate(random_output):
+    values, count = np.unique(output, return_counts=True)
+    entropies[i] = compute_entropy(count)
+    dkls[i] = compute_dkl_uniform(count, 10)
+
+    rand = np.random.randint(0, 10, 16)
+    values, count = np.unique(rand, return_counts=True)
+    entropies_rand[i] = compute_entropy(count)
+    dkls_rand[i] = compute_dkl_uniform(count,10)
+
+print(entropies.mean())
+print(entropies_rand.mean())
+
+print(dkls.mean())
+print(dkls_rand.mean())

@@ -37,7 +37,7 @@ output_random = torch.Tensor(10,16)
 for i in range(10):
     output_random[i] = BayNet(random_noise).argmax(1)
 
-res.append(dict({
+res = dict({
     "seed_random": seed_random,
     "seed_model": seed_model,
     "rho": rho,
@@ -45,6 +45,6 @@ res.append(dict({
     "train loss": losses2,
     "test accuracy": test_acc,
     "random output": output_random
-}))
+})
 
 torch.save(res, "./output/experience01.pt")

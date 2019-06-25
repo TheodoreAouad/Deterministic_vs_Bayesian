@@ -6,3 +6,4 @@ src/models/__pycache__/
 src/models/tests/__pycache__/
 results/
 .DS_Store
+polyaxon_results/
