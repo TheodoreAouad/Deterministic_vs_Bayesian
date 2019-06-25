@@ -36,7 +36,7 @@ def train(model, optimizer, criterion, number_of_epochs, trainloader, device="cp
                     print(f'Train: [{epoch + 1}, {i + 1}/{number_of_data}] loss: {running_loss / number_of_data}, '
                           f'Acc: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
                 loss_accs[epoch].append(running_loss / number_of_data)
-                train_accs[epoch].append(round(100 * number_of_correct_labels / number_of_labels, 2))
+                train_accs[epoch].append(number_of_correct_labels / number_of_labels)
                 running_loss = 0.0
 
     print('Finished Training')

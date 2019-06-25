@@ -1,0 +1,25 @@
+
+---
+version: 1
+
+kind: experiment
+
+environment:
+  resources:
+    gpu:
+      requests: 1
+      limits: 1
+
+build:
+  image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8
+  build_steps:
+    - pip install --no-cache-dir -r requirements.txt
+  env_vars:
+    - ['LC_ALL', 'C.UTF-8']
+    - ['PYTHONPATH', '$PYTHONPATH:/code']
+
+run:
+  cmd:
+    - ln -s /data/theodorea/data ./data
+    # Run the pipeline defined in the pipelines folder
+    - python experiments/sandbox_experiments.py

@@ -75,21 +75,25 @@ t.train(DetNet, adam_det, criterion, 1, trainloader, device="cpu", verbose=True)
 # %%
 
 reload(bm)
+seed_random = u.set_and_print_random_seed()
 random_noise = torch.randn(16,1,28,28).to(device)
 rhos = [-5, -3, -1, 0, 1]
 res = []
 for rho in rhos:
+    seed_model = u.set_and_print_random_seed()
     BayNet = bm.GaussianClassifier(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
     BayNet.to(device)
     criterion = nn.CrossEntropyLoss()
     adam_proba = optim.Adam(BayNet.parameters())
     losses2, accs2 = t.train(BayNet, adam_proba, criterion, 10, trainloader, device=device, verbose=True)
     test_acc = t.test(BayNet, testloader, device)
-    output_random = torch.Tensor(10)
-    for _ in range(10):
-        output_random = BayNet(random_noise).argmax(1)
+    output_random = torch.Tensor(10,16)
+    for i in range(10):
+        output_random[i] = BayNet(random_noise).argmax(1)
 
     res.append(dict({
+        "seed_random": seed_random,
+        "seed_model": seed_model,
         "rho": rho,
         "train accuracy": accs2,
         "test accuracy": test_acc,

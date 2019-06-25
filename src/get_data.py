@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -13,10 +15,15 @@ def get_mnist(transform=transform, batch_size=16, shuffle=True):
     :param shuffle:
     :return:
     '''
-    trainset = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
+
+    absolute_path = os.getcwd()
+    download_path = os.path.join(absolute_path, 'data')
+    print(download_path)
+
+    trainset = torchvision.datasets.MNIST(root=download_path, train=True, transform=transform, download=True)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
-    testset = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
+    testset = torchvision.datasets.MNIST(root=download_path, train=False, transform=transform, download=True)
     testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
 
     return trainloader, testloader
