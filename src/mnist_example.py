@@ -128,6 +128,7 @@ exp_nb = "985"
 path_to_results = os.path.join(polyaxon_results, group, group_nb, exp_nb, "experience01.pt")
 
 res = torch.load(path_to_results)
+print(u.get_interesting_results(res[0],10))
 for key, value in res[0].items():
     if key != "random output":
         if "train" in key:
@@ -135,33 +136,22 @@ for key, value in res[0].items():
         else:
             print(key, value)
 
+
 #%%
 
-def compute_entropy(count):
-    normalized = count / count.sum()
-    return -np.sum(normalized * np.log(normalized))
+inpt = torch.ones(4,1,28,28)
+BayNet = bm.GaussianClassifier(1,28,10)
+outpt = BayNet(inpt)
+print(outpt)
 
-def compute_dkl_uniform(count, number_of_possibilities):
-    normalized = count / count.sum()
-    return np.sum(normalized * np.log(number_of_possibilities * normalized))
+#%%
 
-random_output = res[0]["random output"].numpy().T
-entropies = np.zeros(16)
-entropies_rand = np.zeros(16)
-dkls = np.zeros(16)
-dkls_rand = np.zeros(16)
-for i, output in enumerate(random_output):
-    values, count = np.unique(output, return_counts=True)
-    entropies[i] = compute_entropy(count)
-    dkls[i] = compute_dkl_uniform(count, 10)
-
-    rand = np.random.randint(0, 10, 16)
-    values, count = np.unique(rand, return_counts=True)
-    entropies_rand[i] = compute_entropy(count)
-    dkls_rand[i] = compute_dkl_uniform(count,10)
-
-print(entropies.mean())
-print(entropies_rand.mean())
-
-print(dkls.mean())
-print(dkls_rand.mean())
+polyaxon_results = "polyaxon_results"
+single = "experiments"
+group = "groups"
+group_nb = "62"
+results = []
+for exp_nb in [str(k) for k in range(984,993)]:
+    result = u.open_experiment_results(group, exp_nb, group_nb, polyaxon_results)[0]
+    results.append(u.get_interesting_result(result,10))
+u.write_results_in_csv(results)

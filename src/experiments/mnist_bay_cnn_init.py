@@ -1,3 +1,4 @@
+from math import log, exp
 import argparse
 import torch
 import torch.optim as optim
@@ -27,24 +28,26 @@ random_noise = torch.randn(16,1,28,28).to(device)
 res = []
 
 seed_model = set_and_print_random_seed()
-BayNet = GaussianClassifier(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
-BayNet.to(device)
+bay_net = GaussianClassifier(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
+bay_net.to(device)
 criterion = CrossEntropyLoss()
-adam_proba = optim.Adam(BayNet.parameters())
-losses2, accs2 = train(BayNet, adam_proba, criterion, 10, trainloader, device=device, verbose=True)
-test_acc = test(BayNet, testloader, device)
+adam_proba = optim.Adam(bay_net.parameters())
+losses2, accs2 = train(bay_net, adam_proba, criterion, 10, trainloader, device=device, verbose=True)
+test_acc = test(bay_net, testloader, device)
 output_random = torch.Tensor(10,16)
 for i in range(10):
-    output_random[i] = BayNet(random_noise).argmax(1)
+    output_random[i] = bay_net(random_noise).argmax(1)
 
 res = dict({
-    "seed_random": seed_random,
     "seed_model": seed_model,
     "rho": rho,
+    "sigma initial": log(1 + exp(rho)),
     "train accuracy": accs2,
     "train loss": losses2,
     "test accuracy": test_acc,
+    "seed_random": seed_random,
     "random output": output_random
 })
 
-torch.save(res, "./output/experience01.pt")
+torch.save(res, "./output/results.pt")
+torch.save(bay_net.state_dict(), "./output/weights.pt")
