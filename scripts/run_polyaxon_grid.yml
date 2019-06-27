@@ -16,7 +16,7 @@ hptuning:
 
   matrix:
     rho:
-      values: [-5, -4, -3, -2, -1, 0, 1, 2, 3]
+      values: [-1.9, -1.8, -1.7, -1.6, -1.5, -1.4, -1.3, -1.2, -1.1]
 
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8

@@ -14,7 +14,8 @@ import torch.optim as optim
 import src.utils as u
 import src.models.determinist_models as dm
 import src.trains as t
-from src.get_data import get_mnist
+import src.write_csv
+from src.get_data import get_mnist, get_cifar10
 import src.models.bayesian_models as bm
 
 reload(u)
@@ -149,9 +150,12 @@ print(outpt)
 polyaxon_results = "polyaxon_results"
 single = "experiments"
 group = "groups"
-group_nb = "62"
+group_nb = "65"
 results = []
-for exp_nb in [str(k) for k in range(984,993)]:
-    result = u.open_experiment_results(group, exp_nb, group_nb, polyaxon_results)[0]
-    results.append(u.get_interesting_result(result,10))
-u.write_results_in_csv(results)
+for exp_nb in [str(k) for k in range(1027,1036)]:
+    result = src.write_csv.open_experiment_results(group, exp_nb, group_nb, polyaxon_results)
+    results.append(src.write_csv.get_interesting_result(result, 10))
+src.write_csv.write_results_in_csv(results)
+
+#%%
+trainloader, testloader = get_cifar10()

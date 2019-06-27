@@ -1,4 +1,3 @@
-import csv
 import math
 import torch
 import numpy as np
@@ -58,78 +57,6 @@ def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoi
 def compute_dkl_uniform(count, number_of_possibilities):
     normalized = count / count.sum()
     return np.sum(normalized * np.log(number_of_possibilities * normalized))
-
-
-def open_experiment_results(type, exp_nb,  group_nb=None, polyaxon_path="polyaxon_results", filename = "results.pt"):
-    '''
-
-    Args:
-        type (str): groups or experiment
-        exp_nb (str): the number of the experiment
-        group_nb (str || None): the number of the group (if type is groups)
-        polyaxon_path (str): path of the parent folder of the results
-        filename (str): name of the file we want to open
-
-    Returns:
-        content of the file. Most of the time it is a dict.
-
-    '''
-    if type == "groups":
-        path_to_results = os.path.join(polyaxon_path, type, group_nb, exp_nb, filename)
-    else:
-        path_to_results = os.path.join(polyaxon_path, type, exp_nb, filename)
-    return torch.load(path_to_results)
-
-
-def get_interesting_result(result, number_of_classes):
-    '''
-
-    Args:
-        result (dict): output of the polyaxon experiment
-        number_of_classes (int): number of classes of the polyaxon experiment (ex: MNIST, 10)
-
-    Returns:
-        interesting_result (dict): dictionary of the desired parameters we would like to write in a csv
-
-    '''
-    interesting_result = dict()
-    for key, value in result.items():
-        if key != "random output":
-            if "train" in key:
-                interesting_result[key] = value[-1][-1]
-            else:
-                interesting_result[key] = value
-        else:
-            random_output = value.numpy().T
-            dkls = np.zeros(random_output.shape[0])
-            for i, output in enumerate(random_output):
-                values, count = np.unique(output, return_counts=True)
-                dkls[i] = compute_dkl_uniform(count, number_of_classes)
-            interesting_result["DKL(p||uniform)"] = dkls.mean()
-    return interesting_result
-
-
-def write_results_in_csv(results, name="results/results.csv"):
-    '''
-
-    This function takes as input a tuple of results from mulitple experiments
-    and writes a csv.
-
-    Args:
-        results (dict): results we want to write in csv
-        name (dict): path and name of the file we want to write in
-
-    Returns:
-        None
-
-    '''
-
-    file = open(name,"w")
-    writer = csv.DictWriter(file, results[0].keys())
-    writer.writeheader()
-    for result in results:
-        writer.writerow(result)
-    file.close()
 
 
 
