@@ -76,3 +76,25 @@ def init_same_baynet_detnet():
     reset_parameters_linear(BayNet.mu_fc, BayNet.bias_fc)
 
     return BayNet, DetNet
+
+
+class DeterministClassifierCIFAR(nn.Module):
+
+    def __init__(self, number_of_classes, dim_input=32):
+        super().__init__()
+        self.dim_input = dim_input
+
+        self.conv1 = nn.Conv2d(3, 16, 3, padding=1)
+        self.pool1 = nn.MaxPool2d(2, 2)
+        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
+        self.pool2 = nn.MaxPool2d(2, 2)
+        self.linear = nn.Linear(32 * self.dim_input//4*self.dim_input//4, number_of_classes)
+
+
+    def forward(self, x):
+        output = self.pool1(F.relu(self.conv1(x)))
+        output = self.pool2(F.relu(self.conv2(output)))
+        output = output.view(-1, 32 * self.dim_input // 4 * self.dim_input // 4)
+        output = F.softmax(self.linear(output), dim=1)
+
+        return output

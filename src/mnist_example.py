@@ -14,7 +14,6 @@ import torch.optim as optim
 import src.utils as u
 import src.models.determinist_models as dm
 import src.trains as t
-import src.write_csv
 from src.get_data import get_mnist, get_cifar10
 import src.models.bayesian_models as bm
 
@@ -84,7 +83,7 @@ rhos = [-5, -3, -1, 0, 1]
 res = []
 for rho in rhos:
     seed_model = u.set_and_print_random_seed()
-    BayNet = bm.GaussianClassifier(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
+    BayNet = bm.GaussianClassifierMNIST(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
     BayNet.to(device)
     criterion = nn.CrossEntropyLoss()
     adam_proba = optim.Adam(BayNet.parameters())
@@ -109,7 +108,7 @@ torch.save(res, "results/experience01.pt")
 # %%
 reload(bm)
 rho = -5
-BayNet = bm.GaussianClassifier(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
+BayNet = bm.GaussianClassifierMNIST(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
 BayNet.to(device)
 criterion = nn.CrossEntropyLoss()
 adam_proba = optim.Adam(BayNet.parameters())
@@ -141,21 +140,25 @@ for key, value in res[0].items():
 #%%
 
 inpt = torch.ones(4,1,28,28)
-BayNet = bm.GaussianClassifier(1,28,10)
+BayNet = bm.GaussianClassifierMNIST(1, 28, 10)
 outpt = BayNet(inpt)
 print(outpt)
 
 #%%
-
-polyaxon_results = "polyaxon_results"
-single = "experiments"
-group = "groups"
-group_nb = "65"
-results = []
-for exp_nb in [str(k) for k in range(1027,1036)]:
-    result = src.write_csv.open_experiment_results(group, exp_nb, group_nb, polyaxon_results)
-    results.append(src.write_csv.get_interesting_result(result, 10))
-src.write_csv.write_results_in_csv(results)
+trainloader, testloader = get_cifar10()
 
 #%%
-trainloader, testloader = get_cifar10()
+reload(dm)
+det_net = dm.DeterministClassifierCIFAR(number_of_classes=10)
+det_net.to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(det_net.parameters())
+t.train(det_net, optimizer, criterion, 1, trainloader, device, verbose=True)
+
+#%%
+reload(bm)
+bay_net = bm.GaussianClassifierCIFAR(rho=1, number_of_classes=10, determinist=True)
+bay_net.to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(bay_net.parameters())
+t.train(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)

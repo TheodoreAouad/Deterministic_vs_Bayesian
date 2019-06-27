@@ -16,10 +16,10 @@ class GaussianCNN(nn.Conv2d):
         self.reset_parameters(rho)
 
     def forward(self, x, determinist=False):
-        std = self.get_std()
         if determinist:
             weight = self.mu
         else:
+            std = self.get_std()
             weight = self.mu + std*torch.randn_like(std)
         return F.conv2d(x, weight, self.bias, stride=self.stride, padding=self.padding,)
 
@@ -42,10 +42,10 @@ class GaussianLinear(nn.Linear):
         self.reset_parameters(rho)
 
     def forward(self, x, determinist=False):
-        std = self.get_std()
         if determinist:
             weight = self.mu
         else:
+            std = self.get_std()
             weight = self.mu + std * torch.randn_like(std)
         return F.linear(x, weight, self.bias)
 
@@ -59,27 +59,53 @@ class GaussianLinear(nn.Linear):
         return torch.log(1+torch.exp(self.rho))
 
 
-class GaussianClassifier(nn.Module):
+class GaussianClassifierMNIST(nn.Module):
 
-    def __init__(self, rho, dim_input, number_of_classes, determinist=False):
+    def __init__(self, rho, number_of_classes=10, dim_input=28, determinist=False):
         super().__init__()
         self.determinist = determinist
         self.dim_input = dim_input
 
-        self.bay_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)
+        self.gaussian_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
-        self.bay_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)
+        self.gaussian_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)
         self.pool2 = nn.MaxPool2d(2, 2)
-        self.bay_linear = GaussianLinear(rho, 32 * self.dim_input//4*self.dim_input//4, number_of_classes)
+        self.gaussian_linear = GaussianLinear(rho, 32 * self.dim_input//4*self.dim_input//4, number_of_classes)
 
     def forward(self, x, determinist=None):
         if determinist is not None:
             do_determinist = determinist
         else:
             do_determinist = self.determinist
-        output = self.pool1(F.relu(self.bay_conv1(x, determinist=do_determinist)))
-        output = self.pool2(F.relu(self.bay_conv2(output, determinist=do_determinist)))
+        output = self.pool1(F.relu(self.gaussian_conv1(x, determinist=do_determinist)))
+        output = self.pool2(F.relu(self.gaussian_conv2(output, determinist=do_determinist)))
         output = output.view(-1, 32*self.dim_input//4*self.dim_input//4)
-        output = F.softmax(self.bay_linear(output, determinist=do_determinist), dim=1)
+        output = F.softmax(self.gaussian_linear(output, determinist=do_determinist), dim=1)
+
+        return output
+
+
+class GaussianClassifierCIFAR(nn.Module):
+
+    def __init__(self, rho, number_of_classes, dim_input=32, determinist=False):
+        super().__init__()
+        self.determinist = determinist
+        self.dim_input = dim_input
+
+        self.gaussian_conv1 = GaussianCNN(rho, 3, 16, 3, padding=1)
+        self.pool1 = nn.MaxPool2d(2, 2)
+        self.gaussian_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)
+        self.pool2 = nn.MaxPool2d(2, 2)
+        self.gaussian_linear = GaussianLinear(rho, 32 * self.dim_input//4*self.dim_input//4, number_of_classes)
+
+    def forward(self, x, determinist=None):
+        if determinist is not None:
+            do_determinist = determinist
+        else:
+            do_determinist = self.determinist
+        output = self.pool1(F.relu(self.gaussian_conv1(x, determinist=do_determinist)))
+        output = self.pool2(F.relu(self.gaussian_conv2(output, determinist=do_determinist)))
+        output = output.view(-1, 32 * self.dim_input // 4 * self.dim_input // 4)
+        output = F.softmax(self.gaussian_linear(output, determinist=do_determinist), dim=1)
 
         return output
