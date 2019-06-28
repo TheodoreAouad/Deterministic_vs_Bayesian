@@ -47,6 +47,9 @@ def get_interesting_result(result, number_of_classes):
                 interesting_result[key] = value[-1][-1]
             else:
                 interesting_result[key] = value
+            if "uncertainty" in key or "dkls" in key:
+                interesting_result[key + "-mean"] = value.mean().item()
+                interesting_result[key + "-std"] = value.std().item()
 
         # This part is deprecated. Its use affects previous experiments, but should not affect future experiments.
         else:

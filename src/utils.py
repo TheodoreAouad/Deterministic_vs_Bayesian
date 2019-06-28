@@ -83,4 +83,6 @@ def aggregate_data(data):
         values, count = np.unique(test_sample, return_counts=True)
         dkls[test_sample_idx] = compute_dkl_uniform(count, data.size(2))
 
-    return predicted, uncertainty, dkls
+    return predicted, uncertainty, torch.tensor(dkls).float().to(data.device)
+
+

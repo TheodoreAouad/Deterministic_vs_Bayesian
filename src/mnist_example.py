@@ -266,7 +266,18 @@ for i, data in enumerate(testloader, 0):
 #%%
 
 reload(t)
+reload(u)
 _,testloader = dataset.get_mnist(batch_size=16)
 number_of_tests = 10
 model = bay_net
 t.test_bayesian(model, testloader, number_of_tests, device)
+
+#%%
+number_of_tests = 20
+seed_random = u.set_and_print_random_seed()
+random_noise = torch.randn(16,1,28,28).to(device)
+output_random = torch.Tensor(number_of_tests, 16, 10)
+for test_idx in range(number_of_tests):
+    output_random[test_idx] = bay_net(random_noise).detach()
+_, random_uncertainty, random_dkl = u.aggregate_data(output_random)
+print(random_uncertainty, random_dkl)
