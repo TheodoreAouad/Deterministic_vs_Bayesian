@@ -1,5 +1,7 @@
 import torch
 
+from src.utils import aggregate_data
+
 
 def train(model, optimizer, criterion, number_of_epochs, trainloader, device="cpu", verbose = False):
     model.train()
@@ -44,19 +46,40 @@ def train(model, optimizer, criterion, number_of_epochs, trainloader, device="cp
 
 
 def test(model, testloader, device):
-    running_loss = 0.0
-    number_of_correct_labels = 0
-    number_of_labels = 0
-    for i, data in enumerate(testloader, 0):
+    model.eval()
+    all_correct_labels = 0
+    number_of_samples = 0
 
+    for i, data in enumerate(testloader, 0):
         inputs, labels = [x.to(device) for x in data]
         outputs = model(inputs)
         predicted_labels = outputs.argmax(1)
-        number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
-        number_of_labels += labels.size(0)
-        if i % 2000 == 1999:  # print every 2000 mini-batches
-            print(f' Test: {i + 1} loss: {running_loss / 2000}, '
-                  f'Acc: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
-            running_loss = 0.0
-    print(f'Test accuracy: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
-    return number_of_correct_labels / number_of_labels
+        all_correct_labels += torch.sum(predicted_labels - labels == 0).item()
+        number_of_samples += labels.size(0)
+
+    return all_correct_labels / number_of_samples
+
+
+def test_bayesian(model, testloader, number_of_tests, device):
+    number_of_samples = torch.zeros(1, requires_grad=False)
+    all_correct_labels = torch.zeros(1, requires_grad=False)
+    all_uncertainties = torch.zeros(1, requires_grad=False)
+    all_dkls = torch.zeros(1, requires_grad=False)
+
+    for i, data in enumerate(testloader, 0):
+        inputs, labels = [x.to(device).detach() for x in data]
+        batch_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(device).detach()
+        for test_idx in range(number_of_tests):
+            output = model(inputs)
+            batch_outputs[test_idx] = output.detach()
+        predicted_labels, uncertainty, dkls = aggregate_data(batch_outputs)
+
+        all_uncertainties += uncertainty.mean()
+        all_dkls += dkls.mean()
+        all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
+        number_of_samples += labels.size(0)
+
+    for value_to_normalize in [all_correct_labels, all_uncertainties, all_dkls]:
+        value_to_normalize /= number_of_samples
+
+    return all_correct_labels, all_uncertainties, all_dkls

@@ -65,22 +65,36 @@ class GaussianClassifierMNIST(nn.Module):
         super().__init__()
         self.determinist = determinist
         self.dim_input = dim_input
+        self.number_of_classes = number_of_classes
 
         self.gaussian_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)
+        self.bn1 = nn.BatchNorm2d(16)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.gaussian_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)
+        self.bn2 = nn.BatchNorm2d(32)
         self.pool2 = nn.MaxPool2d(2, 2)
         self.gaussian_linear = GaussianLinear(rho, 32 * self.dim_input//4*self.dim_input//4, number_of_classes)
+
+    def forward_before_softmax(self, x, determinist=None):
+        if determinist is not None:
+            do_determinist = determinist
+        else:
+            do_determinist = self.determinist
+        output = self.bn1(self.gaussian_conv1(x, determinist=do_determinist))
+        output = self.pool1(F.relu(output))
+        output = self.bn2(self.gaussian_conv2(output, determinist=do_determinist))
+        output = self.pool2(F.relu(output))
+        output = output.view(-1, 32*self.dim_input//4*self.dim_input//4)
+
+        return self.gaussian_linear(output, determinist=do_determinist)
 
     def forward(self, x, determinist=None):
         if determinist is not None:
             do_determinist = determinist
         else:
             do_determinist = self.determinist
-        output = self.pool1(F.relu(self.gaussian_conv1(x, determinist=do_determinist)))
-        output = self.pool2(F.relu(self.gaussian_conv2(output, determinist=do_determinist)))
-        output = output.view(-1, 32*self.dim_input//4*self.dim_input//4)
-        output = F.softmax(self.gaussian_linear(output, determinist=do_determinist), dim=1)
+        output = self.forward_before_softmax(x, determinist)
+        output = F.softmax(output, dim=1)
 
         return output
 

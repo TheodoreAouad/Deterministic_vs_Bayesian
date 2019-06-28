@@ -47,6 +47,8 @@ def get_interesting_result(result, number_of_classes):
                 interesting_result[key] = value[-1][-1]
             else:
                 interesting_result[key] = value
+
+        # This part is deprecated. Its use affects previous experiments, but should not affect future experiments.
         else:
             random_output = value.numpy().T
             dkls = np.zeros(random_output.shape[0])
@@ -60,7 +62,7 @@ def get_interesting_result(result, number_of_classes):
 def write_results_in_csv(results, name="results/results.csv"):
     '''
 
-    This function takes as input a tuple of results from mulitple experiments
+    This function takes as input a tuple of results from multiple experiments
     and writes a csv.
 
     Args:

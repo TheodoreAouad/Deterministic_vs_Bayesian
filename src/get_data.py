@@ -53,6 +53,6 @@ def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
     testset = torchvision.datasets.CIFAR10(root=download_path, train=False, transform=transform, download=download)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
+    testloader = torch.utils.data.DataLoader(testset, batch_size= batch_size, shuffle=shuffle)
 
     return trainloader, testloader
