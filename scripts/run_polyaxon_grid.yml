@@ -12,7 +12,7 @@ environment:
 
 hptuning:
 
-  concurrency: 2
+  concurrency: 1
 
   matrix:
     rho:

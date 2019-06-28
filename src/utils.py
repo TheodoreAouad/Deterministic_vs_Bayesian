@@ -86,3 +86,6 @@ def aggregate_data(data):
     return predicted, uncertainty, torch.tensor(dkls).float().to(data.device)
 
 
+def get_bayesian_parameters(model):
+    pass
+

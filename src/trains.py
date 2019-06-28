@@ -81,7 +81,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, d
 
             # forward + backward + optimize
             outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            likelihood = criterion(outputs, labels)
+            varational_posterior = 0
+            loss = varational_posterior + likelihood
             loss.backward()
             optimizer.step()
 

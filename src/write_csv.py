@@ -45,11 +45,11 @@ def get_interesting_result(result, number_of_classes):
         if key != "random output":
             if "train" in key:
                 interesting_result[key] = value[-1][-1]
-            else:
-                interesting_result[key] = value
-            if "uncertainty" in key or "dkls" in key:
+            elif "uncertainty" in key or "dkls" in key:
                 interesting_result[key + "-mean"] = value.mean().item()
                 interesting_result[key + "-std"] = value.std().item()
+            else:
+                interesting_result[key] = value
 
         # This part is deprecated. Its use affects previous experiments, but should not affect future experiments.
         else:
@@ -127,6 +127,6 @@ elif exp_nb is not None:
 
 results = []
 for file_path in all_files:
-    result = torch.load(file_path)
+    result = torch.load(file_path, map_location="cpu")
     results.append(get_interesting_result(result, 10))
 write_results_in_csv(results, filename+'.csv')

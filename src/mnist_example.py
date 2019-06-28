@@ -168,7 +168,7 @@ t.train(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)
 reload(u)
 reload(bm)
 trainloader, testloader = dataset.get_mnist()
-bay_net = bm.GaussianClassifierMNIST(rho=-1, number_of_classes=10)
+bay_net = bm.GaussianClassifierMNIST(rho=-2, number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
@@ -275,9 +275,13 @@ t.test_bayesian(model, testloader, number_of_tests, device)
 #%%
 number_of_tests = 20
 seed_random = u.set_and_print_random_seed()
-random_noise = torch.randn(16,1,28,28).to(device)
-output_random = torch.Tensor(number_of_tests, 16, 10)
+random_noise = torch.randn(1000,1,28,28).to(device)
+output_random = torch.Tensor(number_of_tests, 1000, 10)
 for test_idx in range(number_of_tests):
     output_random[test_idx] = bay_net(random_noise).detach()
 _, random_uncertainty, random_dkl = u.aggregate_data(output_random)
-print(random_uncertainty, random_dkl)
+print(random_uncertainty.mean(), random_uncertainty.std())
+
+#%%
+
+bay_net = bm.GaussianClassifierMNIST(rho=1, number_of_classes=10)
