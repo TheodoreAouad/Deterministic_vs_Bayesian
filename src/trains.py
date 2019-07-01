@@ -60,6 +60,7 @@ def test(model, testloader, device):
     return all_correct_labels / number_of_samples
 
 
+#TODO: Add the loss of bayes by backprop: variational posterior and prior
 def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, device="cpu", verbose=False):
     model.train()
     loss_accs = [list() for _ in range(number_of_epochs)]
@@ -104,7 +105,6 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, d
     return loss_accs, train_accs
 
 
-
 def test_bayesian(model, testloader, number_of_tests, device):
 
     number_of_samples = len(testloader.dataset)
@@ -112,8 +112,7 @@ def test_bayesian(model, testloader, number_of_tests, device):
     all_uncertainties = torch.Tensor().to(device).detach()
     all_dkls = torch.Tensor().to(device).detach()
 
-
-    for i, data in enumerate(testloader, 0):
+    for i, data in enumerate(testloader):
         inputs, labels = [x.to(device).detach() for x in data]
         batch_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(device).detach()
         for test_idx in range(number_of_tests):
@@ -125,6 +124,6 @@ def test_bayesian(model, testloader, number_of_tests, device):
         all_dkls = torch.cat((all_dkls, dkls))
         all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
 
-    all_correct_labels /= number_of_samples
+    accuracy = (all_correct_labels / number_of_samples).item()
 
-    return all_correct_labels.item(), all_uncertainties, all_dkls
+    return accuracy, all_uncertainties, all_dkls

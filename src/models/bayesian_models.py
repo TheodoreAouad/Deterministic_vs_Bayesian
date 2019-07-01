@@ -1,69 +1,117 @@
 import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
+#TODO: Add get_bayesian_parameter to each bayesian module
 class GaussianCNN(nn.Conv2d):
 
     def __init__(self, rho, in_channels, out_channels, kernel_size, stride=1, padding=0, bias=True):
         super().__init__(in_channels, out_channels, kernel_size, stride=stride, padding=padding,
                                         bias=bias)
+        if rho == "determinist" :
+            self.determinist = True
+        elif type(rho) in [int, float]:
+            self.determinist = False
+            self.rho_init = rho
+            self.rho = nn.Parameter(data=torch.Tensor(out_channels, in_channels, kernel_size, kernel_size),
+                                    requires_grad=True)
+        else:
+            print('rho not understood. Determinist classifier created. '
+                          'To delete this warning, write rho as "determinist"')
+            self.determinist = True
+
         self.mu = nn.Parameter(data=torch.Tensor(out_channels, in_channels, kernel_size, kernel_size),
                                    requires_grad=True)
-        self.rho = nn.Parameter(data=torch.Tensor(out_channels, in_channels, kernel_size, kernel_size),
-                                   requires_grad=True)
-        self.reset_parameters(rho)
+        self.reset_parameters()
 
-    def forward(self, x, determinist=False):
-        if determinist:
+    def forward(self, x, determinist=None):
+        if determinist is not None:
+            do_determinist = determinist
+        else:
+            do_determinist = self.determinist
+        if do_determinist:
             weight = self.mu
         else:
             std = self.get_std()
             weight = self.mu + std*torch.randn_like(std)
         return F.conv2d(x, weight, self.bias, stride=self.stride, padding=self.padding,)
 
-    def reset_parameters(self, rho=1):
+    def reset_parameters(self, rho=None):
         super().reset_parameters()
         if hasattr(self, "mu"):
             self.mu.data = self.weight.data
-            self.rho.data = rho*torch.ones_like(self.rho.data)
+            if not self.determinist:
+                if rho is not None:
+                    self.rho_init = rho
+                self.rho.data = self.rho_init*torch.ones_like(self.rho.data)
 
     def get_std(self):
+        if self.determinist:
+            return 0
         return torch.log(1+torch.exp(self.rho))
 
 
 class GaussianLinear(nn.Linear):
 
     def __init__(self, rho, in_features, out_features):
-        super(GaussianLinear, self).__init__(in_features, out_features)
+        super().__init__(in_features, out_features)
+        if rho == "determinist":
+            self.determinist = True
+        elif type(rho) in [int, float]:
+            self.determinist = False
+            self.rho_init = rho
+            self.rho = nn.Parameter(data=torch.Tensor(out_features, in_features), requires_grad=True)
+        else:
+            print('rho not understood. Determinist classifier created. '
+                          'To delete this warning, write rho as "determinist"')
+            self.determinist = True
+
         self.mu = nn.Parameter(data=torch.Tensor(out_features, in_features), requires_grad=True)
-        self.rho = nn.Parameter(data=torch.Tensor(out_features, in_features), requires_grad=True)
-        self.reset_parameters(rho)
+        self.reset_parameters()
 
     def forward(self, x, determinist=False):
-        if determinist:
+        if determinist is not None:
+            do_determinist = determinist
+        else:
+            do_determinist = self.determinist
+        if do_determinist:
             weight = self.mu
         else:
             std = self.get_std()
             weight = self.mu + std * torch.randn_like(std)
         return F.linear(x, weight, self.bias)
 
-    def reset_parameters(self, rho=1):
-        super(GaussianLinear, self).reset_parameters()
+    def reset_parameters(self, rho=None):
+        super().reset_parameters()
         if hasattr(self, "mu"):
             self.mu.data = self.weight.data
-            self.rho.data = rho*torch.ones_like(self.rho.data)
+            if not self.determinist:
+                if rho is not None:
+                    self.rho_init = rho
+                self.rho.data = self.rho_init * torch.ones_like(self.rho.data)
 
     def get_std(self):
+        if self.determinist:
+            return 0
         return torch.log(1+torch.exp(self.rho))
 
 
 class GaussianClassifierMNIST(nn.Module):
 
-    def __init__(self, rho, number_of_classes=10, dim_input=28, determinist=False):
+    def __init__(self, rho, number_of_classes=10, dim_input=28):
         super().__init__()
-        self.determinist = determinist
+        if rho == "determinist" :
+            self.determinist = True
+        elif type(rho) in [int, float]:
+            self.determinist = False
+        else:
+            print('rho not understood. Determinist classifier created. '
+                          'To delete this warning, write rho as "determinist"')
+            self.determinist = True
+
         self.dim_input = dim_input
         self.number_of_classes = number_of_classes
 
