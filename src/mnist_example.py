@@ -33,7 +33,8 @@ print(device)
 #%% Datasets
 
 trainloader, testloader = dataset.get_mnist()
-
+get_train_img = iter(trainloader)
+train_img, train_label = next(get_train_img)
 #%%
 trainloader, testloader = dataset.get_cifar10()
 
@@ -45,10 +46,22 @@ bay_net = bm.GaussianClassifierMNIST(rho=-2, number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
-t.train(bay_net, optimizer, criterion, 2, trainloader, device, verbose=True)
+t.train(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)
 
 #%%
 
+weights = torch.Tensor().to(device)
+bias = torch.Tensor().to(device)
+all_layers = iter(bay_net.modules())
+next(all_layers)
+for layer in all_layers:
+    print(layer)
+    if not getattr(layer, "determinist", True):
+        weight_to_add, bias_to_add = layer.sample_weights()
+        weights = torch.cat((weights, u.vectorize(weight_to_add)))
+        bias = torch.cat((bias, u.vectorize(bias_to_add)))
+
+bay_net.variational_posterior(weights, bias)
 
 #%%
 _,testloader = dataset.get_mnist(batch_size=16)
@@ -145,4 +158,12 @@ print(random_uncertainty.mean(), random_uncertainty.std())
 
 #%%
 
-bay_net = bm.GaussianClassifierMNIST(rho=1, number_of_classes=10)
+bay_conv = bm.GaussianCNN(-1,1,16,3)
+lp = bay_conv.bayesian_parameters()
+lpp = bay_conv.named_bayesian_parameters()
+
+for name, params in bay_conv.named_parameters():
+    if hasattr(params, "bayesian"):
+        print(params.bayesian)
+    else:
+        print(name)

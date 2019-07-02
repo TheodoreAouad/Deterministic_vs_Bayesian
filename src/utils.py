@@ -5,7 +5,6 @@ import os
 
 
 def reset_parameters_conv(weight, bias=None):
-
     size = weight.size()
     in_channels, kernel_size = size[1], size[2:]
 
@@ -86,6 +85,14 @@ def aggregate_data(data):
     return predicted, uncertainty, torch.tensor(dkls).float().to(data.device)
 
 
-def get_bayesian_parameters(model):
-    pass
+def vectorize(tensor):
+    '''
+
+    Args:
+        tensor (torch.Tensor): the tensor we want to vectorize
+
+    Returns:
+        vector (torch.Tensor): has one dimension
+    '''
+    return tensor.view(tensor.nelement())
 

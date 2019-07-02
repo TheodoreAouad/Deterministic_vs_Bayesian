@@ -6,6 +6,9 @@ import torch.nn.functional as F
 
 
 #TODO: Add get_bayesian_parameter to each bayesian module
+from src.utils import vectorize
+
+
 class GaussianCNN(nn.Conv2d):
 
     def __init__(self, rho, in_channels, out_channels, kernel_size, stride=1, padding=0, bias=True):
@@ -18,6 +21,7 @@ class GaussianCNN(nn.Conv2d):
             self.rho_init = rho
             self.rho = nn.Parameter(data=torch.Tensor(out_channels, in_channels, kernel_size, kernel_size),
                                     requires_grad=True)
+            self.rho_bias = nn.Parameter(data=torch.Tensor(out_channels), requires_grad=True)
         else:
             print('rho not understood. Determinist classifier created. '
                           'To delete this warning, write rho as "determinist"')
@@ -25,7 +29,12 @@ class GaussianCNN(nn.Conv2d):
 
         self.mu = nn.Parameter(data=torch.Tensor(out_channels, in_channels, kernel_size, kernel_size),
                                    requires_grad=True)
+        self.mu_bias = nn.Parameter(data=torch.Tensor(out_channels), requires_grad=True)
         self.reset_parameters()
+
+        if not self.determinist:
+            for params in [self.mu, self.rho, self.mu_bias, self.rho_bias]:
+                params.bayesian = True
 
     def forward(self, x, determinist=None):
         if determinist is not None:
@@ -34,24 +43,42 @@ class GaussianCNN(nn.Conv2d):
             do_determinist = self.determinist
         if do_determinist:
             weight = self.mu
+            bias = self.mu_bias
         else:
-            std = self.get_std()
-            weight = self.mu + std*torch.randn_like(std)
-        return F.conv2d(x, weight, self.bias, stride=self.stride, padding=self.padding,)
+            weight, bias = self.sample_weights()
+        return F.conv2d(x, weight, bias, stride=self.stride, padding=self.padding,)
 
     def reset_parameters(self, rho=None):
         super().reset_parameters()
         if hasattr(self, "mu"):
             self.mu.data = self.weight.data
+            self.mu_bias.data = self.bias.data
             if not self.determinist:
                 if rho is not None:
                     self.rho_init = rho
                 self.rho.data = self.rho_init*torch.ones_like(self.rho.data)
+                self.rho_bias.data = self.rho_init*torch.ones_like(self.rho_bias.data)
 
     def get_std(self):
         if self.determinist:
-            return 0
-        return torch.log(1+torch.exp(self.rho))
+            return 0, 0
+        return torch.log(1+torch.exp(self.rho)), torch.log(1+torch.exp(self.rho_bias))
+
+    def sample_weights(self):
+        std, std_bias = self.get_std()
+        weight = self.mu + std * torch.randn_like(std)
+        bias = self.mu_bias + std_bias * torch.randn_like(std_bias)
+        return weight, bias
+
+    def bayesian_parameters(self):
+        for params in self.parameters():
+            if getattr(params, "bayesian", False):
+                yield params
+
+    def named_bayesian_parameters(self):
+        for name, params in self.named_parameters():
+            if getattr(params, "bayesian", False):
+                yield name, params
 
 
 class GaussianLinear(nn.Linear):
@@ -64,13 +91,19 @@ class GaussianLinear(nn.Linear):
             self.determinist = False
             self.rho_init = rho
             self.rho = nn.Parameter(data=torch.Tensor(out_features, in_features), requires_grad=True)
+            self.rho_bias = nn.Parameter(data=torch.Tensor(out_features), requires_grad=True)
         else:
             print('rho not understood. Determinist classifier created. '
                           'To delete this warning, write rho as "determinist"')
             self.determinist = True
 
         self.mu = nn.Parameter(data=torch.Tensor(out_features, in_features), requires_grad=True)
+        self.mu_bias = nn.Parameter(data=torch.Tensor(out_features), requires_grad=True)
         self.reset_parameters()
+
+        if not self.determinist:
+            for params in [self.mu, self.rho, self.mu_bias, self.rho_bias]:
+                params.bayesian = True
 
     def forward(self, x, determinist=False):
         if determinist is not None:
@@ -79,24 +112,42 @@ class GaussianLinear(nn.Linear):
             do_determinist = self.determinist
         if do_determinist:
             weight = self.mu
+            bias = self.mu_bias
         else:
-            std = self.get_std()
-            weight = self.mu + std * torch.randn_like(std)
-        return F.linear(x, weight, self.bias)
+            weight, bias = self.sample_weights()
+        return F.linear(x, weight, bias)
 
     def reset_parameters(self, rho=None):
         super().reset_parameters()
         if hasattr(self, "mu"):
             self.mu.data = self.weight.data
+            self.mu_bias.data = self.bias.data
             if not self.determinist:
                 if rho is not None:
                     self.rho_init = rho
                 self.rho.data = self.rho_init * torch.ones_like(self.rho.data)
+                self.rho_bias.data = self.rho_init * torch.ones_like(self.rho_bias.data)
 
     def get_std(self):
         if self.determinist:
-            return 0
-        return torch.log(1+torch.exp(self.rho))
+            return 0, 0
+        return torch.log(1+torch.exp(self.rho)), torch.log(1+torch.exp(self.rho_bias))
+
+    def sample_weights(self):
+        std, std_bias = self.get_std()
+        weight = self.mu + std * torch.randn_like(std)
+        bias = self.mu_bias + std_bias * torch.randn_like(std_bias)
+        return weight, bias
+
+    def bayesian_parameters(self):
+        for params in self.parameters():
+            if getattr(params, "bayesian", False):
+                yield params
+
+    def named_bayesian_parameters(self):
+        for name, params in self.named_parameters():
+            if getattr(params, "bayesian", False):
+                yield name, params
 
 
 class GaussianClassifierMNIST(nn.Module):
@@ -112,6 +163,7 @@ class GaussianClassifierMNIST(nn.Module):
                           'To delete this warning, write rho as "determinist"')
             self.determinist = True
 
+        self.device = "cpu"
         self.dim_input = dim_input
         self.number_of_classes = number_of_classes
 
@@ -141,10 +193,47 @@ class GaussianClassifierMNIST(nn.Module):
             do_determinist = determinist
         else:
             do_determinist = self.determinist
-        output = self.forward_before_softmax(x, determinist)
+        output = self.forward_before_softmax(x, do_determinist)
         output = F.softmax(output, dim=1)
 
         return output
+
+    def variational_posterior(self, weights, bias):
+        '''
+        q(w|D)
+        '''
+        if self.determinist:
+            return 0
+        mu = torch.Tensor().to(self.device)
+        rho = torch.Tensor().to(self.device)
+        mu_bias = torch.Tensor().to(self.device)
+        rho_bias = torch.Tensor().to(self.device)
+        all_layers = iter(self.modules())
+        next(all_layers)
+        for layer in all_layers:
+            if not getattr(layer, "determinist", True):
+                for name, params in layer.named_bayesian_parameters():
+                    if name == "mu":
+                        mu = torch.cat((mu, vectorize(params)))
+                    if name == "rho":
+                        rho = torch.cat((rho, vectorize(params)))
+                    if name == "mu_bias":
+                        mu_bias = torch.cat((mu_bias, vectorize(params)))
+                    if name == "rho_bias":
+                        rho_bias = torch.cat((rho_bias, vectorize(params)))
+
+        std = torch.log(1+torch.exp(rho))
+        std_bias = torch.log(1+torch.exp(rho_bias))
+
+        w = vectorize(weights)
+        w_bias = vectorize(bias)
+
+        return -1/2 * ((torch.sum((w - mu)**2 / std) + torch.sum((w_bias - mu_bias)**2 / std_bias)) +
+                       torch.sum(torch.log(std)) + torch.sum(torch.log(std_bias)))
+
+    def to(self, device):
+        super().to(device)
+        self.device = device
 
 
 class GaussianClassifierCIFAR(nn.Module):

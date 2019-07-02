@@ -107,6 +107,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, d
 
 def test_bayesian(model, testloader, number_of_tests, device):
 
+    model.eval()
     number_of_samples = len(testloader.dataset)
     all_correct_labels = torch.zeros(1, requires_grad=False)
     all_uncertainties = torch.Tensor().to(device).detach()
