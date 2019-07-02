@@ -42,11 +42,31 @@ trainloader, testloader = dataset.get_cifar10()
 reload(u)
 reload(bm)
 trainloader, testloader = dataset.get_mnist()
-bay_net = bm.GaussianClassifierMNIST(rho=-2, number_of_classes=10)
+bay_net = bm.GaussianClassifierMNIST(-2, 1,1,1,1, number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
 t.train(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)
+
+#%%
+
+reload(u)
+reload(bm)
+reload(t)
+trainloader, testloader = dataset.get_mnist()
+bay_net = bm.GaussianClassifierMNIST(-5, 1,1,1,1, number_of_classes=10)
+bay_net.to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(bay_net.parameters())
+t.train_bayesian(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)
+
+
+
+#%%
+
+prev_weights, prev_bias = bay_net.get_previous_weights()
+vp = bay_net.variational_posterior(prev_weights, prev_bias)
+pl = bay_net.prior(prev_weights, prev_bias)
 
 #%%
 

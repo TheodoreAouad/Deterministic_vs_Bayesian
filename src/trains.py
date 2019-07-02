@@ -46,18 +46,7 @@ def train(model, optimizer, criterion, number_of_epochs, trainloader, device="cp
 
 
 def test(model, testloader, device):
-    model.eval()
-    all_correct_labels = 0
-    number_of_samples = 0
-
-    for i, data in enumerate(testloader, 0):
-        inputs, labels = [x.to(device) for x in data]
-        outputs = model(inputs)
-        predicted_labels = outputs.argmax(1)
-        all_correct_labels += torch.sum(predicted_labels - labels == 0).item()
-        number_of_samples += labels.size(0)
-
-    return all_correct_labels / number_of_samples
+    return test_bayesian(model, testloader, number_of_tests=1, device=device)
 
 
 #TODO: Add the loss of bayes by backprop: variational posterior and prior
@@ -82,9 +71,11 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, d
 
             # forward + backward + optimize
             outputs = model(inputs)
-            likelihood = criterion(outputs, labels)
-            varational_posterior = 0
-            loss = varational_posterior + likelihood
+            loss_likelihood = criterion(outputs, labels)
+            weights_used, bias_used = model.get_previous_weights()
+            loss_varational_posterior = model.variational_posterior(weights_used, bias_used)
+            loss_prior = -model.prior(weights_used, bias_used)
+            loss = loss_varational_posterior + loss_prior + loss_likelihood
             loss.backward()
             optimizer.step()
 

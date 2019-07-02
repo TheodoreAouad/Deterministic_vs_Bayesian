@@ -8,6 +8,8 @@ parts
 sdist
 var
 data
+results
+polyaxon_results
 *.pyc
 *.swp
 .DS_Store
