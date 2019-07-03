@@ -165,7 +165,7 @@ class GaussianLinear(nn.Linear):
 
 class GaussianClassifierMNIST(nn.Module):
 
-    def __init__(self, rho, mu_prior, std_prior, mu_bias_prior, std_bias_prior,
+    def __init__(self, rho, mus_prior=(0,0), stds_prior=None,
                  number_of_classes=10, dim_input=28):
         super().__init__()
         if rho == "determinist" :
@@ -181,9 +181,15 @@ class GaussianClassifierMNIST(nn.Module):
         self.dim_input = dim_input
         self.number_of_classes = number_of_classes
 
+        mu_prior, mu_bias_prior = mus_prior
         self.mu_prior_init = mu_prior
-        self.std_prior_init = std_prior
         self.mu_bias_prior_init = mu_bias_prior
+        if stds_prior is not None:
+            std_prior, std_bias_prior = stds_prior
+        else:
+            std_prior = math.log(math.exp(rho)+1)
+            std_bias_prior = math.log(math.exp(rho)+1)
+        self.std_prior_init = std_prior
         self.std_bias_prior_init = std_bias_prior
 
         self.gaussian_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)

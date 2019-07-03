@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.nn import CrossEntropyLoss
 
 from src.models.bayesian_models import GaussianClassifierMNIST
-from src.trains import train, test, test_bayesian
+from src.trains import train, test, test_bayesian, train_bayesian
 from src.utils import set_and_print_random_seed, aggregate_data
 from src.get_data import get_mnist
 
@@ -30,11 +30,11 @@ trainloader, testloader = get_mnist()
 
 
 seed_model = set_and_print_random_seed()
-bay_net = GaussianClassifierMNIST(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
+bay_net = GaussianClassifierMNIST(rho, dim_input=28, number_of_classes=10)
 bay_net.to(device)
 criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
-losses2, accs2 = train(bay_net, adam_proba, criterion, epoch, trainloader, device=device, verbose=True)
+losses2, accs2 = train_bayesian(bay_net, adam_proba, criterion, epoch, trainloader, device=device, verbose=True)
 
 
 test_acc, test_uncertainty, test_dkls = test_bayesian(bay_net, testloader, number_of_tests=number_of_tests, device=device)
