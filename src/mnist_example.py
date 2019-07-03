@@ -41,8 +41,9 @@ trainloader, testloader = dataset.get_cifar10()
 #%%
 reload(u)
 reload(bm)
-trainloader, testloader = dataset.get_mnist()
-bay_net = bm.GaussianClassifierMNIST(-2, 1,1,1,1, number_of_classes=10)
+reload(t)
+trainloader, testloader = dataset.get_mnist(batch_size=64)
+bay_net = bm.GaussianClassifierMNIST(-2, (0, 0), (1, 1), number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
@@ -53,12 +54,13 @@ t.train(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)
 reload(u)
 reload(bm)
 reload(t)
-trainloader, testloader = dataset.get_mnist()
-bay_net = bm.GaussianClassifierMNIST(-5, 1,1,1,1, number_of_classes=10)
+trainloader, testloader = dataset.get_mnist(batch_size=64)
+bay_net = bm.GaussianClassifierMNIST(-5, (0, 0), (1, 1), number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
-t.train_bayesian(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)
+t.train_bayesian(bay_net, optimizer, criterion, 5, trainloader, output_dir_tensorboard="/output",
+                 device=device, verbose=True);
 
 
 
