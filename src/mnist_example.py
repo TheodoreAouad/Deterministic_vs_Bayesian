@@ -1,23 +1,27 @@
 #%% Imports
-
 import os
-import numpy as np
+
 import matplotlib.pyplot as plt
-from tqdm import tqdm
-import math
 from importlib import reload
+import numpy as np
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision
 import torchvision.transforms as transforms
 import torch.optim as optim
 
 import src.utils as u
-import src.determinist_models as m
+import src.models.determinist_models as dm
+import src.trains as t
+import src.get_data as dataset
+import src.models.bayesian_models as bm
+
 reload(u)
-reload(m)
+reload(t)
+reload(dm)
+reload(bm)
+reload(dataset)
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -28,13 +32,7 @@ print(device)
 
 #%% Datasets
 
-transform = transforms.ToTensor()
-
-trainset = torchvision.datasets.MNIST(root='./data', train=True, transform=transform, download=True)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=16, shuffle=True)
-
-testset = torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=True)
-testloader = torch.utils.data.DataLoader(testset, batch_size=16, shuffle=True)
+trainloader, testloader = dataset.get_mnist()
 #%% Plot image
 
 iter_train = iter(trainloader)
@@ -44,68 +42,6 @@ print(label)
 plt.show()
 image = image.to(device)
 label = label.to(device)
-
-
-#%% Def training
-
-def train(model, optimizer, criterion, number_of_epochs, device, verbose = False):
-    model.train()
-    loss_accs = [[]]*number_of_epochs
-    train_accs = [[]]*number_of_epochs
-    for epoch in range(number_of_epochs):  # loop over the dataset multiple times
-
-        number_of_data = len(trainloader)
-        interval = number_of_data // 10
-        running_loss = 0.0
-        number_of_correct_labels = 0
-        number_of_labels = 0
-
-        for i, data in enumerate(trainloader, 0):
-            # get the inputs; data is a list of [inputs, labels]
-            inputs, labels = [x.to(device) for x in data]
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
-
-            # forward + backward + optimize
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            # print statistics
-            running_loss += loss.item()
-            predicted_labels = outputs.argmax(1)
-            number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
-            number_of_labels += labels.size(0)
-            if i % interval == interval - 1:
-                if verbose:
-                    print(f'Train: [{epoch + 1}, {i + 1}/{number_of_data}] loss: {running_loss / number_of_data}, '
-                          f'Acc: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
-                running_loss = 0.0
-                loss_accs[epoch].append([running_loss / number_of_data])
-                train_accs[epoch].append([round(100 * number_of_correct_labels / number_of_labels, 2)])
-
-    print('Finished Training')
-    return loss_accs, train_accs
-
-
-def test(model):
-    running_loss = 0.0
-    number_of_correct_labels = 0
-    number_of_labels = 0
-    for i, data in enumerate(testloader, 0):
-
-        inputs, labels = [x.to(device) for x in data]
-        outputs = model(inputs)
-        predicted_labels = outputs.argmax(1)
-        number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
-        number_of_labels += labels.size(0)
-        if i % 2000 == 1999:  # print every 2000 mini-batches
-            print(f' Test: {i + 1} loss: {running_loss / 2000}, '
-                  f'Acc: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
-            running_loss = 0.0
-    print(f'Test accuracy: {round(100 * number_of_correct_labels / number_of_labels, 2)} %')
 
 
 #%% gpu vs cpu
@@ -124,50 +60,9 @@ w2 = conv2.weight.data.to(device)
 torch.sum(torch.abs(w1-w2))
 
 
-#%% Test Training identity
+# %% Test train accuracy
 
-DetNet = m.DeterministClassifierSequential(10)
-weight1, bias1 = DetNet.conv1.weight.data, DetNet.conv1.bias.data
-weight2, bias2 = DetNet.conv2.weight.data, DetNet.conv2.bias.data
-
-BayNet = m.DeterministClassifierFunctional(10)
-
-criterion = nn.CrossEntropyLoss()
-seed1 = u.set_and_print_random_seed()
-
-det_adam = optim.Adam(DetNet.parameters())
-DetNet.to(device)
-det_output = DetNet(image)
-det_loss = criterion(det_output,label)
-det_loss.backward()
-
-u.set_and_print_random_seed(seed1)
-bay_adam = optim.Adam(BayNet.parameters())
-BayNet.to(device)
-bay_output = BayNet(image)
-bay_loss = criterion(bay_output,label)
-bay_loss.backward()
-
-u.set_and_print_random_seed(seed1)
-det_losses, det_accs = train(DetNet, det_adam, criterion, 1, verbose=True)
-u.set_and_print_random_seed(seed1)
-bay_losses, bay_accs = train(BayNet, bay_adam, criterion, 1, verbose=True)
-#%%
-model_proba = m.DeterministClassifierFunctional(10)
-model_proba.to(device)
-adam_proba = optim.Adam(model_proba.parameters())
-criterion = nn.CrossEntropyLoss()
-
-#%%
-model_proba.zero_grad()
-output = model_proba(image)
-loss = criterion(output, label)
-loss.backward()
-[(name, torch.abs(k.grad).sum()) if k.grad is not None else (name, k.grad) for (name, k) in
- model_proba.named_parameters()]
-# %%
-
-BayNet, DetNet = m.init_same_baynet_detnet()
+BayNet, DetNet = dm.init_same_baynet_detnet()
 # BayNet.to(device)
 # DetNet.to(device)
 criterion = nn.CrossEntropyLoss()
@@ -175,7 +70,218 @@ adam_proba = optim.Adam(BayNet.parameters())
 adam_det = optim.Adam(DetNet.parameters())
 
 seed1 = u.set_and_print_random_seed()
-train(BayNet,adam_proba,criterion,1, device="cpu", verbose=True)
+t.train(BayNet, adam_proba, criterion, 1, trainloader, device="cpu", verbose=True)
 u.set_and_print_random_seed(seed1)
-train(DetNet,adam_det,criterion,1, device="cpu", verbose=True)
+t.train(DetNet, adam_det, criterion, 1, trainloader, device="cpu", verbose=True)
 
+
+# %%
+
+reload(bm)
+seed_random = u.set_and_print_random_seed()
+random_noise = torch.randn(16,1,28,28).to(device)
+rhos = [-5, -3, -1, 0, 1]
+res = []
+for rho in rhos:
+    seed_model = u.set_and_print_random_seed()
+    BayNet = bm.GaussianClassifierMNIST(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
+    BayNet.to(device)
+    criterion = nn.CrossEntropyLoss()
+    adam_proba = optim.Adam(BayNet.parameters())
+    losses2, accs2 = t.train(BayNet, adam_proba, criterion, 10, trainloader, device=device, verbose=True)
+    test_acc = t.test(BayNet, testloader, device)
+    output_random = torch.Tensor(10,16)
+    for i in range(10):
+        output_random[i] = BayNet(random_noise).argmax(1)
+
+    res.append(dict({
+        "seed_random": seed_random,
+        "seed_model": seed_model,
+        "rho": rho,
+        "train accuracy": accs2,
+        "test accuracy": test_acc,
+        "random output": output_random
+    }))
+
+torch.save(res, "results/experience01.pt")
+
+
+# %%
+reload(bm)
+rho = -5
+BayNet = bm.GaussianClassifierMNIST(rho=rho, dim_input=28, number_of_classes=10, determinist=False)
+BayNet.to(device)
+criterion = nn.CrossEntropyLoss()
+adam_proba = optim.Adam(BayNet.parameters())
+losses2, accs2 = t.train(BayNet, adam_proba, criterion, 5, trainloader, device=device, verbose=True)
+
+# %%
+t.test(BayNet, testloader, device)
+
+#%%
+random_noise = torch.randn(16,1,28,28).to(device)
+#%%
+polyaxon_results = "polyaxon_results"
+single = "experiments"
+group = "groups"
+group_nb = "62"
+exp_nb = "985"
+path_to_results = os.path.join(polyaxon_results, group, group_nb, exp_nb, "experience01.pt")
+
+res = torch.load(path_to_results)
+print(u.get_interesting_results(res[0],10))
+for key, value in res[0].items():
+    if key != "random output":
+        if "train" in key:
+            print(key, value[-1][-1])
+        else:
+            print(key, value)
+
+
+#%%
+
+inpt = torch.ones(4,1,28,28)
+BayNet = bm.GaussianClassifierMNIST(1, 28, 10)
+outpt = BayNet(inpt)
+print(outpt)
+
+#%%
+trainloader, testloader = get_cifar10()
+
+#%%
+reload(dm)
+det_net = dm.DeterministClassifierCIFAR(number_of_classes=10)
+det_net.to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(det_net.parameters())
+t.train(det_net, optimizer, criterion, 1, trainloader, device, verbose=True)
+
+#%%
+reload(bm)
+bay_net = bm.GaussianClassifierCIFAR(rho=1, number_of_classes=10, determinist=True)
+bay_net.to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(bay_net.parameters())
+t.train(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)
+
+#%%
+reload(u)
+reload(bm)
+trainloader, testloader = dataset.get_mnist()
+bay_net = bm.GaussianClassifierMNIST(rho=-2, number_of_classes=10)
+bay_net.to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(bay_net.parameters())
+t.train(bay_net, optimizer, criterion, 2, trainloader, device, verbose=True)
+
+#%%
+_,testloader = dataset.get_mnist(batch_size=16)
+get_test_img = iter(testloader)
+img, label = next(get_test_img)
+
+#%%
+def compute_memory_used_tensor(tensor):
+    return dict({
+        'number of elements': tensor.nelement(),
+        'size of an element': tensor.element_size(),
+        'total memory use': tensor.nelement() * tensor.element_size()
+    })
+
+#%%
+
+reload(u)
+bay_net.eval()
+random_image = torch.rand(16,1,28,28).to(device)
+number_of_tests = 10
+data_random = torch.Tensor(20, 16, 10)
+for test_idx in range(number_of_tests):
+    data_random[test_idx] = bay_net(random_image)
+
+data_mnist = torch.Tensor(20,16,10)
+for test_idx in range(number_of_tests):
+    data_mnist[test_idx] = bay_net(img.to(device))
+
+#%%
+
+_,testloader = dataset.get_mnist(batch_size=16)
+get_test_img = iter(testloader)
+# img, label = next(get_test_img)
+
+number_of_tests = 5
+model = bay_net
+
+number_of_correct_labels = torch.zeros(1)
+number_of_labels = torch.zeros(1)
+
+all_outputs = torch.Tensor(number_of_tests, testloader.batch_size, model.number_of_classes).to(device)
+
+i = 0
+if True:# for i, data in enumerate(testloader, 0):
+    data = next(get_test_img)
+    inputs, labels = [x.to(device) for x in data]
+
+    to_add_to_all_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(device)
+    predicted = torch.FloatTensor(number_of_tests, testloader.batch_size).to(device)
+    test_idx = 0
+    if True:# for test_idx in range(number_of_tests):
+        output = model(inputs)
+        to_add_to_all_outputs[test_idx] = output
+        predicted[test_idx] = output.argmax(1)
+        test_idx += 1
+    all_outputs = torch.cat((all_outputs, to_add_to_all_outputs), 1)
+    predicted_labels = torch.round(predicted.mean(0)).int()
+    number_of_correct_labels += torch.sum(predicted_labels - labels.int() == 0)
+    number_of_labels += labels.size(0)
+
+print(output.nelement(), output.element_size(), output.nelement() * output.element_size())
+
+print(f'Test accuracy: {round(100 * (number_of_correct_labels / number_of_labels).item(), 2)} %')
+returned1, returned2 = (number_of_correct_labels / number_of_labels).item(), all_outputs
+#%%
+reload(u)
+
+_,testloader = dataset.get_mnist(batch_size=16)
+number_of_tests = 1
+model = bay_net
+
+number_of_samples = torch.zeros(1, requires_grad=False)
+all_correct_labels = torch.zeros(1, requires_grad=False)
+all_uncertainties = torch.zeros(1, requires_grad=False)
+all_dkls = torch.zeros(1, requires_grad=False)
+
+for i, data in enumerate(testloader, 0):
+    inputs, labels = [x.to(device).detach() for x in data]
+    batch_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(
+        device).detach()
+    for test_idx in range(number_of_tests):
+        output = model(inputs)
+        batch_outputs[test_idx] = output.detach()
+    predicted_labels, uncertainty, dkls = u.aggregate_data(batch_outputs)
+
+    all_uncertainties += uncertainty.mean()
+    all_dkls += dkls.mean()
+    all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
+    number_of_samples += labels.size(0)
+
+#%%
+
+reload(t)
+reload(u)
+_,testloader = dataset.get_mnist(batch_size=16)
+number_of_tests = 10
+model = bay_net
+t.test_bayesian(model, testloader, number_of_tests, device)
+
+#%%
+number_of_tests = 20
+seed_random = u.set_and_print_random_seed()
+random_noise = torch.randn(1000,1,28,28).to(device)
+output_random = torch.Tensor(number_of_tests, 1000, 10)
+for test_idx in range(number_of_tests):
+    output_random[test_idx] = bay_net(random_noise).detach()
+_, random_uncertainty, random_dkl = u.aggregate_data(output_random)
+print(random_uncertainty.mean(), random_uncertainty.std())
+
+#%%
+
+bay_net = bm.GaussianClassifierMNIST(rho=1, number_of_classes=10)

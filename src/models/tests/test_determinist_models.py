@@ -1,7 +1,10 @@
-import torch.nn as nn
+import torch
+from torch import nn
+import torch.nn.functional as F
 
-from src.determinist_models import *
-from src.utils import *
+from src.models.determinist_models import DeterministClassifierFunctional, DeterministClassifierSequential, init_same_baynet_detnet
+from src.utils import set_and_print_random_seed, reset_parameters_conv
+
 
 
 class TestResetParametersConv:

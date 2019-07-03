@@ -1,0 +1,42 @@
+
+---
+version: 1
+
+kind: group
+
+environment:
+  resources:
+    gpu:
+      requests: 1
+      limits: 1
+
+hptuning:
+
+  concurrency: 1
+
+  matrix:
+    rho:
+      values: [-5. , -4.5, -4. , -3.5, -3. , -2.5, -2. , -1.5, -1. , -0.5,  0. ,
+               0.5,  1. ,  1.5,  2. ,  2.5,  3. ,  3.5,  4. ,  4.5,  5. ]
+
+    epoch:
+      values: [10]
+
+    number_of_tests:
+      values: [10]
+build:
+  image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8
+  build_steps:
+    - pip install --no-cache-dir -r requirements.txt
+  env_vars:
+    - ['LC_ALL', 'C.UTF-8']
+    - ['PYTHONPATH', '$PYTHONPATH:/code']
+
+run:
+  cmd:
+    # Allow to access the mounted data_folder as if it was in ./data
+    - ln -s /data/theodorea/data ./data
+    # Allow to access the mounted output_folder as if it was in ./output
+    - ln -s $POLYAXON_RUN_OUTPUTS_PATH ./output
+    # Run the pipeline defined in the pipelines folder
+    - python src/experiments/mnist_bay_cnn_init.py --rho {{ rho }} --epoch {{ epoch }} --number_of_tests {{ number_of_tests }}
