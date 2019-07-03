@@ -13,6 +13,7 @@ from src.get_data import get_mnist
 parser = argparse.ArgumentParser()
 parser.add_argument("--rho")
 parser.add_argument("--epoch")
+parser.add_argument("--batch_size")
 parser.add_argument("--number_of_tests")
 parser.add_argument("--loss_type")
 parser.add_argument("--mu_prior")
@@ -21,6 +22,7 @@ args = parser.parse_args()
 
 rho = float(args.rho)
 epoch = int(args.epoch)
+batch_size = int(args.batch_size)
 number_of_tests = int(args.number_of_tests)
 loss_type = args.loss_type
 mu_prior = float(args.mu_prior)
@@ -36,7 +38,7 @@ else:
     device = "cpu"
 device = torch.device(device)
 
-trainloader, testloader = get_mnist()
+trainloader, testloader = get_mnist(batch_size=batch_size)
 
 seed_model = set_and_print_random_seed()
 bay_net = GaussianClassifierMNIST(rho=rho, mus_prior=mus_prior, stds_prior=stds_prior, dim_input=28, number_of_classes=10)

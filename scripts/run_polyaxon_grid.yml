@@ -12,7 +12,7 @@ environment:
 
 hptuning:
 
-  concurrency: 2
+  concurrency: 1
 
   matrix:
     rho:
@@ -21,14 +21,20 @@ hptuning:
     epoch:
       values: [20]
 
+    batch_size:
+      values: [16, 32, 64, 128]
+
     number_of_tests:
       values: [10]
 
+    loss_type:
+      values: ["bbb", "criterion"]
+
     mu_prior:
-      values: [-3., -2., -1.,  0.,  1.,  2.,  3.]
+      values: [0]
 
     std_prior:
-      values: [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 2]
+      values: [1e-1]
 
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8
@@ -46,5 +52,8 @@ run:
     - ln -s /data/theodorea/data ./data
     # Allow to access the mounted output_folder as if it was in ./output
     - ln -s $POLYAXON_RUN_OUTPUTS_PATH ./output
+    # Save experiment script
+    - cp src/experiments/mnist_bay_cnn_init.py ./output
     # Run the pipeline defined in the pipelines folder
-    - python src/experiments/mnist_bay_cnn_init.py --rho {{ rho }} --epoch {{ epoch }} --number_of_tests {{ number_of_tests }} --mu_prior {{ mu_prior }} --std_prior {{ std_prior }}
+    - python src/experiments/mnist_bay_cnn_init.py --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --number_of_tests {{ number_of_tests }} --loss_type {{ loss_type }} --mu_prior {{ mu_prior }} --std_prior {{ std_prior }}
+
