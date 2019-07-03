@@ -47,7 +47,7 @@ bay_net = bm.GaussianClassifierMNIST(-2, (0, 0), (1, 1), number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
-t.train(bay_net, optimizer, criterion, 1, trainloader, device, verbose=True)
+t.train(bay_net, optimizer, criterion, 1, trainloader=trainloader, device=device, verbose=True)
 
 #%%
 
@@ -59,7 +59,7 @@ bay_net = bm.GaussianClassifierMNIST(-5, (0, 0), (1, 1), number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
-t.train_bayesian(bay_net, optimizer, criterion, 5, trainloader, output_dir_tensorboard="/output",
+t.train_bayesian(bay_net, optimizer, criterion, 1, trainloader, output_dir_tensorboard="./output",
                  device=device, verbose=True);
 
 

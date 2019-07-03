@@ -14,6 +14,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--rho")
 parser.add_argument("--epoch")
 parser.add_argument("--number_of_tests")
+parser.add_argument("--loss_type")
 parser.add_argument("--mu_prior")
 parser.add_argument("--std_prior")
 args = parser.parse_args()
@@ -21,6 +22,7 @@ args = parser.parse_args()
 rho = float(args.rho)
 epoch = int(args.epoch)
 number_of_tests = int(args.number_of_tests)
+loss_type = args.loss_type
 mu_prior = float(args.mu_prior)
 std_prior = float(args.std_prior)
 
@@ -43,7 +45,8 @@ criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
 
 losses, loss_llhs, loss_vps, loss_prs, accs = train_bayesian(bay_net, adam_proba, criterion,
-                                                             epoch, trainloader, output_dir_tensorboard='./output',
+                                                             epoch, trainloader, loss_type=loss_type,
+                                                             output_dir_tensorboard='./output',
                                                              device=device, verbose=True)
 test_acc, test_uncertainty, test_dkls = test_bayesian(bay_net, testloader,
                                                       number_of_tests=number_of_tests, device=device)
