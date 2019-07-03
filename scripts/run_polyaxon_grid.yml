@@ -16,17 +16,31 @@ hptuning:
 
   matrix:
     rho:
-      values: [-5. , -4.5, -4. , -3.5, -3. , -2.5, -2. , -1.5, -1. , -0.5,  0. ,
-               0.5,  1. ,  1.5,  2. ,  2.5,  3. ,  3.5,  4. ,  4.5,  5. ]
+      values: [-10.]
 
     epoch:
-      values: [10]
+      values: [20]
+
+    batch_size:
+      values: [16, 32, 64, 128]
 
     number_of_tests:
       values: [10]
+
+    loss_type:
+      values: ["bbb", "criterion"]
+
+    mu_prior:
+      values: [0]
+
+    std_prior:
+      values: [1e-1]
+
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8
   build_steps:
+    - pip uninstall -y tensorflow-gpu
+    - pip uninstall -y tensorboard
     - pip install --no-cache-dir -r requirements.txt
   env_vars:
     - ['LC_ALL', 'C.UTF-8']
@@ -38,5 +52,8 @@ run:
     - ln -s /data/theodorea/data ./data
     # Allow to access the mounted output_folder as if it was in ./output
     - ln -s $POLYAXON_RUN_OUTPUTS_PATH ./output
+    # Save experiment script
+    - cp src/experiments/mnist_bay_cnn_init.py ./output
     # Run the pipeline defined in the pipelines folder
-    - python src/experiments/mnist_bay_cnn_init.py --rho {{ rho }} --epoch {{ epoch }} --number_of_tests {{ number_of_tests }}
+    - python src/experiments/mnist_bay_cnn_init.py --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --number_of_tests {{ number_of_tests }} --loss_type {{ loss_type }} --mu_prior {{ mu_prior }} --std_prior {{ std_prior }}
+

@@ -80,6 +80,8 @@ tabulate==0.8.2
 tb-nightly==1.15.0a20190624
 terminado==0.8.2
 testpath==0.4.2
+torch==1.1.0
+torchvision==0.3.0
 tornado==6.0.2
 tqdm==4.32.2
 traitlets==4.3.2
@@ -90,5 +92,3 @@ websocket-client==0.56.0
 Werkzeug==0.15.4
 widgetsnbextension==3.4.2
 zipp==0.5.1
-https://download.pytorch.org/whl/cu100/torch-1.1.0-cp36-cp36m-linux_x86_64.whl
-https://download.pytorch.org/whl/cu100/torchvision-0.3.0-cp36-cp36m-linux_x86_64.whl

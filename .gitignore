@@ -8,5 +8,5 @@ results/
 .DS_Store
 polyaxon_results/
 .polyaxon/.polyaxongroup
-
+output/
 
