@@ -1,5 +1,4 @@
 #%% Imports
-import os
 
 import matplotlib.pyplot as plt
 from importlib import reload
@@ -7,8 +6,6 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-import torchvision
-import torchvision.transforms as transforms
 import torch.optim as optim
 
 import src.utils as u
@@ -42,33 +39,88 @@ trainloader, testloader = dataset.get_cifar10()
 reload(u)
 reload(bm)
 reload(t)
-trainloader, testloader = dataset.get_mnist(batch_size=16)
-bay_net = bm.GaussianClassifierMNIST(-2, (0, 0), (1, 1), number_of_classes=10)
-bay_net.to(device)
+trainloader, testloader = dataset.get_mnist(batch_size=128)
+det_net = bm.GaussianClassifierMNIST("determinist", (0, 0), (1, 1), number_of_classes=10)
+det_net.to(device)
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(bay_net.parameters())
-t.train(bay_net, optimizer, criterion, 5, trainloader=trainloader, device=device, verbose=True)
+optimizer = optim.Adam(det_net.parameters())
+t.train(det_net, optimizer, criterion, 3, output_dir_results='sandbox_results/det',
+        trainloader=trainloader, device=device, verbose=True)
 
- #%%
+#%%
 
 reload(u)
 reload(bm)
 reload(t)
-trainloader, testloader = dataset.get_mnist(batch_size=16)
+trainloader, testloader = dataset.get_mnist(batch_size=128)
 bay_net = bm.GaussianClassifierMNIST(-5, (0, 0), (1, 1), number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
-t.train_bayesian(bay_net, optimizer, criterion, 2, trainloader, output_dir_tensorboard="./output",
+t.train_bayesian(bay_net, optimizer, criterion, 3, trainloader,
+                 loss_type="bbb",
+                 output_dir_results='sandbox_results/bbb_stepped',
+                 output_dir_tensorboard="./output",
                  device=device, verbose=True);
+
+#%%
+reload(u)
+weights_paths = u.get_file_path_in_dir('sandbox_results/bbb_stepped')
+weights_norms = []
+for path in weights_paths:
+    model = bm.GaussianClassifierMNIST(rho=1)
+    model.load_state_dict(torch.load(path))
+    weights_norms.append(u.compute_weights_norm(model))
+
+plt.plot(weights_norms)
+plt.title("bbb_stepped")
+plt.show()
+#%%
+reload(u)
+weights_paths = u.get_file_path_in_dir('sandbox_results/ce')
+weights_norms = []
+for path in weights_paths:
+    model = bm.GaussianClassifierMNIST()
+    model.load_state_dict(torch.load(path))
+    weights_norms.append(u.compute_weights_norm(model))
+
+plt.plot(weights_norms)
+plt.title("cross entropy")
+plt.show()
+#%%
+weights_paths = u.get_file_path_in_dir('sandbox_results/det')
+weights_norms = []
+for path in weights_paths:
+    model = bm.GaussianClassifierMNIST(rho="determinist")
+    model.load_state_dict(torch.load(path))
+    weights_norms.append(u.compute_weights_norm(model))
+
+plt.plot(weights_norms)
+plt.title("determinist")
+plt.show()
+
+# %%
+t.test_bayesian(bay_net, testloader, 15, device)
+
+#%%
+
+t.test(det_net, testloader, device)
+
+
+#%%
+
 
 
 
 #%%
 
-prev_weights, prev_bias = bay_net.get_previous_weights()
-vp = bay_net.variational_posterior(prev_weights, prev_bias)
-pl = bay_net.prior(prev_weights, prev_bias)
+_, testloader = dataset.get_mnist(batch_size=128)
+get_test_img = iter(testloader)
+img, label = next(get_test_img)
+#%%
+outpt = bay_net(img)
+print("predicted:", np.unique(outpt.argmax(1), return_counts=1))
+print("true:", np.unique(label, return_counts=1))
 
 #%%
 

@@ -165,7 +165,7 @@ class GaussianLinear(nn.Linear):
 
 class GaussianClassifierMNIST(nn.Module):
 
-    def __init__(self, rho, mus_prior=(0,0), stds_prior=None,
+    def __init__(self, rho=-5, mus_prior=(0,0), stds_prior=None,
                  number_of_classes=10, dim_input=28):
         super().__init__()
         if rho == "determinist" :
@@ -181,16 +181,17 @@ class GaussianClassifierMNIST(nn.Module):
         self.dim_input = dim_input
         self.number_of_classes = number_of_classes
 
-        mu_prior, mu_bias_prior = mus_prior
-        self.mu_prior_init = mu_prior
-        self.mu_bias_prior_init = mu_bias_prior
-        if stds_prior is not None:
-            std_prior, std_bias_prior = stds_prior
-        else:
-            std_prior = math.log(math.exp(rho)+1)
-            std_bias_prior = math.log(math.exp(rho)+1)
-        self.std_prior_init = std_prior
-        self.std_bias_prior_init = std_bias_prior
+        if not self.determinist:
+            mu_prior, mu_bias_prior = mus_prior
+            self.mu_prior_init = mu_prior
+            self.mu_bias_prior_init = mu_bias_prior
+            if stds_prior is not None:
+                std_prior, std_bias_prior = stds_prior
+            else:
+                std_prior = math.log(math.exp(rho)+1)
+                std_bias_prior = math.log(math.exp(rho)+1)
+            self.std_prior_init = std_prior
+            self.std_bias_prior_init = std_bias_prior
 
         self.gaussian_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(16)
@@ -282,7 +283,7 @@ class GaussianClassifierMNIST(nn.Module):
         std_bias = torch.log(1+torch.exp(rho_bias))
 
         return -1/2 * ((torch.sum((weights - mu)**2 / std) + torch.sum((bias - mu_bias)**2 / std_bias)) +
-                       torch.sum(torch.log(std)) + torch.sum(torch.log(std_bias)))
+                       2*torch.sum(torch.log(std)) + 2*torch.sum(torch.log(std_bias)))
 
     def prior(self, weights, bias):
         '''
@@ -295,7 +296,7 @@ class GaussianClassifierMNIST(nn.Module):
             prior_loss (torch.Tensor): size (1)
         '''
         return -1/2 * ((torch.sum((weights - self.mu_prior)**2 / self.std_prior) +
-                        torch.sum((bias - self.mu_bias_prior)**2 / self.std_bias_prior)))
+                  torch.sum((bias - self.mu_bias_prior)**2 / self.std_bias_prior)))
 
     def get_previous_weights(self, output='vector'):
 
@@ -346,7 +347,7 @@ class GaussianClassifierMNIST(nn.Module):
         self.init_prior()
 
 
-class GaussianClassifierMNIST(nn.Module):
+class GaussianClassifierMNIST_NoBatchNorm(nn.Module):
 
     def __init__(self, rho, mus_prior=(0,0), stds_prior=None,
                  number_of_classes=10, dim_input=28):
@@ -376,10 +377,8 @@ class GaussianClassifierMNIST(nn.Module):
         self.std_bias_prior_init = std_bias_prior
 
         self.gaussian_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(16)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.gaussian_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(32)
         self.pool2 = nn.MaxPool2d(2, 2)
         self.gaussian_linear = GaussianLinear(rho, 32 * self.dim_input//4*self.dim_input//4, number_of_classes)
 
@@ -415,9 +414,9 @@ class GaussianClassifierMNIST(nn.Module):
             do_determinist = determinist
         else:
             do_determinist = self.determinist
-        output = self.bn1(self.gaussian_conv1(x, determinist=do_determinist))
+        output = self.gaussian_conv1(x, determinist=do_determinist)
         output = self.pool1(F.relu(output))
-        output = self.bn2(self.gaussian_conv2(output, determinist=do_determinist))
+        output = self.gaussian_conv2(output, determinist=do_determinist)
         output = self.pool2(F.relu(output))
         output = output.view(-1, 32*self.dim_input//4*self.dim_input//4)
 

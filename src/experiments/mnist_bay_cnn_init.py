@@ -5,7 +5,7 @@ import torch.optim as optim
 from torch.nn import CrossEntropyLoss
 
 from src.models.bayesian_models import GaussianClassifierMNIST
-from src.trains import train, test, test_bayesian, train_bayesian
+from src.trains import train, test, test_bayesian, train_bayesian, test_random
 from src.utils import set_and_print_random_seed, aggregate_data
 from src.get_data import get_mnist
 
@@ -28,6 +28,11 @@ loss_type = args.loss_type
 mu_prior = float(args.mu_prior)
 std_prior = float(args.std_prior)
 
+if mu_prior is None:
+    mu_prior = 0
+
+if std_prior is None:
+    std_prior = 1
 
 mus_prior = (mu_prior, mu_prior)
 stds_prior = (std_prior, std_prior)
@@ -46,30 +51,29 @@ bay_net.to(device)
 criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
 
-losses, loss_llhs, loss_vps, loss_prs, accs = train_bayesian(bay_net, adam_proba, criterion,
+losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc, i_max_acc = train_bayesian(bay_net,
+                                                             adam_proba, criterion,
                                                              epoch, trainloader, loss_type=loss_type,
                                                              output_dir_tensorboard='./output',
+                                                             output_dir_results="./output/weights_training",
                                                              device=device, verbose=True)
 test_acc, test_uncertainty, test_dkls = test_bayesian(bay_net, testloader,
                                                       number_of_tests=number_of_tests, device=device)
-
-
-seed_random = set_and_print_random_seed()
-random_noise = torch.randn(16,1,28,28).to(device)
-output_random = torch.Tensor(number_of_tests, 16, 10)
-for test_idx in range(number_of_tests):
-    output_random[test_idx] = bay_net(random_noise).detach()
-_, random_uncertainty, random_dkl = aggregate_data(output_random)
+random_uncertainty, random_dkl, seed_random = test_random(bay_net, batch_size, 1, 28, number_of_tests,
+                                                          number_of_classes=10, device=device)
 
 res = dict({
     "number of epochs": epoch,
+    "batch_size": batch_size,
     "number of tests": number_of_tests,
     "seed_model": seed_model,
-    "mu_prior": 0,
-    "stds_prior": 1,
+    "mu_prior": mu_prior,
+    "stds_prior": std_prior,
     "rho": rho,
     "sigma initial": log(1 + exp(rho)),
     "train accuracy": accs,
+    "train max acc": max_acc,
+    "train max acc epoch": epoch_max_acc,
     "train loss": losses,
     "train loss llh": loss_llhs,
     "train loss vp": loss_vps,
@@ -83,4 +87,4 @@ res = dict({
 })
 
 torch.save(res, "./output/results.pt")
-torch.save(bay_net.state_dict(), "./output/weights.pt")
+torch.save(bay_net.state_dict(), "./output/final_weights.pt")

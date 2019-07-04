@@ -3,22 +3,27 @@ import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from src.utils import aggregate_data
+from src.utils import aggregate_data, set_and_print_random_seed
 
 
 def train(model, optimizer, criterion, number_of_epochs, trainloader,
-          output_dir_tensorboard=None, device="cpu", verbose = False):
+          output_dir_tensorboard=None, output_dir_results='sandbox_results', device="cpu", verbose = False):
     return train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader,
                  loss_type='criterion',output_dir_tensorboard=output_dir_tensorboard,
-                 device=device, verbose=verbose)
+                 output_dir_results= output_dir_results, device=device, verbose=verbose)
 
 
 def test(model, testloader, device):
     return test_bayesian(model, testloader, number_of_tests=1, device=device)
 
 
+def uniform(batch_index,number_of_batchs):
+    return 1/number_of_batchs
+
+
 def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, loss_type='bbb',
-                   output_dir_tensorboard=None, device="cpu", verbose=False):
+                   step_function=uniform,
+                   output_dir_tensorboard=None, output_dir_results=None, device="cpu", verbose=False):
     '''
     Train the model in a bayesian fashion, meaning the loss is different.
     Args:
@@ -27,7 +32,8 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
         criterion (function): how do we compute the likelihood
         number_of_epochs (int): how long do we train our model
         trainloader (torch.utils.data.dataloader.DataLoader): train data
-        loss (str): which type of loss. Chose "bbb" (Bayes By Backprop) or "criterion" (CrossEntropy)
+        loss_type (str): which type of loss. Chose "bbb" (Bayes By Backprop) or "criterion" (CrossEntropy)
+        step_function (function): takes as args (number of batchs, length of batch) and returns the weight to give to KL
         output_dir_tensorboard (str): output directory in which to save the tensorboard
         device (torch.device || str): cpu or gpu
         verbose (Bool): print training steps or not
@@ -38,6 +44,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
         loss_vps (list): list of the variational posterior loss for each epoch (q(W|D))
         loss_prs (list): list of the prior loss for each epoch (P(W))
         train_accs (list): list of the accuracies for each epoch
+        max_acc (float): the maximum accuracy obtained by the net
+        epoch_max_acc (int): the epoch where the max acc is obtained
+        i_max_acc (int): the batch_idx where the epoch is obtained
 
     '''
 
@@ -49,6 +58,12 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             writer_loss_pr = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_pr"))
         writer_accs = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "accuracy"))
         tensorboard_idx = 0
+    if output_dir_results is not None:
+        weights_writer_idx = 0
+        if not os.path.exists(output_dir_results):
+            os.mkdir(output_dir_results)
+
+    max_acc = 0
 
     model.train()
     loss_accs = [list() for _ in range(number_of_epochs)]
@@ -70,6 +85,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
         number_of_labels = 0
 
         for i, data in enumerate(trainloader, 0):
+            M = len(trainloader)
+            kl_weight = step_function(i, M)
+
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = [x.to(device) for x in data]
 
@@ -83,7 +101,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
                 weights_used, bias_used = model.get_previous_weights()
                 loss_varational_posterior = model.variational_posterior(weights_used, bias_used)
                 loss_prior = -model.prior(weights_used, bias_used)
-                loss = loss_varational_posterior + loss_prior + loss_likelihood
+                loss = kl_weight*(loss_varational_posterior + loss_prior) + loss_likelihood
             elif loss_type == 'criterion':
                 loss = loss_likelihood
             else:
@@ -109,6 +127,10 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
                     current_loss_vp = running_loss_vp / number_of_data
                     current_loss_pr = running_loss_pr / number_of_data
                 current_acc = number_of_correct_labels / number_of_labels
+                if max_acc < current_acc:
+                    max_acc = current_acc
+                    epoch_max_acc = epoch
+                    i_max_acc = i
                 if verbose:
                     if loss_type == 'bbb':
                         print(f'Train: [{epoch + 1}, {i + 1}/{number_of_data}] '
@@ -138,6 +160,11 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
                     writer_accs.add_scalar('Train accuracy', current_acc, tensorboard_idx)
                     tensorboard_idx += 1
 
+                if output_dir_results is not None:
+                    file_idx = 'weight' + str(weights_writer_idx) + '.pt'
+                    torch.save(model.state_dict(), os.path.join(output_dir_results, file_idx))
+                    weights_writer_idx += 1
+
                 running_loss = 0.0
                 if loss_type == 'bbb':
                     running_loss_llh = 0.0
@@ -154,9 +181,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             writer.close()
     print('Finished Training')
     if loss_type == 'bbb':
-        return loss_accs, loss_llhs, loss_vps, loss_prs, train_accs
+        return loss_accs, loss_llhs, loss_vps, loss_prs, train_accs, max_acc, epoch_max_acc, i_max_acc
     else:
-        return loss_accs, 0, 0, 0, train_accs
+        return loss_accs, [[0]], [[0]], [[0]], train_accs, max_acc, epoch_max_acc, i_max_acc
 
 
 def test_bayesian(model, testloader, number_of_tests, device):
@@ -182,3 +209,13 @@ def test_bayesian(model, testloader, number_of_tests, device):
     accuracy = (all_correct_labels / number_of_samples).item()
 
     return accuracy, all_uncertainties, all_dkls
+
+
+def test_random(model, batch_size, img_channels, img_dim, number_of_tests, number_of_classes, random_seed=None, device='cpu'):
+    seed = set_and_print_random_seed(random_seed)
+    random_noise = torch.randn(batch_size, img_channels, img_dim, img_dim).to(device)
+    output_random = torch.Tensor(number_of_tests, batch_size, number_of_classes)
+    for test_idx in range(number_of_tests):
+        output_random[test_idx] = model(random_noise).detach()
+    _, random_uncertainty, random_dkl = aggregate_data(output_random)
+    return random_uncertainty, random_dkl, seed

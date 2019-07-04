@@ -10,6 +10,7 @@ var
 data
 results
 polyaxon_results
+sandbox_results
 *.pyc
 *.swp
 .DS_Store
