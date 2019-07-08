@@ -7,3 +7,6 @@ write-results-csv:
 pull-and-write-csv:
 	make pull-output
 	make write-results-csv $(GROUP_NB)
+
+test:
+	python -m pytest src/
