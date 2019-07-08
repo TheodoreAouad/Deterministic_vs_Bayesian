@@ -7,14 +7,14 @@ from src.utils import aggregate_data, set_and_print_random_seed
 
 
 def train(model, optimizer, criterion, number_of_epochs, trainloader,
-          output_dir_tensorboard=None, output_dir_results='sandbox_results', device="cpu", verbose = False):
+          output_dir_tensorboard=None, output_dir_results='sandbox_results', device='cpu', verbose = False):
     return train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader,
-                 loss_type='criterion',output_dir_tensorboard=output_dir_tensorboard,
-                 output_dir_results= output_dir_results, device=device, verbose=verbose)
+                          loss_type='criterion', output_dir_tensorboard=output_dir_tensorboard,
+                          output_dir_results= output_dir_results, device=device, verbose=verbose)
 
 
-def test(model, testloader, device):
-    return test_bayesian(model, testloader, number_of_tests=1, device=device)
+def eval(model, testloader, device):
+    return eval_bayesian(model, testloader, number_of_tests=1, device=device)
 
 
 def uniform(batch_index,number_of_batchs):
@@ -32,7 +32,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
         criterion (function): how do we compute the likelihood
         number_of_epochs (int): how long do we train our model
         trainloader (torch.utils.data.dataloader.DataLoader): train data
-        loss_type (str): which type of loss. Chose "bbb" (Bayes By Backprop) or "criterion" (CrossEntropy)
+        loss_type (str): which type of loss. "bbb" (Bayes By Backprop) or "criterion" (CrossEntropy)
         step_function (function): takes as args (number of batchs, length of batch) and returns the weight to give to KL
         output_dir_tensorboard (str): output directory in which to save the tensorboard
         device (torch.device || str): cpu or gpu
@@ -84,9 +84,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
         number_of_correct_labels = 0
         number_of_labels = 0
 
-        for i, data in enumerate(trainloader, 0):
-            M = len(trainloader)
-            kl_weight = step_function(i, M)
+        for batch_idx, data in enumerate(trainloader, 0):
+            number_of_batchs = len(trainloader)
+            kl_weight = step_function(batch_idx, number_of_batchs)
 
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = [x.to(device) for x in data]
@@ -120,7 +120,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             predicted_labels = outputs.argmax(1)
             number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
             number_of_labels += labels.size(0)
-            if i % interval == interval - 1:
+            if batch_idx % interval == interval - 1:
                 current_loss = running_loss / number_of_data
                 if loss_type == 'bbb':
                     current_loss_llh = running_loss_llh / number_of_data
@@ -130,17 +130,17 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
                 if max_acc < current_acc:
                     max_acc = current_acc
                     epoch_max_acc = epoch
-                    i_max_acc = i
+                    batch_idx_max_acc = batch_idx
                 if verbose:
                     if loss_type == 'bbb':
-                        print(f'Train: [{epoch + 1}, {i + 1}/{number_of_data}] '
+                        print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_data}] '
                               f'Acc: {round(100 * current_acc, 2)} %, '
                               f'loss: {round(current_loss, 2)}, '
                               f'loss_llh: {round(current_loss_llh, 2)}, '
                               f'loss_vp: {round(current_loss_vp, 2)}, '
                               f'loss_pr: {round(current_loss_pr, 2)}')
                     else:
-                        print(f'Train: [{epoch + 1}, {i + 1}/{number_of_data}] '
+                        print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_data}] '
                               f'Acc: {round(100 * current_acc, 2)} %, '
                               f'loss: {round(current_loss, 2)}')
 
@@ -181,12 +181,12 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             writer.close()
     print('Finished Training')
     if loss_type == 'bbb':
-        return loss_accs, loss_llhs, loss_vps, loss_prs, train_accs, max_acc, epoch_max_acc, i_max_acc
+        return loss_accs, loss_llhs, loss_vps, loss_prs, train_accs, max_acc, epoch_max_acc, batch_idx_max_acc
     else:
-        return loss_accs, [[0]], [[0]], [[0]], train_accs, max_acc, epoch_max_acc, i_max_acc
+        return loss_accs, [[0]], [[0]], [[0]], train_accs, max_acc, epoch_max_acc, batch_idx_max_acc
 
 
-def test_bayesian(model, testloader, number_of_tests, device):
+def eval_bayesian(model, testloader, number_of_tests, device):
 
     model.eval()
     number_of_samples = len(testloader.dataset)
@@ -194,7 +194,7 @@ def test_bayesian(model, testloader, number_of_tests, device):
     all_uncertainties = torch.Tensor().to(device).detach()
     all_dkls = torch.Tensor().to(device).detach()
 
-    for i, data in enumerate(testloader):
+    for batch_idx, data in enumerate(testloader):
         inputs, labels = [x.to(device).detach() for x in data]
         batch_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(device).detach()
         for test_idx in range(number_of_tests):

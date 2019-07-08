@@ -8,9 +8,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+import src.models.bayesian_models.bayesian_base_layers
 import src.utils as u
 import src.models.determinist_models as dm
-import src.trains as t
+import src.tasks.trains as t
 import src.get_data as dataset
 import src.models.bayesian_models as bm
 
@@ -100,11 +101,11 @@ plt.title("determinist")
 plt.show()
 
 # %%
-t.test_bayesian(bay_net, testloader, 15, device)
+t.eval_bayesian(bay_net, testloader, 15, device)
 
 #%%
 
-t.test(det_net, testloader, device)
+t.eval(det_net, testloader, device)
 
 
 #%%
@@ -155,7 +156,7 @@ class MiniTestLoader:
 
 
 mini_testloader = MiniTestLoader(img, label)
-acc, unc, dkls = t.test_bayesian(bay_net, mini_testloader, 15, device)
+acc, unc, dkls = t.eval_bayesian(bay_net, mini_testloader, 15, device)
 
 #%%
 
@@ -218,7 +219,7 @@ reload(u)
 _,testloader = dataset.get_mnist(batch_size=16)
 number_of_tests = 10
 model = bay_net
-t.test_bayesian(model, testloader, number_of_tests, device)
+t.eval_bayesian(model, testloader, number_of_tests, device)
 
 #%%
 number_of_tests = 20
@@ -232,7 +233,7 @@ print(random_uncertainty.mean(), random_uncertainty.std())
 
 #%%
 
-bay_conv = bm.GaussianCNN(-1,1,16,3)
+bay_conv = src.models.bayesian_models.bayesian_base_layers.GaussianCNN(-1, 1, 16, 3)
 lp = bay_conv.bayesian_parameters()
 lpp = bay_conv.named_bayesian_parameters()
 

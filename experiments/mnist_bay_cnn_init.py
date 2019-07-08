@@ -5,8 +5,8 @@ import torch.optim as optim
 from torch.nn import CrossEntropyLoss
 
 from src.models.bayesian_models import GaussianClassifierMNIST
-from src.trains import train, test, test_bayesian, train_bayesian, test_random
-from src.utils import set_and_print_random_seed, aggregate_data
+from src.tasks.trains import eval_bayesian, train_bayesian, test_random
+from src.utils import set_and_print_random_seed
 from src.get_data import get_mnist
 
 
@@ -51,13 +51,13 @@ bay_net.to(device)
 criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
 
-losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc, i_max_acc = train_bayesian(bay_net,
-                                                             adam_proba, criterion,
-                                                             epoch, trainloader, loss_type=loss_type,
-                                                             output_dir_tensorboard='./output',
-                                                             output_dir_results="./output/weights_training",
-                                                             device=device, verbose=True)
-test_acc, test_uncertainty, test_dkls = test_bayesian(bay_net, testloader,
+losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc, batch_idx_max_acc = train_bayesian(bay_net,
+                                                                                                        adam_proba, criterion,
+                                                                                                        epoch, trainloader, loss_type=loss_type,
+                                                                                                        output_dir_tensorboard='./output',
+                                                                                                        output_dir_results="./output/weights_training",
+                                                                                                        device=device, verbose=True)
+test_acc, test_uncertainty, test_dkls = eval_bayesian(bay_net, testloader,
                                                       number_of_tests=number_of_tests, device=device)
 random_uncertainty, random_dkl, seed_random = test_random(bay_net, batch_size, 1, 28, number_of_tests,
                                                           number_of_classes=10, device=device)

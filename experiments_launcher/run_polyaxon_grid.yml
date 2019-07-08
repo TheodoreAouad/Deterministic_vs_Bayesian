@@ -16,7 +16,7 @@ hptuning:
 
   matrix:
     rho:
-      values: [-10., -5, -4, -3, -2]
+      values: [-10, -5, -4, -3, -2]
 
     epoch:
       values: [20]
@@ -34,7 +34,7 @@ hptuning:
       values: [0]
 
     std_prior:
-      values: [1, 1e-1, 1e-2, 1e-3]
+      values: [1e0, 1e-1, 1e-2, 1e-3]
 
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8

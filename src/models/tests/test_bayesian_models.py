@@ -1,8 +1,7 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
 
-from src.models.bayesian_models import GaussianCNN, GaussianLinear
+from src.models.bayesian_models.bayesian_base_layers import GaussianLinear, GaussianCNN
 from src.utils import set_and_print_random_seed
 
 

@@ -10,4 +10,3 @@ polyaxon_results/
 sandbox_results/
 .polyaxon/.polyaxongroup
 output/
-src/mnist_example.py
