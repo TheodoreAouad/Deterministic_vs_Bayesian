@@ -88,17 +88,14 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
 
             # forward + backward + optimize
             outputs = model(inputs)
-            loss_likelihood = criterion(outputs, labels)
-            if loss_type == 'bbb':
-                weights_used, bias_used = model.get_previous_weights()
-                loss_varational_posterior = model.variational_posterior(weights_used, bias_used)
-                loss_prior = -model.prior(weights_used, bias_used)
-                loss = kl_weight*(loss_varational_posterior + loss_prior) + loss_likelihood
-            elif loss_type == 'criterion':
-                loss = loss_likelihood
-            else:
-                raise ValueError('Loss must be either "bbb" for Bayes By Backprop,'
-                                 'or "criterion" for CrossEntropy. No other loss is implented.')
+
+            kl_weight = step_function(batch_idx, number_of_batch)
+            loss, loss_likelihood, loss_varational_posterior, loss_prior = get_loss(model,
+                                                                                    loss_type,
+                                                                                    outputs,
+                                                                                    labels,
+                                                                                    criterion,
+                                                                                    kl_weight)
 
             loss.backward()
             optimizer.step()
@@ -196,3 +193,34 @@ def get_loss_writers(output_dir_tensorboard, loss_type):
         writer_loss_llh, writer_loss_vp, writer_loss_pr = None, None, None
     writer_accs = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "accuracy"))
     return writer_loss, writer_loss_llh, writer_loss_vp, writer_loss_pr, writer_accs
+
+
+def get_loss(model, loss_type, outputs, labels, criterion, kl_weight):
+    """
+    Returns the loss of the model
+    Args:
+        model:
+        loss_type:
+        loss_likelihood:
+        outputs:
+        labels:
+        criterion:
+        kl_weight
+
+    Returns:
+
+    """
+    loss_likelihood = criterion(outputs, labels)
+    if loss_type == 'bbb':
+        weights_used, bias_used = model.get_previous_weights()
+        loss_varational_posterior = model.variational_posterior(weights_used, bias_used)
+        loss_prior = -model.prior(weights_used, bias_used)
+        loss = kl_weight * (loss_varational_posterior + loss_prior) + loss_likelihood
+        return loss, loss_likelihood, loss_varational_posterior, loss_prior
+    elif loss_type == 'criterion':
+        loss = loss_likelihood
+        return loss, loss_likelihood, None, None
+    else:
+        raise ValueError('Loss must be either "bbb" for Bayes By Backprop,'
+                         'or "criterion" for CrossEntropy. No other loss is implented.')
+
