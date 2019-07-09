@@ -7,7 +7,7 @@ from torch.nn import CrossEntropyLoss
 from src.models.bayesian_models import GaussianClassifierCIFAR
 from src.tasks.trains import train, eval_bayesian
 from src.utils import set_and_print_random_seed, aggregate_data
-from src.get_data import get_cifar10
+from src.dataset_manager.get_data import get_cifar10
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--rho")
