@@ -5,7 +5,8 @@ import torch.optim as optim
 from torch.nn import CrossEntropyLoss
 
 from src.models.bayesian_models import GaussianClassifierMNIST
-from src.tasks.trains import eval_bayesian, train_bayesian, test_random
+from src.tasks.trains import train_bayesian
+from src.task.eval import eval_bayesian, eval_random
 from src.utils import set_and_print_random_seed
 from src.get_data import get_mnist
 
@@ -59,7 +60,7 @@ losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc, batch_idx_m
                                                                                                         device=device, verbose=True)
 test_acc, test_uncertainty, test_dkls = eval_bayesian(bay_net, testloader,
                                                       number_of_tests=number_of_tests, device=device)
-random_uncertainty, random_dkl, seed_random = test_random(bay_net, batch_size, 1, 28, number_of_tests,
+random_uncertainty, random_dkl, seed_random = eval_random(bay_net, batch_size, 1, 28, number_of_tests,
                                                           number_of_classes=10, device=device)
 
 res = dict({

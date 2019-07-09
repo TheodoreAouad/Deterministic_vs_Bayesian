@@ -3,8 +3,6 @@ import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from src.utils import aggregate_data, set_and_print_random_seed
-
 
 def train(model, optimizer, criterion, number_of_epochs, trainloader,
           output_dir_tensorboard=None, output_dir_results='sandbox_results', device='cpu', verbose = False):
@@ -13,18 +11,13 @@ def train(model, optimizer, criterion, number_of_epochs, trainloader,
                           output_dir_results= output_dir_results, device=device, verbose=verbose)
 
 
-def eval(model, testloader, device):
-    return eval_bayesian(model, testloader, number_of_tests=1, device=device)
-
-
-def uniform(batch_index,number_of_batchs):
+def uniform(_, number_of_batchs):
     return 1/number_of_batchs
 
 
-def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, loss_type='bbb',
-                   step_function=uniform,
+def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, loss_type='bbb', step_function=uniform,
                    output_dir_tensorboard=None, output_dir_results=None, device="cpu", verbose=False):
-    '''
+    """
     Train the model in a bayesian fashion, meaning the loss is different.
     Args:
         model (Torch.nn.Module child): the model we want to train
@@ -48,15 +41,12 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
         epoch_max_acc (int): the epoch where the max acc is obtained
         i_max_acc (int): the batch_idx where the epoch is obtained
 
-    '''
+    """
+
 
     if output_dir_tensorboard is not None:
-        writer_loss = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "total_loss"))
-        if loss_type == 'bbb':
-            writer_loss_llh = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_llh"))
-            writer_loss_vp = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_vp"))
-            writer_loss_pr = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_pr"))
-        writer_accs = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "accuracy"))
+        writer_loss, writer_loss_llh, writer_loss_vp, writer_loss_pr, writer_accs = get_loss_writers(
+            output_dir_tensorboard, loss_type)
         tensorboard_idx = 0
     if output_dir_results is not None:
         weights_writer_idx = 0
@@ -64,18 +54,19 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             os.mkdir(output_dir_results)
 
     max_acc = 0
+    number_of_data = len(trainloader)
+    interval = number_of_data // 10
+
+    loss_accs = [[] for _ in range(number_of_epochs)]
+    if loss_type == 'bbb':
+        loss_llhs = [[] for _ in range(number_of_epochs)]
+        loss_vps = [[] for _ in range(number_of_epochs)]
+        loss_prs = [[] for _ in range(number_of_epochs)]
+    train_accs = [[] for _ in range(number_of_epochs)]
 
     model.train()
-    loss_accs = [list() for _ in range(number_of_epochs)]
-    if loss_type == 'bbb':
-        loss_llhs = [list() for _ in range(number_of_epochs)]
-        loss_vps = [list() for _ in range(number_of_epochs)]
-        loss_prs = [list() for _ in range(number_of_epochs)]
-    train_accs = [list() for _ in range(number_of_epochs)]
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
 
-        number_of_data = len(trainloader)
-        interval = number_of_data // 10
         running_loss = 0.0
         if loss_type == 'bbb':
             running_loss_llh = 0.0
@@ -83,6 +74,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             running_loss_pr = 0.0
         number_of_correct_labels = 0
         number_of_labels = 0
+
 
         for batch_idx, data in enumerate(trainloader, 0):
             number_of_batchs = len(trainloader)
@@ -171,7 +163,6 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
                     running_loss_vp = 0.0
                     running_loss_pr = 0.0
 
-
     if output_dir_tensorboard is not None:
         if loss_type == 'bbb':
             to_close = [writer_loss, writer_loss_llh, writer_loss_vp, writer_loss_pr, writer_accs]
@@ -186,36 +177,22 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
         return loss_accs, [[0]], [[0]], [[0]], train_accs, max_acc, epoch_max_acc, batch_idx_max_acc
 
 
-def eval_bayesian(model, testloader, number_of_tests, device):
+def get_loss_writers(output_dir_tensorboard, loss_type):
+    """
+    Return initialized loss writers
+    Args:
+        loss_type (str): the typeof the loss
 
-    model.eval()
-    number_of_samples = len(testloader.dataset)
-    all_correct_labels = torch.zeros(1, requires_grad=False)
-    all_uncertainties = torch.Tensor().to(device).detach()
-    all_dkls = torch.Tensor().to(device).detach()
+    Returns:
+        Tuple[SummaryWriter, SummaryWriter, SummaryWriter, SummaryWriter, SummaryWriter]
 
-    for batch_idx, data in enumerate(testloader):
-        inputs, labels = [x.to(device).detach() for x in data]
-        batch_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(device).detach()
-        for test_idx in range(number_of_tests):
-            output = model(inputs)
-            batch_outputs[test_idx] = output.detach()
-        predicted_labels, uncertainty, dkls = aggregate_data(batch_outputs)
-
-        all_uncertainties = torch.cat((all_uncertainties, uncertainty))
-        all_dkls = torch.cat((all_dkls, dkls))
-        all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
-
-    accuracy = (all_correct_labels / number_of_samples).item()
-
-    return accuracy, all_uncertainties, all_dkls
-
-
-def test_random(model, batch_size, img_channels, img_dim, number_of_tests, number_of_classes, random_seed=None, device='cpu'):
-    seed = set_and_print_random_seed(random_seed)
-    random_noise = torch.randn(batch_size, img_channels, img_dim, img_dim).to(device)
-    output_random = torch.Tensor(number_of_tests, batch_size, number_of_classes)
-    for test_idx in range(number_of_tests):
-        output_random[test_idx] = model(random_noise).detach()
-    _, random_uncertainty, random_dkl = aggregate_data(output_random)
-    return random_uncertainty, random_dkl, seed
+    """
+    writer_loss = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "total_loss"))
+    if loss_type == 'bbb':
+        writer_loss_llh = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_llh"))
+        writer_loss_vp = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_vp"))
+        writer_loss_pr = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_pr"))
+    else:
+        writer_loss_llh, writer_loss_vp, writer_loss_pr = None, None, None
+    writer_accs = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "accuracy"))
+    return writer_loss, writer_loss_llh, writer_loss_vp, writer_loss_pr, writer_accs
