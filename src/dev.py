@@ -13,12 +13,12 @@ import src.utils as u
 import src.models.determinist_models as dm
 import src.tasks.trains as t
 import src.get_data as dataset
-import src.models.bayesian_models as bm
+import src.models.bayesian_models.gaussian_classifiers as gc
 
 reload(u)
 reload(t)
 reload(dm)
-reload(bm)
+reload(gc)
 reload(dataset)
 
 if torch.cuda.is_available():
@@ -38,10 +38,10 @@ trainloader, testloader = dataset.get_cifar10()
 
 #%%
 reload(u)
-reload(bm)
+reload(gc)
 reload(t)
 trainloader, testloader = dataset.get_mnist(batch_size=128)
-det_net = bm.GaussianClassifierMNIST("determinist", (0, 0), (1, 1), number_of_classes=10)
+det_net = gc.GaussianClassifierMNIST("determinist", (0, 0), (1, 1), number_of_classes=10)
 det_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(det_net.parameters())
@@ -51,14 +51,14 @@ t.train(det_net, optimizer, criterion, 3, output_dir_results='sandbox_results/de
 #%%
 
 reload(u)
-reload(bm)
+reload(gc)
 reload(t)
-trainloader, testloader = dataset.get_mnist(batch_size=128)
-bay_net = bm.GaussianClassifierMNIST(-5, (0, 0), (1, 1), number_of_classes=10)
+trainloader, testloader = dataset.get_mnist(batch_size=1)
+bay_net = gc.GaussianClassifierMNIST(-5, (0, 0), (1, 1), number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
-t.train_bayesian(bay_net, optimizer, criterion, 3, trainloader,
+t.train_bayesian(bay_net, optimizer, criterion, 2, trainloader,
                  loss_type="bbb",
                  output_dir_results='sandbox_results/bbb_stepped',
                  output_dir_tensorboard="./output",
@@ -69,7 +69,7 @@ reload(u)
 weights_paths = u.get_file_path_in_dir('sandbox_results/bbb_stepped')
 weights_norms = []
 for path in weights_paths:
-    model = bm.GaussianClassifierMNIST(rho=1)
+    model = gc.GaussianClassifierMNIST(rho=1)
     model.load_state_dict(torch.load(path))
     weights_norms.append(u.compute_weights_norm(model))
 
@@ -81,7 +81,7 @@ reload(u)
 weights_paths = u.get_file_path_in_dir('sandbox_results/ce')
 weights_norms = []
 for path in weights_paths:
-    model = bm.GaussianClassifierMNIST()
+    model = gc.GaussianClassifierMNIST()
     model.load_state_dict(torch.load(path))
     weights_norms.append(u.compute_weights_norm(model))
 
@@ -92,7 +92,7 @@ plt.show()
 weights_paths = u.get_file_path_in_dir('sandbox_results/det')
 weights_norms = []
 for path in weights_paths:
-    model = bm.GaussianClassifierMNIST(rho="determinist")
+    model = gc.GaussianClassifierMNIST(rho="determinist")
     model.load_state_dict(torch.load(path))
     weights_norms.append(u.compute_weights_norm(model))
 
