@@ -54,10 +54,10 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             os.mkdir(output_dir_results)
 
     max_acc = 0
-    number_of_data = len(trainloader)
-    interval = number_of_data // 10
+    number_of_batch = len(trainloader)
+    interval = number_of_batch // 10
 
-    loss_accs = [[] for _ in range(number_of_epochs)]
+    loss_totals = [[] for _ in range(number_of_epochs)]
     if loss_type == 'bbb':
         loss_llhs = [[] for _ in range(number_of_epochs)]
         loss_vps = [[] for _ in range(number_of_epochs)]
@@ -77,8 +77,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
 
 
         for batch_idx, data in enumerate(trainloader, 0):
-            number_of_batchs = len(trainloader)
-            kl_weight = step_function(batch_idx, number_of_batchs)
+            kl_weight = step_function(batch_idx, number_of_batch)
 
             # get the inputs; data is a list of [inputs, labels]
             inputs, labels = [x.to(device) for x in data]
@@ -110,11 +109,11 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
             number_of_labels += labels.size(0)
             if batch_idx % interval == interval - 1:
-                current_loss = running_loss / number_of_data
+                current_loss = running_loss / number_of_batch
                 if loss_type == 'bbb':
-                    current_loss_llh = running_loss_llh / number_of_data
-                    current_loss_vp = running_loss_vp / number_of_data
-                    current_loss_pr = running_loss_pr / number_of_data
+                    current_loss_llh = running_loss_llh / number_of_batch
+                    current_loss_vp = running_loss_vp / number_of_batch
+                    current_loss_pr = running_loss_pr / number_of_batch
                 current_acc = number_of_correct_labels / number_of_labels
                 if max_acc < current_acc:
                     max_acc = current_acc
@@ -122,18 +121,18 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
                     batch_idx_max_acc = batch_idx
                 if verbose:
                     if loss_type == 'bbb':
-                        print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_data}] '
+                        print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_batch}] '
                               f'Acc: {round(100 * current_acc, 2)} %, '
                               f'loss: {round(current_loss, 2)}, '
                               f'loss_llh: {round(current_loss_llh, 2)}, '
                               f'loss_vp: {round(current_loss_vp, 2)}, '
                               f'loss_pr: {round(current_loss_pr, 2)}')
                     else:
-                        print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_data}] '
+                        print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_batch}] '
                               f'Acc: {round(100 * current_acc, 2)} %, '
                               f'loss: {round(current_loss, 2)}')
 
-                loss_accs[epoch].append(current_loss)
+                loss_totals[epoch].append(current_loss)
                 if loss_type == 'bbb':
                     loss_llhs[epoch].append(current_loss_llh)
                     loss_vps[epoch].append(current_loss_vp)
@@ -169,9 +168,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             writer.close()
     print('Finished Training')
     if loss_type == 'bbb':
-        return loss_accs, loss_llhs, loss_vps, loss_prs, train_accs, max_acc, epoch_max_acc, batch_idx_max_acc
+        return loss_totals, loss_llhs, loss_vps, loss_prs, train_accs, max_acc, epoch_max_acc, batch_idx_max_acc
     else:
-        return loss_accs, [[0]], [[0]], [[0]], train_accs, max_acc, epoch_max_acc, batch_idx_max_acc
+        return loss_totals, [[0]], [[0]], [[0]], train_accs, max_acc, epoch_max_acc, batch_idx_max_acc
 
 
 def get_loss_writers(output_dir_tensorboard, loss_type):
