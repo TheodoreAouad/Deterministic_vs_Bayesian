@@ -8,7 +8,7 @@ from src.models.bayesian_models import GaussianClassifierMNIST
 from src.tasks.trains import train_bayesian
 from src.task.eval import eval_bayesian, eval_random
 from src.utils import set_and_print_random_seed
-from src.get_data import get_mnist
+from src.dataset_manager.get_data import get_mnist
 
 
 parser = argparse.ArgumentParser()

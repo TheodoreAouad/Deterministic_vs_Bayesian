@@ -12,7 +12,7 @@ import src.models.bayesian_models.bayesian_base_layers
 import src.utils as u
 import src.models.determinist_models as dm
 import src.tasks.trains as t
-import src.get_data as dataset
+import src.dataset_manager.get_data as dataset
 import src.models.bayesian_models.gaussian_classifiers as gc
 
 reload(u)
@@ -29,10 +29,14 @@ device = torch.device(device)
 print(device)
 
 #%% Datasets
-
+reload(dataset)
 trainloader, testloader = dataset.get_mnist()
 get_train_img = iter(trainloader)
+#%%
 train_img, train_label = next(get_train_img)
+print(np.unique(train_label))
+plt.imshow(train_img[5][0])
+plt.show()
 #%%
 trainloader, testloader = dataset.get_cifar10()
 
