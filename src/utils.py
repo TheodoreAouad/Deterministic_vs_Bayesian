@@ -1,6 +1,8 @@
 import csv
 
 import math
+import pickle
+
 import torch
 import numpy as np
 import os
@@ -206,3 +208,30 @@ def compute_weights_norm(model):
     for param in model.parameters():
         norm += torch.norm(param.data).item()
     return norm/len(list(all_params))
+
+
+def save_dict(to_save, path):
+    """
+    Saves a dictionary in a file. Warning: will overwrite the file.
+    Args:
+        to_save (dict): the dict we want to save.
+        path (str): path to the file where to write the dict.
+
+    """
+    with open(path, "wb") as f:
+        pickle.dump(to_save, f)
+
+
+def load_dict(path):
+    """
+    Returns the dict saved in the path.
+    Args:
+        path (str): the path to the file where the dict is saved.
+
+    Returns:
+        my_dict (dict): the dictionary loaded.
+
+    """
+    with open(path, "rb") as f:
+        my_dict = pickle.load(f)
+    return my_dict

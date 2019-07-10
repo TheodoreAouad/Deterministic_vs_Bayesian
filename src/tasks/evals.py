@@ -2,8 +2,9 @@ import torch
 from src.utils import aggregate_data, set_and_print_random_seed
 
 
-def eval(model, testloader, device):
-    return eval_bayesian(model, testloader, number_of_tests=1, device=device)
+def evaluate(model, testloader, device):
+    accuracy, _, all_dkls = eval_bayesian(model, testloader, number_of_tests=1, device=device)
+    return accuracy, all_dkls
 
 
 def eval_bayesian(model, testloader, number_of_tests, device):

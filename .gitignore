@@ -10,3 +10,7 @@ polyaxon_results/
 sandbox_results/
 .polyaxon/.polyaxongroup
 output/
+src/dataset_manager/__pycache__/
+src/models/bayesian_models/__pycache__/
+src/tasks/__pycache__/
+tests_integration/test_dataset_manager/__pycache__/

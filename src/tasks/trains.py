@@ -3,6 +3,8 @@ import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
+from src.tasks.evals import evaluate
+
 
 def train(model, optimizer, criterion, number_of_epochs, trainloader,
           output_dir_tensorboard=None, output_dir_results='sandbox_results', device='cpu', verbose = False):
@@ -15,8 +17,9 @@ def uniform(_, number_of_batchs):
     return 1/number_of_batchs
 
 
-def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, loss_type='bbb', step_function=uniform,
-                   output_dir_tensorboard=None, output_dir_results=None, device="cpu", verbose=False):
+def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, valloader=None, loss_type='bbb',
+                   step_function=uniform, output_dir_tensorboard=None, output_dir_results=None, device="cpu",
+                   verbose=False):
     """
     Train the model in a bayesian fashion, meaning the loss is different.
     Args:
@@ -63,6 +66,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
         loss_vps = [[] for _ in range(number_of_epochs)]
         loss_prs = [[] for _ in range(number_of_epochs)]
     train_accs = [[] for _ in range(number_of_epochs)]
+    val_accs = [[] for _ in range(number_of_epochs)]
+    val_acc = -0.01
+    val_dkl = torch.tensor(1)
 
     model.train()
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
@@ -98,8 +104,6 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
 
             loss.backward()
             optimizer.step()
-
-            # print statistics
             running_loss += loss.item()
             if loss_type == 'bbb':
                 running_loss_llh += loss_likelihood.item()
@@ -108,7 +112,12 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
             predicted_labels = outputs.argmax(1)
             number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
             number_of_labels += labels.size(0)
+
+
             if batch_idx % interval == interval - 1:
+                if valloader is not None:
+                    val_acc, val_dkl = evaluate(model, valloader, device)
+                    val_dkl = val_dkl.mean().item()
                 current_loss = running_loss / number_of_batch
                 if loss_type == 'bbb':
                     current_loss_llh = running_loss_llh / number_of_batch
@@ -126,11 +135,15 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, l
                               f'loss: {round(current_loss, 2)}, '
                               f'loss_llh: {round(current_loss_llh, 2)}, '
                               f'loss_vp: {round(current_loss_vp, 2)}, '
-                              f'loss_pr: {round(current_loss_pr, 2)}')
+                              f'loss_pr: {round(current_loss_pr, 2)}, '
+                              f'Val Acc: {round(100*val_acc, 2)} %, '
+                              f'Val Dkl: {round(val_dkl, 2)}')
                     else:
                         print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_batch}] '
                               f'Acc: {round(100 * current_acc, 2)} %, '
-                              f'loss: {round(current_loss, 2)}')
+                              f'loss: {round(current_loss, 2)}'
+                              f'Val Acc: {round(100*val_acc, 2)} %, '
+                              f'Val Dkl: {round(val_dkl), 2}')
 
                 loss_totals[epoch].append(current_loss)
                 if loss_type == 'bbb':
