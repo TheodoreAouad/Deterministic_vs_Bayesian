@@ -12,28 +12,30 @@ from src.dataset_manager.get_data import get_mnist
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--split_labels")
-parser.add_argument("--rho")
-parser.add_argument("--epoch")
-parser.add_argument("--batch_size")
-parser.add_argument("--number_of_tests")
-parser.add_argument("--loss_type")
-parser.add_argument("--std_prior")
+parser.add_argument("--split_labels", help="up to which label the training goes",
+                    type=int, default=5)
+parser.add_argument("--rho", help="variable symbolizing the variance. std = log(1+exp(rho))",
+                    type=float, default=-5)
+parser.add_argument("--epoch", help="number of times we train the model on the same data",
+                    type=int, default=3)
+parser.add_argument("--batch_size", help="number of batches to split the data into",
+                    type=int, default=32)
+parser.add_argument("--number_of_tests", help="number of evaluations to perform for each each image to check for "
+                                              "uncertainty", type=int, default=10)
+parser.add_argument("--loss_type", help="which loss to use", choices=["bbb", "criterion"], type=str,
+                    default="bbb")
+parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
 args = parser.parse_args()
 
 save_dict(vars(args), './output/arguments.pkl')
 
-split_labels = int(args.split_labels)           #up to which label do we train
-rho = float(args.rho)
-epoch = int(args.epoch)
-batch_size = int(args.batch_size)
-number_of_tests = int(args.number_of_tests)
+split_labels = args.split_labels
+rho = args.rho
+epoch = args.epoch
+batch_size = args.batch_size
+number_of_tests = args.number_of_tests
 loss_type = args.loss_type
-std_prior = float(args.std_prior)
-
-
-if std_prior is None:
-    std_prior = 1
+std_prior = args.std_prior
 
 stds_prior = (std_prior, std_prior)
 
@@ -45,7 +47,7 @@ device = torch.device(device)
 
 trainloader, valloader, evalloader_unseen = get_mnist(train_labels=range(split_labels), eval_labels=range(split_labels, 10),
                                                       batch_size=batch_size)
-_, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), batch_size=batch_size)
+_, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), batch_size=batch_size)
 
 
 seed_model = set_and_print_random_seed()

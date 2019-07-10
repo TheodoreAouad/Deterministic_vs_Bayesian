@@ -39,10 +39,10 @@ def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10),
                                        download=True)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
-    if split_val > 0:
-        valset = MNISTSpecificLabels(root=root, labels=train_labels, train=False, split=(0, split_val),
-                                     transform=transform, download=True)
-        valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=shuffle)
+        if split_val > 0:
+            valset = MNISTSpecificLabels(root=root, labels=train_labels, train=False, split=(0, split_val),
+                                         transform=transform, download=True)
+            valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=shuffle)
 
     if len(eval_labels) > 0:
         evalset = MNISTSpecificLabels(root=root, labels=eval_labels, train=False, split=(split_val, 2),

@@ -31,7 +31,7 @@ print(device)
 
 #%% Datasets
 reload(dataset)
-trainloader, valloader, evalloader = dataset.get_mnist(train_labels=range(6), eval_labels=range(6,10), split_val=0)
+trainloader, valloader, evalloader = dataset.get_mnist(train_labels=(), eval_labels=range(6,10), split_val=0)
 get_train_img = iter(trainloader)
 
 #%%
@@ -71,7 +71,7 @@ t.train_bayesian(bbb_net, optimizer, criterion, 1, trainloader_0_5, valloader=va
 
 #%%
 reload(e)
-_, evalloader_0_5 = dataset.get_mnist(eval_labels=range(6), batch_size=32)
+_, _, evalloader_0_5 = dataset.get_mnist(eval_labels=range(6), batch_size=32)
 _, bbb_softmax_unc_6_9, bbb_dkls_6_9 = e.eval_bayesian(bbb_net, evalloader_6_9, number_of_tests=10, device=device)
 _, bbb_softmax_unc_0_5, bbb_dkls_0_5 = e.eval_bayesian(bbb_net, evalloader_0_5, number_of_tests=10, device=device)
 print('Unseen: ', bbb_softmax_unc_6_9, bbb_dkls_6_9)
