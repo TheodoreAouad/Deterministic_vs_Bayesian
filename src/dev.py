@@ -282,12 +282,7 @@ print(random_uncertainty.mean(), random_uncertainty.std())
 
 #%%
 
-bay_conv = src.models.bayesian_models.bayesian_base_layers.GaussianCNN(-1, 1, 16, 3)
-lp = bay_conv.bayesian_parameters()
-lpp = bay_conv.named_bayesian_parameters()
+result = torch.load("output/results.pt", map_location="cpu")
+print(result)
 
-for name, params in bay_conv.named_parameters():
-    if hasattr(params, "bayesian"):
-        print(params.bayesian)
-    else:
-        print(name)
+

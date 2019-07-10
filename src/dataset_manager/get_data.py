@@ -12,6 +12,17 @@ absolute_path = os.getcwd()
 download_path = os.path.join(absolute_path, 'data')
 
 
+class EmptyLoader:
+    def __init__(self):
+        self.dataset = []
+
+    def __len__(self):
+        return 0
+
+    def __getitem__(self, index):
+        self.dataset.__getitem__(index)
+
+
 def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10), split_val=0.5, transform=transform,
               batch_size=16, shuffle=True):
     """
@@ -33,7 +44,7 @@ def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10),
 
     """
     print(root)
-    trainloader, valloader, evalloader = [], [], []
+    trainloader, valloader, evalloader = EmptyLoader(), EmptyLoader(), EmptyLoader()
     if len(train_labels) > 0:
         trainset = MNISTSpecificLabels(root=root, labels=train_labels, train=True, transform=transform,
                                        download=True)

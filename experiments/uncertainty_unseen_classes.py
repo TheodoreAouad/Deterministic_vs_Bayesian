@@ -57,7 +57,7 @@ criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
 
 (losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc,
- batch_idx_max_acc) = train_bayesian(bay_net,
+ batch_idx_max_acc, val_accs, val_uncs, val_dkls) = train_bayesian(bay_net,
                                      adam_proba,
                                      criterion,
                                      epoch,
@@ -76,6 +76,12 @@ seen_eval_acc, seen_eval_uncertainty, seen_eval_dkls = eval_bayesian(bay_net,
                                                                      evalloader_seen,
                                                                      number_of_tests=number_of_tests,
                                                                      device=device)
+
+print(f"Seen: {round(100*seen_eval_acc,2)} %, "
+      f"Softmax uncertainty:{seen_eval_uncertainty.mean()}, "
+      f"Dkl:{seen_eval_dkls.mean()}")
+print(f"Unseen: Softmax uncertainty:{unseen_eval_uncertainty.mean()}, "
+      f"Dkl:{unseen_eval_dkls.mean()}")
 res = dict({
     "number of epochs": epoch,
     "batch_size": batch_size,
@@ -91,6 +97,9 @@ res = dict({
     "train loss llh": loss_llhs,
     "train loss vp": loss_vps,
     "train loss pr": loss_prs,
+    "val accuracy": val_accs,
+    "val uncertainty": val_uncs,
+    "val dkls": val_dkls,
     "eval accuracy": seen_eval_acc,
     "seen uncertainty": seen_eval_uncertainty,
     "seen dkls": seen_eval_dkls,
