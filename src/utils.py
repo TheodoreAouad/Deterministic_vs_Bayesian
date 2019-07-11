@@ -122,7 +122,7 @@ def open_experiment_results(type, exp_nb,  group_nb=None, polyaxon_path="polyaxo
     return torch.load(path_to_results)
 
 
-def get_interesting_result(result, number_of_classes):
+def get_interesting_result(result):
     '''
 
     Args:
@@ -135,29 +135,22 @@ def get_interesting_result(result, number_of_classes):
     '''
     interesting_result = dict()
     for key, value in result.items():
-        if key != "random output":
-            if "train" in key:
-                if type(value) == int or type(value) == float:
-                    interesting_result[key] = value
-                elif type(value) == list:
+        try:
+            if key == "val accuracy":
+                interesting_result[key + " max"] = np.array(value).max()
+            else:
+                if type(value) == list:
                     interesting_result[key] = value[-1][-1]
+                elif "uncertainty" in key or "dkls" in key:
+                    interesting_result[key + "-mean"] = value.mean().item()
+                    interesting_result[key + "-std"] = value.std().item()
                 else:
                     interesting_result[key] = value
-                    print(value)
-            elif "uncertainty" in key or "dkls" in key:
-                interesting_result[key + "-mean"] = value.mean().item()
-                interesting_result[key + "-std"] = value.std().item()
-            else:
-                interesting_result[key] = value
+        except Exception as e:
+            print("Following exception occured:", e)
+            print(key, value)
+            raise Exception(str(key) + " recuperation not implemented")
 
-        # This part is deprecated. Its use affects previous experiments, but should not affect future experiments.
-        else:
-            random_output = value.numpy().T
-            dkls = np.zeros(random_output.shape[0])
-            for i, output in enumerate(random_output):
-                values, count = np.unique(output, return_counts=True)
-                dkls[i] = compute_dkl_uniform(count, number_of_classes)
-            interesting_result["DKL(p||uniform)"] = dkls.mean()
     return interesting_result
 
 
@@ -176,7 +169,7 @@ def write_results_in_csv(results, name="results/results.csv"):
 
     '''
 
-    file = open(name,"w")
+    file = open(name, "w")
     writer = csv.DictWriter(file, results[0].keys())
     writer.writeheader()
     for result in results:

@@ -34,5 +34,7 @@ elif exp_nb is not None:
 results = []
 for file_path in all_files:
     result = torch.load(file_path, map_location="cpu")
-    results.append(get_interesting_result(result, 10))
+    results.append(get_interesting_result(result))
+    print(f'{len(results)} results loaded.')
+
 write_results_in_csv(results, filename + '.csv')
