@@ -8,31 +8,59 @@ from src.dataset_manager.datasets_creator import MNISTSpecificLabels
 
 transform = transforms.ToTensor()
 
-def get_mnist(train_labels=range(10), test_labels=range(10), transform=transform, batch_size=16, shuffle=True):
-    '''
+absolute_path = os.getcwd()
+download_path = os.path.join(absolute_path, 'data')
+
+
+class EmptyLoader:
+    def __init__(self):
+        self.dataset = []
+
+    def __len__(self):
+        return 0
+
+    def __getitem__(self, index):
+        self.dataset.__getitem__(index)
+
+
+def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10), split_val=0.5, transform=transform,
+              batch_size=16, shuffle=True):
+    """
 
     Args:
+        root (str): path to the directory where we want to download the data
+        train_labels (list || tuple || array): labels we want to keep in the training set
+        eval_labels (list || tuple || array): labels we want to keep in the testing set
+        split_val (float): the proportion of the evaluation set we use for validation
         transform (torch.transform): which transformation to perform to the data
         batch_size (int): size of the batch
         shuffle (bool): whether or not we shuffle the data. Usually we shuffle the data.
 
     Returns:
 
-    '''
+        trainloader: loader of train data
+        valloader: loader of val data
+        evalloader: loader of eval data
 
-    absolute_path = os.getcwd()
-    download_path = os.path.join(absolute_path, 'data')
-    print(download_path)
+    """
+    print(root)
+    trainloader, valloader, evalloader = EmptyLoader(), EmptyLoader(), EmptyLoader()
+    if len(train_labels) > 0:
+        trainset = MNISTSpecificLabels(root=root, labels=train_labels, train=True, transform=transform,
+                                       download=True)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
-    trainset = MNISTSpecificLabels(root=download_path, labels=train_labels, train=True, transform=transform,
-                                   download=True)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
+        if split_val > 0:
+            valset = MNISTSpecificLabels(root=root, labels=train_labels, train=False, split=(0, split_val),
+                                         transform=transform, download=True)
+            valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=shuffle)
 
-    testset = MNISTSpecificLabels(root=download_path, labels=test_labels, train=False, transform=transform,
-                                   download=True)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
+    if len(eval_labels) > 0:
+        evalset = MNISTSpecificLabels(root=root, labels=eval_labels, train=False, split=(split_val, 2),
+                                      transform=transform, download=True)
+        evalloader = torch.utils.data.DataLoader(evalset, batch_size=batch_size, shuffle=shuffle)
 
-    return trainloader, testloader
+    return trainloader, valloader, evalloader
 
 
 def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False):
