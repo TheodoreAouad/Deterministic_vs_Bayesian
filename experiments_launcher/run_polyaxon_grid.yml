@@ -18,6 +18,9 @@ hptuning:
     experiment_file:
       values: ["experiments/uncertainty_unseen_dataset.py"]
 
+    dataset:
+      values: ["cifar10"]
+
     rho:
       values: [-10, -5, -4, -3, -2]
 
@@ -55,4 +58,4 @@ run:
     # Save experiment script
     - cp {{ experiment_file }} ./output
     # Run the pipeline defined in the pipelines folder
-    - python {{ experiment_file }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}
+    - python {{ experiment_file }} --dataset cifar10 --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}

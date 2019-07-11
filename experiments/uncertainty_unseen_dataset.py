@@ -10,9 +10,11 @@ from src.models.bayesian_models.gaussian_classifiers import GaussianClassifierMN
 from src.tasks.trains import train_bayesian
 from src.tasks.evals import eval_bayesian
 from src.utils import set_and_print_random_seed, save_dict
-from src.dataset_manager.get_data import get_mnist, get_omniglot
+from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--dataset", help="which dataset to test the model", choices=["cifar10", "omniglot"], type=str,
+                    default="omniglot")
 parser.add_argument("--rho", help="variable symbolizing the variance. std = log(1+exp(rho))",
                     type=float, default=-5)
 parser.add_argument("--epoch", help="number of times we train the model on the same data",
@@ -28,6 +30,7 @@ args = parser.parse_args()
 
 save_dict(vars(args), './output/arguments.pkl')
 
+dataset = args.dataset
 rho = args.rho
 epoch = args.epoch
 batch_size = args.batch_size
@@ -44,10 +47,19 @@ else:
 device = torch.device(device)
 
 transform = transforms.Compose([
-    transforms.Resize(28),
-    transforms.ToTensor()
-])
-omniglot_loader = get_omniglot(transform=transform, download=False)
+        transforms.Resize(28),
+        transforms.ToTensor()
+    ])
+if dataset == "omniglot":
+    unseen_loader = get_omniglot(transform=transform, batch_size=batch_size, download=False)
+elif dataset == "cifar10":
+    transform = transforms.Compose([
+        transforms.Grayscale(),
+        transform
+    ])
+    _, unseen_loader = get_cifar10(transform=transform, batch_size=batch_size)
+
+
 trainloader, valloader, evalloader = get_mnist(batch_size=batch_size)
 
 
@@ -76,19 +88,20 @@ seen_eval_acc, seen_eval_uncertainty, seen_eval_dkls = eval_bayesian(bay_net,
                                                                      number_of_tests=number_of_tests,
                                                                      device=device)
 print("Finished evaluation on MNIST.")
-print("Evaluation on omniglot ...")
-_, omniglot_eval_uncertainty, omniglot_eval_dkls = eval_bayesian(bay_net,
-                                                                 omniglot_loader,
+print(f"Evavuation on {dataset} ...")
+_, unseen_eval_uncertainty, unseen_eval_dkls = eval_bayesian(bay_net,
+                                                                 unseen_loader,
                                                                  number_of_tests=number_of_tests,
                                                                  device=device)
-print("Finished evaluation on omniglot.")
+print("Finished evaluation on ", dataset)
 
 print(f"MNIST: {round(100*seen_eval_acc,2)} %, "
       f"Softmax uncertainty:{seen_eval_uncertainty.mean()}, "
       f"Dkl:{seen_eval_dkls.mean()}")
-print(f"Omniglot: Softmax uncertainty:{omniglot_eval_uncertainty.mean()}, "
-      f"Dkl:{omniglot_eval_dkls.mean()}")
+print(f"{dataset}: Softmax uncertainty:{unseen_eval_uncertainty.mean()}, "
+      f"Dkl:{unseen_eval_dkls.mean()}")
 res = dict({
+    "dataset": dataset,
     "number of epochs": epoch,
     "batch_size": batch_size,
     "number of tests": number_of_tests,
@@ -109,8 +122,8 @@ res = dict({
     "eval accuracy": seen_eval_acc,
     "seen uncertainty": seen_eval_uncertainty,
     "seen dkls": seen_eval_dkls,
-    "omniglot uncertainty": omniglot_eval_uncertainty,
-    "omniglot dkls": omniglot_eval_dkls
+    "unseen uncertainty": unseen_eval_uncertainty,
+    "unseen dkls": unseen_eval_dkls
 })
 
 torch.save(res, "./output/results.pt")
