@@ -47,7 +47,7 @@ transform = transforms.Compose([
     transforms.Resize(28),
     transforms.ToTensor()
 ])
-omniglot_loader = get_omniglot(transform=transform)
+omniglot_loader = get_omniglot(transform=transform, download=False)
 trainloader, valloader, evalloader = get_mnist(batch_size=batch_size)
 
 

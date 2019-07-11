@@ -90,25 +90,22 @@ def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False
     return trainloader, evalloader
 
 
-def get_omniglot(root=download_path, train_labels=range(10), eval_labels=range(10), split_val=0.5, transform=transform,
-              batch_size=16, shuffle=True):
+def get_omniglot(root=download_path, transform=transform, batch_size=16, shuffle=True, download=True):
     """
 
     Args:
+        root (str): path to the directory where we want to download the data
         transform (torch.transform): which transformation to perform to the data
         batch_size (int): size of the batch
         shuffle (bool): whether or not we shuffle the data. Usually we shuffle the data.
+        download (bool): whether or not we download the data
 
     Returns:
         omniglot_loader (torch.utils.data.dataloader.DataLoader): loader of the omniglot dataset
 
     """
 
-    absolute_path = os.getcwd()
-    download_path = os.path.join(absolute_path, 'data')
-    print(download_path)
-
-    dataset = torchvision.datasets.Omniglot(root=download_path, transform=transform, download=True)
+    dataset = torchvision.datasets.Omniglot(root=root, transform=transform, download=download)
     omniglot_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
     return omniglot_loader

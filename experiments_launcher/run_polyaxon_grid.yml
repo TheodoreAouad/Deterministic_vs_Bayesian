@@ -15,6 +15,9 @@ hptuning:
   concurrency: 1
 
   matrix:
+    experiment_file:
+      values: ["experiments/uncertainty_unseen_dataset.py"]
+
     rho:
       values: [-10, -5, -4, -3, -2]
 
@@ -50,6 +53,6 @@ run:
     # Allow to access the mounted output_folder as if it was in ./output
     - ln -s $POLYAXON_RUN_OUTPUTS_PATH ./output
     # Save experiment script
-    - cp experiments/uncertainty_unseen_classes.py ./output
+    - cp {{ experiment_file }} ./output
     # Run the pipeline defined in the pipelines folder
-    - python experiments/uncertainty_unseen_classes.py --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}
+    - python {{ experiment_file }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}
