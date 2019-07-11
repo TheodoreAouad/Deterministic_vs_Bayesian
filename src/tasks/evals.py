@@ -1,13 +1,15 @@
 import torch
+from tqdm import tqdm
+
 from src.utils import aggregate_data, set_and_print_random_seed
 
 
-def evaluate(model, testloader, device):
-    accuracy, _, all_dkls = eval_bayesian(model, testloader, number_of_tests=1, device=device)
+def evaluate(model, testloader, device, val=False):
+    accuracy, _, all_dkls = eval_bayesian(model, testloader, number_of_tests=1, device=device, val=val)
     return accuracy, all_dkls
 
 
-def eval_bayesian(model, testloader, number_of_tests, device):
+def eval_bayesian(model, testloader, number_of_tests, device, val=False):
 
     model.eval()
     number_of_samples = len(testloader.dataset)
@@ -15,7 +17,11 @@ def eval_bayesian(model, testloader, number_of_tests, device):
     all_uncertainties = torch.Tensor().to(device).detach()
     all_dkls = torch.Tensor().to(device).detach()
 
-    for batch_idx, data in enumerate(testloader):
+    if val:
+        iterator = enumerate(testloader)
+    else:
+        iterator = tqdm(enumerate(testloader))
+    for batch_idx, data in iterator:
         inputs, labels = [x.to(device).detach() for x in data]
         batch_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(device).detach()
         for test_idx in range(number_of_tests):
