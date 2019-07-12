@@ -124,13 +124,13 @@ def open_experiment_results(type, exp_nb,  group_nb=None, polyaxon_path="polyaxo
 
 def get_interesting_result(result):
     '''
-
+    Reads the results of a polyaxon experiment and extracts in a dict the desired information.
     Args:
         result (dict): output of the polyaxon experiment
         number_of_classes (int): number of classes of the polyaxon experiment (ex: MNIST, 10)
 
     Returns:
-        interesting_result (dict): dictionary of the desired parameters we would like to write in a csv
+        dict: dictionary of the desired parameters we would like to write in a csv
 
     '''
     interesting_result = dict()
@@ -147,9 +147,9 @@ def get_interesting_result(result):
                 else:
                     interesting_result[key] = value
         except Exception as e:
-            print("Following exception occured:", e)
+            print(str(key) + " recuperation not implemented, or unexpected error.")
             print(key, value)
-            raise Exception(str(key) + " recuperation not implemented")
+            raise e
 
     return interesting_result
 
@@ -185,7 +185,7 @@ def get_file_path_in_dir(dir_path, file_name=""):
         file_name (str): strign we want in the name
 
     Returns:
-        all_files (list): list of the paths of all the files
+        list: list of the paths of all the files
     '''
     all_files = []
     for (dirpath, dirnames, filenames) in os.walk(dir_path):
@@ -222,7 +222,7 @@ def load_dict(path):
         path (str): the path to the file where the dict is saved.
 
     Returns:
-        my_dict (dict): the dictionary loaded.
+        dict: the dictionary loaded.
 
     """
     with open(path, "rb") as f:

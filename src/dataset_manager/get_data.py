@@ -72,8 +72,8 @@ def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False
         shuffle (bool): whether or not we shuffle the data. Usually we shuffle the data.
 
     Returns:
-        trainloader (torch.utils.data.dataloader.DataLoader)
-        evalloader (torch.utils.data.dataloader.DataLoader)
+        torch.utils.data.dataloader.DataLoader: loader of train data
+        torch.utils.data.dataloader.DataLoader: loader of evaluation data
 
     '''
 
@@ -101,7 +101,7 @@ def get_omniglot(root=download_path, transform=transform, batch_size=16, shuffle
         download (bool): whether or not we download the data
 
     Returns:
-        omniglot_loader (torch.utils.data.dataloader.DataLoader): loader of the omniglot dataset
+        torch.utils.data.dataloader.DataLoader: loader of the omniglot dataset
 
     """
 

@@ -1,10 +1,10 @@
-from math import log, exp
 import argparse
+from math import log, exp
 
 import torch
 import torch.optim as optim
-from torch.nn import CrossEntropyLoss
 import torchvision.transforms as transforms
+from torch.nn import CrossEntropyLoss
 
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifierMNIST
 from src.tasks.trains import train_bayesian
