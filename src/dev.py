@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torchvision.transforms as transforms
 
 import src.models.bayesian_models.bayesian_base_layers
 import src.utils as u
@@ -31,9 +32,17 @@ print(device)
 
 #%% Datasets
 reload(dataset)
-trainloader, valloader, evalloader = dataset.get_mnist(train_labels=(), eval_labels=range(6,10), split_val=0)
-get_train_img = iter(trainloader)
+transform = transforms.Compose([
+    transforms.Resize(28),
+    transforms.ToTensor(),
+])
+omniglot_loader = dataset.get_omniglot(transform=transform)
+get_omniglot_img = iter(omniglot_loader)
 
+#%%
+omniglot_img, omniglot_label = next(get_omniglot_img)
+plt.imshow(omniglot_img[0][0])
+plt.show()
 #%%
 
 trainloader, valloader, evalloader = dataset.get_mnist(train_labels=range(6), eval_labels=range(6), split_val=0)
@@ -173,21 +182,6 @@ print("predicted:", np.unique(outpt.argmax(1), return_counts=1))
 print("true:", np.unique(label, return_counts=1))
 
 #%%
-
-weights = torch.Tensor().to(device)
-bias = torch.Tensor().to(device)
-all_layers = iter(bay_net.modules())
-next(all_layers)
-for layer in all_layers:
-    print(layer)
-    if not getattr(layer, "determinist", True):
-        weight_to_add, bias_to_add = layer.sample_weights()
-        weights = torch.cat((weights, u.vectorize(weight_to_add)))
-        bias = torch.cat((bias, u.vectorize(bias_to_add)))
-
-bay_net.variational_posterior(weights, bias)
-
-#%%
 _,evalloader = dataset.get_mnist(batch_size=16)
 get_eval_img = iter(evalloader)
 img, label = next(get_eval_img)
@@ -208,12 +202,6 @@ mini_evalloader = MiniTestLoader(img, label)
 acc, unc, dkls = t.eval_bayesian(bay_net, mini_evalloader, 15, device)
 
 #%%
-
-q75, q25 = np.percentile(unc, [75 ,25])
-q75-q25
-
-
-#%%
 def compute_memory_used_tensor(tensor):
     return dict({
         'number of elements': tensor.nelement(),
@@ -221,64 +209,6 @@ def compute_memory_used_tensor(tensor):
         'total memory use': tensor.nelement() * tensor.element_size()
     })
 
-#%%
-
-reload(u)
-bay_net.eval()
-random_image = torch.rand(16,1,28,28).to(device)
-number_of_evals = 10
-data_random = torch.Tensor(20, 16, 10)
-for eval_idx in range(number_of_evals):
-    data_random[eval_idx] = bay_net(random_image)
-
-data_mnist = torch.Tensor(20,16,10)
-for eval_idx in range(number_of_evals):
-    data_mnist[eval_idx] = bay_net(img.to(device))
-
-#%%
-reload(u)
-
-_,evalloader = dataset.get_mnist(batch_size=16)
-number_of_evals = 1
-model = bay_net
-
-number_of_samples = torch.zeros(1, requires_grad=False)
-all_correct_labels = torch.zeros(1, requires_grad=False)
-all_uncertainties = torch.zeros(1, requires_grad=False)
-all_dkls = torch.zeros(1, requires_grad=False)
-
-for i, data in enumerate(evalloader, 0):
-    inputs, labels = [x.to(device).detach() for x in data]
-    batch_outputs = torch.Tensor(number_of_evals, inputs.size(0), model.number_of_classes).to(
-        device).detach()
-    for eval_idx in range(number_of_evals):
-        output = model(inputs)
-        batch_outputs[eval_idx] = output.detach()
-    predicted_labels, uncertainty, dkls = u.aggregate_data(batch_outputs)
-
-    all_uncertainties += uncertainty.mean()
-    all_dkls += dkls.mean()
-    all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
-    number_of_samples += labels.size(0)
-
-#%%
-
-reload(t)
-reload(u)
-_,evalloader = dataset.get_mnist(batch_size=16)
-number_of_evals = 10
-model = bay_net
-t.eval_bayesian(model, evalloader, number_of_evals, device)
-
-#%%
-number_of_evals = 20
-seed_random = u.set_and_print_random_seed()
-random_noise = torch.randn(1000,1,28,28).to(device)
-output_random = torch.Tensor(number_of_evals, 1000, 10)
-for eval_idx in range(number_of_evals):
-    output_random[eval_idx] = bay_net(random_noise).detach()
-_, random_uncertainty, random_dkl = u.aggregate_data(output_random)
-print(random_uncertainty.mean(), random_uncertainty.std())
 
 #%%
 

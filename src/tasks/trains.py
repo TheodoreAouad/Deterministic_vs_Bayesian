@@ -118,7 +118,8 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
 
             if batch_idx % interval == interval - 1:
                 if valloader is not None:
-                    val_acc, val_unc, val_dkl = eval_bayesian(model, valloader, number_of_tests=number_of_tests, device=device)
+                    val_acc, val_unc, val_dkl = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
+                                                              device=device, val=True)
                     val_unc = val_unc.mean().item()
                     val_dkl = val_dkl.mean().item()
                 current_loss = running_loss / number_of_batch

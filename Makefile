@@ -4,9 +4,9 @@ pull-output-group:
 write-results-csv:
 	python scripts/write_csv.py --polyaxon_results_path polyaxon_results --polyaxon_type groups --group_nb $(GROUP_NB) --which_file results
 
-pull-and-write-csv:
-	make pull-output
-	make write-results-csv $(GROUP_NB)
+pull-output-all:
+	rsync -ave ssh muaddib:/output/sicara/BayesianFewShotExperiments/ ./polyaxon_results/  --exclude 'weights*'
+
 
 test:
 	python -m pytest src/

@@ -1,42 +1,43 @@
-from math import log, exp
 import argparse
+from math import log, exp
+
 import torch
 import torch.optim as optim
+import torchvision.transforms as transforms
 from torch.nn import CrossEntropyLoss
 
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifierMNIST
 from src.tasks.trains import train_bayesian
-from src.tasks.evals import eval_bayesian, eval_random
+from src.tasks.evals import eval_bayesian
 from src.utils import set_and_print_random_seed, save_dict
-from src.dataset_manager.get_data import get_mnist
-
+from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--rho")
-parser.add_argument("--epoch")
-parser.add_argument("--batch_size")
-parser.add_argument("--number_of_tests")
-parser.add_argument("--loss_type")
-parser.add_argument("--mu_prior")
-parser.add_argument("--std_prior")
+parser.add_argument("--dataset", help="which dataset to test the model", choices=["cifar10", "omniglot"], type=str,
+                    default="omniglot")
+parser.add_argument("--rho", help="variable symbolizing the variance. std = log(1+exp(rho))",
+                    type=float, default=-5)
+parser.add_argument("--epoch", help="number of times we train the model on the same data",
+                    type=int, default=3)
+parser.add_argument("--batch_size", help="number of batches to split the data into",
+                    type=int, default=32)
+parser.add_argument("--number_of_tests", help="number of evaluations to perform for each each image to check for "
+                                              "uncertainty", type=int, default=10)
+parser.add_argument("--loss_type", help="which loss to use", choices=["bbb", "criterion"], type=str,
+                    default="bbb")
+parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
 args = parser.parse_args()
+
 save_dict(vars(args), './output/arguments.pkl')
 
-rho = float(args.rho)
-epoch = int(args.epoch)
-batch_size = int(args.batch_size)
-number_of_tests = int(args.number_of_tests)
+dataset = args.dataset
+rho = args.rho
+epoch = args.epoch
+batch_size = args.batch_size
+number_of_tests = args.number_of_tests
 loss_type = args.loss_type
-mu_prior = float(args.mu_prior)
-std_prior = float(args.std_prior)
+std_prior = args.std_prior
 
-if mu_prior is None:
-    mu_prior = 0
-
-if std_prior is None:
-    std_prior = 1
-
-mus_prior = (mu_prior, mu_prior)
 stds_prior = (std_prior, std_prior)
 
 if torch.cuda.is_available():
@@ -45,31 +46,66 @@ else:
     device = "cpu"
 device = torch.device(device)
 
-trainloader, testloader = get_mnist(batch_size=batch_size)
+transform = transforms.Compose([
+        transforms.Resize(28),
+        transforms.ToTensor()
+    ])
+if dataset == "omniglot":
+    unseen_loader = get_omniglot(transform=transform, batch_size=batch_size, download=False)
+elif dataset == "cifar10":
+    transform = transforms.Compose([
+        transforms.Grayscale(),
+        transform
+    ])
+    _, unseen_loader = get_cifar10(transform=transform, batch_size=batch_size)
+
+
+trainloader, valloader, evalloader = get_mnist(batch_size=batch_size)
+
 
 seed_model = set_and_print_random_seed()
-bay_net = GaussianClassifierMNIST(rho=rho, mus_prior=mus_prior, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
+bay_net = GaussianClassifierMNIST(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
 bay_net.to(device)
 criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
 
-losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc, batch_idx_max_acc = train_bayesian(bay_net,
-                                                                                                        adam_proba, criterion,
-                                                                                                        epoch, trainloader, loss_type=loss_type,
-                                                                                                        output_dir_tensorboard='./output',
-                                                                                                        output_dir_results="./output/weights_training",
-                                                                                                        device=device, verbose=True)
-test_acc, test_uncertainty, test_dkls = eval_bayesian(bay_net, testloader,
-                                                      number_of_tests=number_of_tests, device=device)
-random_uncertainty, random_dkl, seed_random = eval_random(bay_net, batch_size, 1, 28, number_of_tests,
-                                                          number_of_classes=10, device=device)
+(losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc,
+ batch_idx_max_acc, val_accs, val_uncs, val_dkls) = train_bayesian(bay_net,
+                                                                   adam_proba,
+                                                                   criterion,
+                                                                   epoch,
+                                                                   trainloader,
+                                                                   valloader,
+                                                                   loss_type=loss_type,
+                                                                   output_dir_tensorboard='./output',
+                                                                   output_dir_results="./output/weights_training",
+                                                                   device=device,
+                                                                   verbose=True)
 
+print("Evaluation on MNIST ...")
+seen_eval_acc, seen_eval_uncertainty, seen_eval_dkls = eval_bayesian(bay_net,
+                                                                     evalloader,
+                                                                     number_of_tests=number_of_tests,
+                                                                     device=device)
+print("Finished evaluation on MNIST.")
+print(f"Evavuation on {dataset} ...")
+_, unseen_eval_uncertainty, unseen_eval_dkls = eval_bayesian(bay_net,
+                                                                 unseen_loader,
+                                                                 number_of_tests=number_of_tests,
+                                                                 device=device)
+print("Finished evaluation on ", dataset)
+
+print(f"MNIST: {round(100*seen_eval_acc,2)} %, "
+      f"Softmax uncertainty:{seen_eval_uncertainty.mean()}, "
+      f"Dkl:{seen_eval_dkls.mean()}")
+print(f"{dataset}: Softmax uncertainty:{unseen_eval_uncertainty.mean()}, "
+      f"Dkl:{unseen_eval_dkls.mean()}")
 res = dict({
+    "dataset": dataset,
     "number of epochs": epoch,
     "batch_size": batch_size,
     "number of tests": number_of_tests,
     "seed_model": seed_model,
-    "mu_prior": mu_prior,
     "stds_prior": std_prior,
     "rho": rho,
     "sigma initial": log(1 + exp(rho)),
@@ -80,12 +116,14 @@ res = dict({
     "train loss llh": loss_llhs,
     "train loss vp": loss_vps,
     "train loss pr": loss_prs,
-    "test accuracy": test_acc,
-    "test uncertainty": test_uncertainty,
-    "test dkls": test_dkls,
-    "seed_random": seed_random,
-    "random uncertainty": random_uncertainty,
-    "random dkls": random_dkl
+    "val accuracy": val_accs,
+    "val uncertainty": val_uncs,
+    "val dkls": val_dkls,
+    "eval accuracy": seen_eval_acc,
+    "seen uncertainty": seen_eval_uncertainty,
+    "seen dkls": seen_eval_dkls,
+    "unseen uncertainty": unseen_eval_uncertainty,
+    "unseen dkls": unseen_eval_dkls
 })
 
 torch.save(res, "./output/results.pt")

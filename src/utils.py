@@ -122,42 +122,35 @@ def open_experiment_results(type, exp_nb,  group_nb=None, polyaxon_path="polyaxo
     return torch.load(path_to_results)
 
 
-def get_interesting_result(result, number_of_classes):
+def get_interesting_result(result):
     '''
-
+    Reads the results of a polyaxon experiment and extracts in a dict the desired information.
     Args:
         result (dict): output of the polyaxon experiment
         number_of_classes (int): number of classes of the polyaxon experiment (ex: MNIST, 10)
 
     Returns:
-        interesting_result (dict): dictionary of the desired parameters we would like to write in a csv
+        dict: dictionary of the desired parameters we would like to write in a csv
 
     '''
     interesting_result = dict()
     for key, value in result.items():
-        if key != "random output":
-            if "train" in key:
-                if type(value) == int or type(value) == float:
-                    interesting_result[key] = value
-                elif type(value) == list:
+        try:
+            if key == "val accuracy":
+                interesting_result[key + " max"] = np.array(value).max()
+            else:
+                if type(value) == list:
                     interesting_result[key] = value[-1][-1]
+                elif "uncertainty" in key or "dkls" in key:
+                    interesting_result[key + "-mean"] = value.mean().item()
+                    interesting_result[key + "-std"] = value.std().item()
                 else:
                     interesting_result[key] = value
-                    print(value)
-            elif "uncertainty" in key or "dkls" in key:
-                interesting_result[key + "-mean"] = value.mean().item()
-                interesting_result[key + "-std"] = value.std().item()
-            else:
-                interesting_result[key] = value
+        except Exception as e:
+            print(str(key) + " recuperation not implemented, or unexpected error.")
+            print(key, value)
+            raise e
 
-        # This part is deprecated. Its use affects previous experiments, but should not affect future experiments.
-        else:
-            random_output = value.numpy().T
-            dkls = np.zeros(random_output.shape[0])
-            for i, output in enumerate(random_output):
-                values, count = np.unique(output, return_counts=True)
-                dkls[i] = compute_dkl_uniform(count, number_of_classes)
-            interesting_result["DKL(p||uniform)"] = dkls.mean()
     return interesting_result
 
 
@@ -176,7 +169,7 @@ def write_results_in_csv(results, name="results/results.csv"):
 
     '''
 
-    file = open(name,"w")
+    file = open(name, "w")
     writer = csv.DictWriter(file, results[0].keys())
     writer.writeheader()
     for result in results:
@@ -192,7 +185,7 @@ def get_file_path_in_dir(dir_path, file_name=""):
         file_name (str): strign we want in the name
 
     Returns:
-        all_files (list): list of the paths of all the files
+        list: list of the paths of all the files
     '''
     all_files = []
     for (dirpath, dirnames, filenames) in os.walk(dir_path):
@@ -229,7 +222,7 @@ def load_dict(path):
         path (str): the path to the file where the dict is saved.
 
     Returns:
-        my_dict (dict): the dictionary loaded.
+        dict: the dictionary loaded.
 
     """
     with open(path, "rb") as f:
