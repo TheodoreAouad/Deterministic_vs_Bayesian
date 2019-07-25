@@ -5,6 +5,8 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from src.tasks.evals import evaluate, eval_bayesian
+from src.uncertainty_measures import compute_variation_ratio, compute_predictive_entropy, \
+    compute_mutual_information_uncertainty, get_all_uncertainty_measures
 
 
 def train(model, optimizer, criterion, number_of_epochs, trainloader,
@@ -36,21 +38,25 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
         verbose (Bool): print training steps or not
 
     Returns:
-        loss_accs (list): list of the total loss for each epoch
-        loss_llhs (list): list of the lilelihood loss for each epoch (P(D|W))
+        loss_totals (list): list of the total loss for each epoch
+        loss_llhs (list): list of the likelihood loss for each epoch (P(D|W))
         loss_vps (list): list of the variational posterior loss for each epoch (q(W|D))
         loss_prs (list): list of the prior loss for each epoch (P(W))
         train_accs (list): list of the accuracies for each epoch
         max_acc (float): the maximum accuracy obtained by the net
         epoch_max_acc (int): the epoch where the max acc is obtained
-        i_max_acc (int): the batch_idx where the epoch is obtained
+        batch_idx_max_acc (int): the batch_idx where the epoch is obtained
+        val_accs (list): list of the validation accuracies
+        val_vrs (list): list of the variation-ratios uncertainty for validation test
+        val_predictive_entropies (list): list of the predictive entropy uncertainty for validation test
+        val_mis (list): list of the mutual information uncertainty for validation test
 
     """
     start_time = time()
 
     if output_dir_tensorboard is not None:
-        (writer_loss, writer_loss_llh, writer_loss_vp, writer_loss_pr, writer_accs_train, writer_accs_val, writer_unc,
-         writer_dkl) = get_loss_writers(output_dir_tensorboard, loss_type)
+        (writer_loss, writer_loss_llh, writer_loss_vp, writer_loss_pr, writer_accs_train, writer_accs_val, writer_vr,
+         writer_predictive_entropy, writer_mi) = get_loss_writers(output_dir_tensorboard, loss_type)
         tensorboard_idx = 0
     if output_dir_results is not None:
         weights_writer_idx = 0
@@ -68,11 +74,13 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
         loss_prs = [[] for _ in range(number_of_epochs)]
     train_accs = [[] for _ in range(number_of_epochs)]
     val_accs = [[] for _ in range(number_of_epochs)]
-    val_dkls = [[] for _ in range(number_of_epochs)]
-    val_uncs = [[] for _ in range(number_of_epochs)]
+    val_vrs = [[] for _ in range(number_of_epochs)]
+    val_predictive_entropies = [[] for _ in range(number_of_epochs)]
+    val_mis = [[] for _ in range(number_of_epochs)]
     val_acc = -0.01
-    val_dkl = -1
-    val_unc = -1
+    val_vr = -1
+    val_predictive_entropy = -1
+    val_mi = -1
 
     model.train()
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
@@ -118,10 +126,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
 
             if batch_idx % interval == interval - 1:
                 if valloader is not None:
-                    val_acc, val_unc, val_dkl = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
+                    val_acc, val_outputs = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
                                                               device=device, val=True)
-                    val_unc = val_unc.mean().item()
-                    val_dkl = val_dkl.mean().item()
+                    val_vr, val_predictive_entropy, val_mi = get_all_uncertainty_measures
                 current_loss = running_loss / number_of_batch
                 if loss_type == 'bbb':
                     current_loss_llh = running_loss_llh / number_of_batch
@@ -141,16 +148,18 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
                               f'loss_vp: {round(current_loss_vp, 2)}, '
                               f'loss_pr: {round(current_loss_pr, 2)}, '
                               f'Val Acc: {round(100*val_acc, 2)} %, '
-                              f'Val Dkl: {round(val_dkl, 2)}, '
-                              f'Val Unc: {round(val_unc, 2)}, '
+                              f'Val VR: {round(val_vr, 2)}, '
+                              f'Val Pred Entropy: {round(val_predictive_entropy, 2)}, '
+                              f'Val MI: {round(val_mi, 2)}, '
                               f'Time Elapsed: {round(time() - start_time)} s')
                     else:
                         print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_batch}] '
                               f'Acc: {round(100 * current_train_acc, 2)} %, '
                               f'loss: {round(current_loss, 2)}'
                               f'Val Acc: {round(100*val_acc, 2)} %, '
-                              f'Val Dkl: {round(val_dkl, 2)}, '
-                              f'Val Unc: {round(val_unc, 2)}, '
+                              f'Val VR: {round(val_vr, 2)}, '
+                              f'Val Pred Entropy: {round(val_predictive_entropy, 2)}, '
+                              f'Val MI: {round(val_mi, 2)}, '
                               f'Time Elapsed: {round(time() - start_time)} s')
 
                 loss_totals[epoch].append(current_loss)
@@ -158,8 +167,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
                     loss_llhs[epoch].append(current_loss_llh)
                     loss_vps[epoch].append(current_loss_vp)
                     loss_prs[epoch].append(current_loss_pr)
-                val_uncs[epoch].append(val_unc)
-                val_dkls[epoch].append(val_dkl)
+                val_vrs[epoch].append(val_vr)
+                val_predictive_entropies[epoch].append(val_predictive_entropy)
+                val_mis[epoch].append(val_mi)
                 train_accs[epoch].append(current_train_acc)
                 val_accs[epoch].append(val_acc)
 
@@ -169,8 +179,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
                         writer_loss_llh.add_scalar('loss', current_loss_llh, tensorboard_idx)
                         writer_loss_vp.add_scalar('loss', current_loss_vp, tensorboard_idx)
                         writer_loss_pr.add_scalar('loss', current_loss_pr, tensorboard_idx)
-                        writer_unc.add_scalar('softmax_uncertainty', val_acc, tensorboard_idx)
-                        writer_dkl.add_scalar('dkl', val_acc, tensorboard_idx)
+                    writer_vr.add_scalar('variation ratio', val_acc, tensorboard_idx)
+                    writer_predictive_entropy.add_scalar('predictive entropy', val_acc, tensorboard_idx)
+                    writer_mi.add_scalar('mutual information', val_acc, tensorboard_idx)
                     writer_accs_train.add_scalar('accuracy', current_train_acc, tensorboard_idx)
                     writer_accs_val.add_scalar('accuracy', val_acc, tensorboard_idx)
                     tensorboard_idx += 1
@@ -188,19 +199,20 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
 
     if output_dir_tensorboard is not None:
         if loss_type == 'bbb':
-            to_close = [writer_loss, writer_loss_llh, writer_loss_vp,
-                        writer_loss_pr, writer_accs_train, writer_accs_val, writer_unc, writer_dkl]
+            to_close = [writer_loss, writer_loss_llh, writer_loss_vp, writer_loss_pr, writer_accs_train,
+                        writer_accs_val, writer_vr, writer_predictive_entropy, writer_mi]
         else:
-            to_close = [writer_loss, writer_accs_train, writer_accs_val]
+            to_close = [writer_loss, writer_accs_train, writer_accs_val,
+                        writer_vr, writer_predictive_entropy, writer_mi]
         for writer in to_close:
             writer.close()
     print('Finished Training')
     if loss_type == 'bbb':
         return (loss_totals, loss_llhs, loss_vps, loss_prs, train_accs, max_acc, epoch_max_acc, batch_idx_max_acc,
-               val_accs, val_uncs, val_dkls)
+               val_accs, val_vrs, val_predictive_entropies, val_mis)
     else:
         return (loss_totals, [[0]], [[0]], [[0]], train_accs, max_acc, epoch_max_acc, batch_idx_max_acc,
-               val_accs, val_uncs, val_dkls)
+               val_accs, val_vrs, val_predictive_entropies, val_mis)
 
 
 def get_loss_writers(output_dir_tensorboard, loss_type):
@@ -210,7 +222,7 @@ def get_loss_writers(output_dir_tensorboard, loss_type):
         loss_type (str): the typeof the loss
 
     Returns:
-        Tuple[SummaryWriter, SummaryWriter, SummaryWriter, SummaryWriter, SummaryWriter]
+        Tuple[ (SummaryWriter) * 9]
 
     """
     writer_loss = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "total_loss"))
@@ -218,14 +230,15 @@ def get_loss_writers(output_dir_tensorboard, loss_type):
         writer_loss_llh = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_llh"))
         writer_loss_vp = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_vp"))
         writer_loss_pr = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "loss_pr"))
-        writer_unc = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "softmax uncertainty"))
-        writer_dkl = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "dkl"))
     else:
-        writer_loss_llh, writer_loss_vp, writer_loss_pr, writer_unc, writer_dkl = None, None, None, None, None
+        writer_loss_llh, writer_loss_vp, writer_loss_pr= None, None, None
+    writer_vr = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "variation ratio"))
+    writer_predictive_entropy = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "predictive entropy"))
+    writer_mi = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "mutual information"))
     writer_accs_train = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "train_accuracy"))
     writer_accs_val = SummaryWriter(log_dir=os.path.join(output_dir_tensorboard, "val_accuracy"))
     return (writer_loss, writer_loss_llh, writer_loss_vp, writer_loss_pr,
-            writer_accs_train, writer_accs_val, writer_unc, writer_dkl)
+            writer_accs_train, writer_accs_val, writer_vr, writer_predictive_entropy, writer_mi)
 
 
 def get_loss(model, loss_type, outputs, labels, criterion, kl_weight):
@@ -241,19 +254,23 @@ def get_loss(model, loss_type, outputs, labels, criterion, kl_weight):
         kl_weight
 
     Returns:
+        loss (torch.Float) :
+        loss_likelihood (torch.Float) :
+        loss_variational_posterior (torch.Float) :
+        loss_prior (torch.Float) :
 
     """
     loss_likelihood = criterion(outputs, labels)
     if loss_type == 'bbb':
         weights_used, bias_used = model.get_previous_weights()
-        loss_varational_posterior = model.variational_posterior(weights_used, bias_used)
+        loss_variational_posterior = model.variational_posterior(weights_used, bias_used)
         loss_prior = -model.prior(weights_used, bias_used)
-        loss = kl_weight * (loss_varational_posterior + loss_prior) + loss_likelihood
-        return loss, loss_likelihood, loss_varational_posterior, loss_prior
+        loss = kl_weight * (loss_variational_posterior + loss_prior) + loss_likelihood
+        return loss, loss_likelihood, loss_variational_posterior, loss_prior
     elif loss_type == 'criterion':
         loss = loss_likelihood
         return loss, loss_likelihood, None, None
     else:
         raise ValueError('Loss must be either "bbb" for Bayes By Backprop,'
-                         'or "criterion" for CrossEntropy. No other loss is implented.')
+                         'or "criterion" for CrossEntropy. No other loss is implemented.')
 

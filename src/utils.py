@@ -196,3 +196,11 @@ def load_dict(path):
     with open(path, "rb") as f:
         my_dict = pickle.load(f)
     return my_dict
+
+
+def compute_memory_used_tensor(tensor):
+    return dict({
+        'number of elements': tensor.nelement(),
+        'size of an element': tensor.element_size(),
+        'total memory use': tensor.nelement() * tensor.element_size()
+    })

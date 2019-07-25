@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 
 from src.utils import set_and_print_random_seed
-from src.uncertainty_measures import aggregate_data
+from src.uncertainty_measures import aggregate_data, get_predictions_from_multiple_tests
 
 
 def evaluate(model, testloader, device, val=False):
@@ -15,8 +15,7 @@ def eval_bayesian(model, evalloader, number_of_tests, device, val=False):
     model.eval()
     number_of_samples = len(evalloader.dataset)
     all_correct_labels = torch.zeros(1, requires_grad=False)
-    all_uncertainties = torch.Tensor().to(device).detach()
-    all_dkls = torch.Tensor().to(device).detach()
+    all_outputs = torch.Tensor().to(device).detach()
 
     if val:
         iterator = enumerate(evalloader)
@@ -24,19 +23,18 @@ def eval_bayesian(model, evalloader, number_of_tests, device, val=False):
         iterator = tqdm(enumerate(evalloader))
     for batch_idx, data in iterator:
         inputs, labels = [x.to(device).detach() for x in data]
-        batch_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(device).detach()
+        batch_outputs = torch.Tensor().to(device).detach()
         for test_idx in range(number_of_tests):
             output = model(inputs)
             batch_outputs[test_idx] = output.detach()
-        predicted_labels, uncertainty, dkls = aggregate_data(batch_outputs)
+        predicted_labels = get_predictions_from_multiple_tests(batch_outputs)
 
-        all_uncertainties = torch.cat((all_uncertainties, uncertainty))
-        all_dkls = torch.cat((all_dkls, dkls))
         all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
+        all_outputs = torch.cat((all_outputs, batch_outputs))
 
     accuracy = (all_correct_labels / number_of_samples).item()
 
-    return accuracy, all_uncertainties, all_dkls
+    return accuracy, all_outputs
 
 
 def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, number_of_classes, random_seed=None, device='cpu'):

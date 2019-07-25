@@ -3,12 +3,35 @@ import torch
 
 
 def compute_dkl_uniform(count, number_of_possibilities):
+    """
+    This function computes the kullback leibler divergence between a discrete distribution of probability
+    and the uniform distribution.
+    Args:
+        count (array): size (number_of_labels) . Number of times each labels were predicted
+        number_of_possibilities (int): number of classes
+
+    Returns:
+        float: kullback-leibler divergence
+    """
     normalized = count / count.sum()
     return np.sum(normalized * np.log(number_of_possibilities * normalized))
 
 
+def get_predictions_from_multiple_tests(data):
+    """
+
+    Args:
+        data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes)
+
+    Returns:
+        torch.Tensor: size (batch_size). The labels for each sample.
+    """
+    mean = data.mean(0)
+    return mean.argmax(1)
+
+
 def aggregate_data(data):
-    '''
+    """
 
     Args:
         data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes)
@@ -17,10 +40,9 @@ def aggregate_data(data):
         torch.Tensor: size (batch_size). Tensor of predictions for each element of the batch
         torch.Tensor: size (batch_size). Tensor of uncertainty for each element of the batch
 
-    '''
+    """
 
-    mean = data.mean(0)
-    predicted = mean.argmax(1)
+    predicted = get_predictions_from_multiple_tests(data)
 
     std = data.std(0)
     uncertainty = std.mean(1)
@@ -91,3 +113,15 @@ def compute_mutual_information_uncertainty(data):
     mutual_information_uncertainties = predictive_entropies + 1 / number_of_tests * x.sum(2).sum(0)
 
     return mutual_information_uncertainties
+
+
+def get_all_uncertainty_measures(data):
+    """
+    Gets all the uncertainty measures in this order: Variation-Ratio, Predictive entropy, Mutual information
+    Args:
+        data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes). The output of the test on a batch.
+
+    Returns:
+
+    """
+    return compute_variation_ratio(data), compute_predictive_entropy(data), compute_mutual_information_uncertainty(data)
