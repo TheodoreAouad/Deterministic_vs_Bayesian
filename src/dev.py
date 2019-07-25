@@ -121,7 +121,7 @@ reload(u)
 reload(gc)
 reload(t)
 trainloader, valloader, evalloader = dataset.get_mnist(batch_size=128, split_val=0)
-bay_net = gc.GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+bay_net = gc.GaussianClassifierMNIST("determinist", (0, 0), (1, 1), number_of_classes=10)
 bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(bay_net.parameters())
@@ -150,6 +150,26 @@ for img_idx, img_labels in enumerate(predicted_labels):
     variation_ratios[img_idx] = 1 - highest_label_freq
 
 variation_ratio2 = um.compute_variation_ratio(batch_outputs)
+print(variation_ratio2)
+
+#%%
+reload(um)
+mean_of_distributions = batch_outputs.mean(0).detach()
+predictive_entropies = torch.sum(-mean_of_distributions *torch.log(mean_of_distributions), 1)
+predictive_entropies2 = um.compute_predictive_entropy(batch_outputs)
+
+random_img = torch.rand_like(batch_outputs)
+predictive_entropies_random = um.compute_predictive_entropy(random_img)
+print(predictive_entropies2)
+
+#%%
+reload(um)
+number_of_tests = batch_outputs.size(0)
+predictive_entropies = um.compute_predictive_entropy(batch_outputs)
+x = batch_outputs * torch.log(batch_outputs)
+mutual_information_uncertainties = predictive_entropies + 1/number_of_tests * x.sum(2).sum(0)
+mutual_information_uncertainties2 = um.compute_mutual_information_uncertainty(batch_outputs)
+print(mutual_information_uncertainties2)
 #%%
 reload(u)
 weights_paths = u.get_file_path_in_dir('sandbox_results/bbb_stepped')

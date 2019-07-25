@@ -36,7 +36,8 @@ def aggregate_data(data):
 
 def compute_variation_ratio(data):
     """
-
+    Computes the variation ratio for each sample. It computes the frequency of the most predicted label,
+    then returns 1-this frquency.
     Args:
         data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes). The output of the test on a batch.
 
@@ -55,14 +56,38 @@ def compute_variation_ratio(data):
     return variation_ratios
 
 
-def predictive_entropy(data):
+def compute_predictive_entropy(data):
     """
-
+    Computes the predictive entropy for each sample. It averages across all the tests,
+    then computes the entropy for each sample.
     Args:
         data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes). The output of the test on a batch.
 
     Returns:
-
+        torch.Tensor: size (batch_size). The predictive entropy measure for each sample.
     """
 
-    pass
+    mean_of_distributions = data.mean(0).detach()
+    predictive_entropies = torch.sum(-mean_of_distributions * torch.log(mean_of_distributions), 1)
+
+    return predictive_entropies
+
+
+def compute_mutual_information_uncertainty(data):
+    """
+    Computes the uncertainty linked to the mutual information. It computes the mutual information
+    between the label prediction and the posterior on the weights.
+    Args:
+        data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes). The output of the test on a batch.
+
+    Returns:
+        torch.Tensor: size (batch_size). The mutual information of label distribution and posterior weights for each
+                                         sample.
+
+    """
+    number_of_tests = data.size(0)
+    predictive_entropies = compute_predictive_entropy(data)
+    x = data * torch.log(data)
+    mutual_information_uncertainties = predictive_entropies + 1 / number_of_tests * x.sum(2).sum(0)
+
+    return mutual_information_uncertainties

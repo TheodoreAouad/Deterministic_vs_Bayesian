@@ -29,7 +29,7 @@ def reset_parameters_linear(weight, bias=None):
 
 
 def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoint_dir='./'):
-    '''
+    """
     Set and print numpy random seed, for reproducibility of the training,
     and set torch seed based on numpy random seed
     Args:
@@ -39,7 +39,7 @@ def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoi
     Returns:
         int: numpy random seed
 
-    '''
+    """
     if random_seed is None:
         random_seed = np.random.randint(0, 2 ** 32 - 1)
     np.random.seed(random_seed)
@@ -58,19 +58,19 @@ def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoi
 
 
 def vectorize(tensor):
-    '''
+    """
 
     Args:
         tensor (torch.Tensor): the tensor we want to vectorize
 
     Returns:
-        vector (torch.Tensor): has one dimension
-    '''
+        torch.Tensor: has one dimension
+    """
     return tensor.view(tensor.nelement())
 
 
 def open_experiment_results(type, exp_nb,  group_nb=None, polyaxon_path="polyaxon_results", filename = "results.pt"):
-    '''
+    """
 
     Args:
         type (str): groups or experiment
@@ -82,7 +82,7 @@ def open_experiment_results(type, exp_nb,  group_nb=None, polyaxon_path="polyaxo
     Returns:
         content of the file. Most of the time it is a dict.
 
-    '''
+    """
     if type == "groups":
         path_to_results = os.path.join(polyaxon_path, type, group_nb, exp_nb, filename)
     else:
@@ -91,7 +91,7 @@ def open_experiment_results(type, exp_nb,  group_nb=None, polyaxon_path="polyaxo
 
 
 def get_interesting_result(result):
-    '''
+    """
     Reads the results of a polyaxon experiment and extracts in a dict the desired information.
     Args:
         result (dict): output of the polyaxon experiment
@@ -100,7 +100,7 @@ def get_interesting_result(result):
     Returns:
         dict: dictionary of the desired parameters we would like to write in a csv
 
-    '''
+    """
     interesting_result = dict()
     for key, value in result.items():
         try:
@@ -123,7 +123,7 @@ def get_interesting_result(result):
 
 
 def write_results_in_csv(results, name="results/results.csv"):
-    '''
+    """
 
     This function takes as input a tuple of results from multiple experiments
     and writes a csv.
@@ -135,7 +135,7 @@ def write_results_in_csv(results, name="results/results.csv"):
     Returns:
         None
 
-    '''
+    """
 
     file = open(name, "w")
     writer = csv.DictWriter(file, results[0].keys())
@@ -146,7 +146,7 @@ def write_results_in_csv(results, name="results/results.csv"):
 
 
 def get_file_path_in_dir(dir_path, file_name=""):
-    '''
+    """
     Get all the paths of the files in a certain directory, with a restriction on the file_name
     Args:
         dir_path (str): directory we want to scan
@@ -154,7 +154,7 @@ def get_file_path_in_dir(dir_path, file_name=""):
 
     Returns:
         list: list of the paths of all the files
-    '''
+    """
     all_files = []
     for (dirpath, dirnames, filenames) in os.walk(dir_path):
         for file in filenames:
