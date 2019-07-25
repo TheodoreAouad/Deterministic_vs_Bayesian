@@ -71,8 +71,8 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
     val_dkls = [[] for _ in range(number_of_epochs)]
     val_uncs = [[] for _ in range(number_of_epochs)]
     val_acc = -0.01
-    val_dkl = torch.tensor(1)
-    val_unc = torch.tensor(1)
+    val_dkl = -1
+    val_unc = -1
 
     model.train()
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
