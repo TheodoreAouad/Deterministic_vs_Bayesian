@@ -6,7 +6,8 @@ from torch.nn import CrossEntropyLoss
 
 from src.models.bayesian_models import GaussianClassifierCIFAR
 from src.tasks.trains import train, eval_bayesian
-from src.utils import set_and_print_random_seed, aggregate_data
+from src.utils import set_and_print_random_seed
+from src.uncertainty_measures import aggregate_data
 from src.dataset_manager.get_data import get_cifar10
 
 parser = argparse.ArgumentParser()
@@ -36,7 +37,8 @@ adam_proba = optim.Adam(bay_net.parameters())
 losses2, accs2 = train(bay_net, adam_proba, criterion, epoch, trainloader, device=device, verbose=True)
 
 
-test_acc, test_uncertainty, test_dkls = eval_bayesian(bay_net, testloader, number_of_tests=number_of_tests, device=device)
+test_acc, test_uncertainty, test_dkls = eval_bayesian(bay_net, testloader, number_of_tests=number_of_tests,
+                                                      device=device)
 
 
 seed_random = set_and_print_random_seed()

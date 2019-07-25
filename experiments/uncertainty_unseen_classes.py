@@ -68,14 +68,10 @@ adam_proba = optim.Adam(bay_net.parameters())
                                      output_dir_results="./output/weights_training",
                                      device=device,
                                      verbose=True)
-_, unseen_eval_uncertainty, unseen_eval_dkls = eval_bayesian(bay_net,
-                                                             evalloader_unseen,
-                                                             number_of_tests=number_of_tests,
-                                                             device=device)
-seen_eval_acc, seen_eval_uncertainty, seen_eval_dkls = eval_bayesian(bay_net,
-                                                                     evalloader_seen,
-                                                                     number_of_tests=number_of_tests,
-                                                                     device=device)
+_, unseen_eval_uncertainty, unseen_eval_dkls = eval_bayesian(bay_net, evalloader_unseen,
+                                                             number_of_tests=number_of_tests, device=device)
+seen_eval_acc, seen_eval_uncertainty, seen_eval_dkls = eval_bayesian(bay_net, evalloader_seen,
+                                                                     number_of_tests=number_of_tests, device=device)
 
 print(f"Seen: {round(100*seen_eval_acc,2)} %, "
       f"Softmax uncertainty:{seen_eval_uncertainty.mean()}, "

@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import torch.nn.functional as F
 import torchvision.transforms as transforms
 
 import src.models.bayesian_models.bayesian_base_layers
@@ -16,12 +17,14 @@ import src.tasks.trains as t
 import src.tasks.evals as e
 import src.dataset_manager.get_data as dataset
 import src.models.bayesian_models.gaussian_classifiers as gc
+import src.uncertainty_measures as um
 
 reload(u)
 reload(t)
 reload(dm)
 reload(gc)
 reload(dataset)
+reload(um)
 
 if torch.cuda.is_available():
     device = "cuda"
@@ -38,6 +41,10 @@ transform = transforms.Compose([
 ])
 omniglot_loader = dataset.get_omniglot(transform=transform)
 get_omniglot_img = iter(omniglot_loader)
+
+#%%
+
+F.dropout
 
 #%%
 omniglot_img, omniglot_label = next(get_omniglot_img)
@@ -109,19 +116,40 @@ _, ce_softmax_unc_0_5, ce_dkls_0_5 = e.eval_bayesian(ce_net, evalloader_0_5, num
 print('Unseen: ', ce_softmax_unc_6_9, ce_dkls_6_9)
 print('Seen: ', ce_softmax_unc_0_5, ce_dkls_0_5)
 
-#%%
+#%% Classic training
 reload(u)
 reload(gc)
 reload(t)
-trainloader, evalloader = dataset.get_mnist(batch_size=128)
-det_net = gc.GaussianClassifierMNIST("determinist", (0, 0), (1, 1), number_of_classes=10)
-det_net.to(device)
+trainloader, valloader, evalloader = dataset.get_mnist(batch_size=128, split_val=0)
+bay_net = gc.GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+bay_net.to(device)
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(det_net.parameters())
-t.train(det_net, optimizer, criterion, 3, output_dir_results='sandbox_results/det',
+optimizer = optim.Adam(bay_net.parameters())
+t.train(bay_net, optimizer, criterion, 1, output_dir_results='sandbox_results/det',
         trainloader=trainloader, device=device, verbose=True)
 
+#%%
+number_of_tests = 5
+model = bay_net
+get_eval_img = iter(evalloader)
+data = next(get_eval_img)
+inputs, labels = [x.to(device).detach() for x in data]
+batch_outputs = torch.Tensor(number_of_tests, inputs.size(0), model.number_of_classes).to(device).detach()
+for test_idx in range(number_of_tests):
+    output = model(inputs)
+    batch_outputs[test_idx] = output.detach()
 
+#%%
+reload(um)
+batch_size = batch_outputs.size(1)
+variation_ratios = torch.Tensor(batch_size)
+predicted_labels = torch.transpose(batch_outputs.argmax(2), 0, 1)
+for img_idx, img_labels in enumerate(predicted_labels):
+    labels, counts = np.unique(img_labels, return_counts=True)
+    highest_label_freq = counts.max() / counts.sum()
+    variation_ratios[img_idx] = 1 - highest_label_freq
+
+variation_ratio2 = um.compute_variation_ratio(batch_outputs)
 #%%
 reload(u)
 weights_paths = u.get_file_path_in_dir('sandbox_results/bbb_stepped')

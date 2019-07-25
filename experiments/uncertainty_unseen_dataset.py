@@ -83,16 +83,12 @@ adam_proba = optim.Adam(bay_net.parameters())
                                                                    verbose=True)
 
 print("Evaluation on MNIST ...")
-seen_eval_acc, seen_eval_uncertainty, seen_eval_dkls = eval_bayesian(bay_net,
-                                                                     evalloader,
-                                                                     number_of_tests=number_of_tests,
-                                                                     device=device)
+seen_eval_acc, seen_eval_uncertainty, seen_eval_dkls = eval_bayesian(bay_net, evalloader,
+                                                                     number_of_tests=number_of_tests, device=device)
 print("Finished evaluation on MNIST.")
 print(f"Evavuation on {dataset} ...")
-_, unseen_eval_uncertainty, unseen_eval_dkls = eval_bayesian(bay_net,
-                                                                 unseen_loader,
-                                                                 number_of_tests=number_of_tests,
-                                                                 device=device)
+_, unseen_eval_uncertainty, unseen_eval_dkls = eval_bayesian(bay_net, unseen_loader, number_of_tests=number_of_tests,
+                                                             device=device)
 print("Finished evaluation on ", dataset)
 
 print(f"MNIST: {round(100*seen_eval_acc,2)} %, "
