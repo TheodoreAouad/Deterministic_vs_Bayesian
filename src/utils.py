@@ -9,6 +9,16 @@ import os
 
 
 def reset_parameters_conv(weight, bias=None):
+
+    """
+    This function changes the weights and bias we give as arguments. It reinitializes them.
+    Args:
+        weight (torch.Tensor): weight we want to reset
+        bias (torch.Tensor): bias we want to reset
+
+    Returns:
+        None
+    """
     size = weight.size()
     in_channels, kernel_size = size[1], size[2:]
 
@@ -22,6 +32,7 @@ def reset_parameters_conv(weight, bias=None):
 
 
 def reset_parameters_linear(weight, bias=None):
+
     stdv = 1. / math.sqrt(weight.size(1))
     weight.data.uniform_(-stdv, stdv)
     if bias is not None:
@@ -164,6 +175,15 @@ def get_file_path_in_dir(dir_path, file_name=""):
 
 
 def compute_weights_norm(model):
+    """
+
+    Args:
+        model (torch.nn.Module): the model we want to compute the norm of the weights of
+
+    Returns:
+        float: the norm of the weights parameters of the model
+
+    """
     norm = 0
     all_params = model.parameters()
     for param in model.parameters():
@@ -199,6 +219,14 @@ def load_dict(path):
 
 
 def compute_memory_used_tensor(tensor):
+    """
+
+    Args:
+        tensor (torch.Tensor): tensor we want to compute the memory of
+
+    Returns:
+        Dict: different information on the memory use
+    """
     return dict({
         'number of elements': tensor.nelement(),
         'size of an element': tensor.element_size(),

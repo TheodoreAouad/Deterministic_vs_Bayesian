@@ -4,16 +4,16 @@ from time import time
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from src.tasks.evals import evaluate, eval_bayesian
-from src.uncertainty_measures import compute_variation_ratio, compute_predictive_entropy, \
-    compute_mutual_information_uncertainty, get_all_uncertainty_measures
+from src.tasks.evals import eval_bayesian
+from src.uncertainty_measures import get_all_uncertainty_measures
 
 
-def train(model, optimizer, criterion, number_of_epochs, trainloader,
+def train(model, optimizer, criterion, number_of_epochs, trainloader, valloader=None, number_of_tests=1,
           output_dir_tensorboard=None, output_dir_results='sandbox_results', device='cpu', verbose = False):
-    return train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader,
-                          loss_type='criterion', output_dir_tensorboard=output_dir_tensorboard,
-                          output_dir_results= output_dir_results, device=device, verbose=verbose)
+    return train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, valloader=valloader,
+                          number_of_tests=number_of_tests, loss_type='criterion', step_function=uniform,
+                          output_dir_tensorboard=output_dir_tensorboard, output_dir_results= output_dir_results,
+                          device=device, verbose=verbose)
 
 
 def uniform(_, number_of_batchs):
@@ -63,7 +63,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
         if not os.path.exists(output_dir_results):
             os.mkdir(output_dir_results)
 
-    max_acc = 0
+    max_acc = -1
     number_of_batch = len(trainloader)
     interval = number_of_batch // 10
 
@@ -128,7 +128,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
                 if valloader is not None:
                     val_acc, val_outputs = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
                                                               device=device, val=True)
-                    val_vr, val_predictive_entropy, val_mi = get_all_uncertainty_measures
+                    val_vr, val_predictive_entropy, val_mi = get_all_uncertainty_measures(val_outputs)
                 current_loss = running_loss / number_of_batch
                 if loss_type == 'bbb':
                     current_loss_llh = running_loss_llh / number_of_batch

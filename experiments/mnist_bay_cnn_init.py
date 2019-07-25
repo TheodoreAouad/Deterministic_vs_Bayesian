@@ -61,8 +61,7 @@ losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc, batch_idx_m
                                                                                                         device=device, verbose=True)
 test_acc, test_uncertainty, test_dkls = eval_bayesian(bay_net, testloader, number_of_tests=number_of_tests,
                                                       device=device)
-random_uncertainty, random_dkl, seed_random = eval_random(bay_net, batch_size, 1, 28, number_of_tests,
-                                                          number_of_classes=10, device=device)
+random_uncertainty, random_dkl, seed_random = eval_random(bay_net, batch_size, 1, 28, number_of_tests, device=device)
 
 res = dict({
     "number of epochs": epoch,
