@@ -38,30 +38,33 @@ def eval_bayesian(model, evalloader, number_of_tests, device, val=False):
         torch.Tensor: size (number of test samples, number of classes) output of softmax of all the inputs
     """
     model.eval()
-    number_of_samples = len(evalloader.dataset)
-    batch_size = evalloader.batch_size
-    number_of_classes = model.number_of_classes
-    all_correct_labels = torch.zeros(1, requires_grad=False)
-    all_outputs = torch.Tensor().to(device).detach()
+    with torch.no_grad():
+        number_of_samples = len(evalloader.dataset)
+        batch_size = evalloader.batch_size
+        number_of_classes = model.number_of_classes
+        all_correct_labels = torch.zeros(1, requires_grad=False)
+        all_outputs = torch.Tensor().to(device)
 
-    if val:
-        iterator = enumerate(evalloader)
-    else:
-        iterator = tqdm(enumerate(evalloader))
-    for batch_idx, data in iterator:
-        inputs, labels = [x.to(device).detach() for x in data]
-        batch_outputs = torch.Tensor(number_of_tests, batch_size, number_of_classes).to(device).detach()
-        for test_idx in range(number_of_tests):
-            output = model(inputs)
-            batch_outputs[test_idx] = output.detach()
-        predicted_labels = get_predictions_from_multiple_tests(batch_outputs)
+        if val:
+            iterator = enumerate(evalloader)
+        else:
+            iterator = tqdm(enumerate(evalloader))
+        for batch_idx, data in iterator:
+            inputs, labels = data[0].to(device), data[1].to(device)
+            batch_outputs = torch.zeros(
+                (number_of_tests, inputs.size(0), number_of_classes)
+            ).to(device)
+            for test_idx in range(number_of_tests):
+                output = model(inputs)
+                batch_outputs[test_idx] = output
+            predicted_labels = get_predictions_from_multiple_tests(batch_outputs)
 
-        all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
-        all_outputs = torch.cat((all_outputs, batch_outputs))
+            all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
+            all_outputs = torch.cat((all_outputs, batch_outputs))
 
-    accuracy = (all_correct_labels / number_of_samples).item()
+        accuracy = (all_correct_labels / number_of_samples).item()
 
-    return accuracy, all_outputs
+        return accuracy, all_outputs
 
 
 def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, random_seed=None, device='cpu'):
@@ -89,5 +92,5 @@ def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, rando
     output_random = torch.Tensor(number_of_tests, batch_size, number_of_classes)
     for test_idx in range(number_of_tests):
         output_random[test_idx] = model(random_noise).detach()
-    random_vr, random_prediction_entropy, random_mi = get_all_uncertainty_measures(output_random)
-    return random_vr, random_prediction_entropy, random_mi, seed
+    random_vr, random_predictive_entropy, random_mi = get_all_uncertainty_measures(output_random)
+    return random_vr, random_predictive_entropy, random_mi, seed

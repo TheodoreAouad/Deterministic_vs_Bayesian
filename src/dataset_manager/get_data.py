@@ -23,7 +23,7 @@ class EmptyLoader:
         self.dataset.__getitem__(index)
 
 
-def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10), split_val=0.5, transform=transform,
+def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10), split_val=0.8, transform=transform,
               batch_size=16, shuffle=True):
     """
 

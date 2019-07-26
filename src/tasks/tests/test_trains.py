@@ -9,7 +9,7 @@ from src.tasks.trains import train, train_bayesian
 
 class RandomTrainloader:
 
-    def __init__(self, number_of_batches=10, batch_size=16, number_of_channels=1, img_dim=28, number_of_classes=10):
+    def __init__(self, number_of_batches=2, batch_size=2, number_of_channels=1, img_dim=28, number_of_classes=10):
         self.batch_size = batch_size
         self.number_of_classes = number_of_classes
         self.dataset = torch.rand((number_of_batches, batch_size, number_of_channels, img_dim, img_dim))
@@ -33,7 +33,7 @@ class TestTrain:
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(det_net.parameters())
 
-        train(det_net, optimizer, criterion, 1,trainloader=randomloader, device=device, verbose=False)
+        train(det_net, optimizer, criterion, 1, trainloader=randomloader, device=device, verbose=False)
 
     @staticmethod
     def test_training_with_validation():
@@ -45,6 +45,32 @@ class TestTrain:
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(det_net.parameters())
 
-        train(det_net, optimizer, criterion, 1,trainloader=randomloader, valloader=randomloaderval,
+        train(det_net, optimizer, criterion, 1, trainloader=randomloader, valloader=randomloaderval,
               device=device, verbose=False)
 
+
+class TestTrainBayesian:
+
+    @staticmethod
+    def test_training_no_validation():
+        randomloader = RandomTrainloader()
+        device = "cpu"
+        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net.to(device)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(bay_net.parameters())
+
+        train_bayesian(bay_net, optimizer, criterion, 1, trainloader=randomloader, device=device, verbose=False)
+
+    @staticmethod
+    def test_training_with_validation():
+        randomloader = RandomTrainloader()
+        randomloaderval = RandomTrainloader()
+        device = "cpu"
+        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net.to(device)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(bay_net.parameters())
+
+        train_bayesian(bay_net, optimizer, criterion, 1, trainloader=randomloader, valloader=randomloaderval,
+                       number_of_tests=2, device=device, verbose=False)

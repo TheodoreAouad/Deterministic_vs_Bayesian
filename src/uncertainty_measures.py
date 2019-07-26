@@ -69,13 +69,13 @@ def compute_variation_ratio(data):
     """
     batch_size = data.size(1)
     variation_ratios = torch.Tensor(batch_size).detach()
-    predicted_labels = torch.transpose(data.argmax(2), 0, 1)
+    predicted_labels = torch.transpose(data.argmax(2), 0, 1).to('cpu')
     for img_idx, img_labels in enumerate(predicted_labels):
         labels, counts = np.unique(img_labels, return_counts=True)
         highest_label_freq = counts.max() / counts.sum()
         variation_ratios[img_idx] = 1 - highest_label_freq
 
-    return variation_ratios
+    return variation_ratios.to(data.device)
 
 
 def compute_predictive_entropy(data):

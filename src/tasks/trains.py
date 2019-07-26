@@ -65,7 +65,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
 
     max_acc = -1
     number_of_batch = len(trainloader)
-    interval = number_of_batch // 10
+    interval = max(number_of_batch // 10, 1)
 
     loss_totals = [[] for _ in range(number_of_epochs)]
     if loss_type == 'bbb':
