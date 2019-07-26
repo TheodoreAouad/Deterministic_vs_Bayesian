@@ -110,9 +110,11 @@ res = dict({
     "seen vr": seen_eval_vr,
     "seen predictive entropy": seen_eval_predictive_entropy,
     "seen mi": seen_eval_mi,
+    "all softmax outputs seen": all_outputs_eval_seen,
     "unseen vr": unseen_eval_vr,
     "unseen predictive entropy": unseen_eval_predictive_entropy,
-    "unseen mi": seen_eval_mi
+    "unseen mi": seen_eval_mi,
+    "all softmax outputs unseen": all_outputs_eval_unseen
 })
 
 torch.save(res, "./output/results.pt")

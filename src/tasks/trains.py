@@ -78,9 +78,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
     val_predictive_entropies = [[] for _ in range(number_of_epochs)]
     val_mis = [[] for _ in range(number_of_epochs)]
     val_acc = -0.01
-    val_vr = -1
-    val_predictive_entropy = -1
-    val_mi = -1
+    val_vr = torch.tensor(-1)
+    val_predictive_entropy = torch.tensor(-1)
+    val_mi = torch.tensor(-1)
 
     model.train()
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times
@@ -127,7 +127,7 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
             if batch_idx % interval == interval - 1:
                 if valloader is not None:
                     val_acc, val_outputs = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
-                                                              device=device, val=True)
+                                                         device=device, val=True)
                     val_vr, val_predictive_entropy, val_mi = get_all_uncertainty_measures(val_outputs)
                 current_loss = running_loss / number_of_batch
                 if loss_type == 'bbb':
@@ -148,18 +148,18 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
                               f'loss_vp: {round(current_loss_vp, 2)}, '
                               f'loss_pr: {round(current_loss_pr, 2)}, '
                               f'Val Acc: {round(100*val_acc, 2)} %, '
-                              f'Val VR: {round(val_vr, 2)}, '
-                              f'Val Pred Entropy: {round(val_predictive_entropy, 2)}, '
-                              f'Val MI: {round(val_mi, 2)}, '
+                              f'Val VR: {val_vr.mean().item()}, '
+                              f'Val Pred Entropy: {val_predictive_entropy.mean().item()}, '
+                              f'Val MI: {val_mi.mean().item()}, '
                               f'Time Elapsed: {round(time() - start_time)} s')
                     else:
                         print(f'Train: [{epoch + 1}, {batch_idx + 1}/{number_of_batch}] '
                               f'Acc: {round(100 * current_train_acc, 2)} %, '
                               f'loss: {round(current_loss, 2)}'
                               f'Val Acc: {round(100*val_acc, 2)} %, '
-                              f'Val VR: {round(val_vr, 2)}, '
-                              f'Val Pred Entropy: {round(val_predictive_entropy, 2)}, '
-                              f'Val MI: {round(val_mi, 2)}, '
+                              f'Val VR: {val_vr.mean().item()}, '
+                              f'Val Pred Entropy: {val_predictive_entropy.mean().item()}, '
+                              f'Val MI: {val_mi.mean().item()}, '
                               f'Time Elapsed: {round(time() - start_time)} s')
 
                 loss_totals[epoch].append(current_loss)

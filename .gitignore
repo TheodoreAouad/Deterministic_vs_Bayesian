@@ -16,3 +16,4 @@ src/tasks/__pycache__/
 tests_integration/test_dataset_manager/__pycache__/
 src/dev.py
 todelete.pt
+src/tasks/tests/__pycache__/

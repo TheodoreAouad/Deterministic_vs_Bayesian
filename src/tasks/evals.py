@@ -23,7 +23,7 @@ def evaluate(model, evalloader, device, val=False):
     return accuracy, all_outputs
 
 
-def eval_bayesian(model, evalloader, number_of_tests, device, val=False):
+def eval_bayesian(model, evalloader, number_of_tests, device='cpu', val=False):
     """
 
     Args:
@@ -60,7 +60,7 @@ def eval_bayesian(model, evalloader, number_of_tests, device, val=False):
             predicted_labels = get_predictions_from_multiple_tests(batch_outputs)
 
             all_correct_labels += torch.sum(predicted_labels.int() - labels.int() == 0)
-            all_outputs = torch.cat((all_outputs, batch_outputs))
+            all_outputs = torch.cat((all_outputs, batch_outputs), 1)
 
         accuracy = (all_correct_labels / number_of_samples).item()
 
