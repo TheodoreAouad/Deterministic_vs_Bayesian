@@ -1,42 +1,10 @@
 import csv
 
-import math
 import pickle
 
 import torch
 import numpy as np
 import os
-
-
-def reset_parameters_conv(weight, bias=None):
-
-    """
-    This function changes the weights and bias we give as arguments. It reinitializes them.
-    Args:
-        weight (torch.Tensor): weight we want to reset
-        bias (torch.Tensor): bias we want to reset
-
-    Returns:
-        None
-    """
-    size = weight.size()
-    in_channels, kernel_size = size[1], size[2:]
-
-    n = in_channels
-    for k in kernel_size:
-        n *= k
-    stdv = 1. / math.sqrt(n)
-    weight.data.uniform_(-stdv, stdv)
-    if bias is not None:
-        bias.data.uniform_(-stdv, stdv)
-
-
-def reset_parameters_linear(weight, bias=None):
-
-    stdv = 1. / math.sqrt(weight.size(1))
-    weight.data.uniform_(-stdv, stdv)
-    if bias is not None:
-        bias.data.uniform_(-stdv, stdv)
 
 
 def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoint_dir='./'):
