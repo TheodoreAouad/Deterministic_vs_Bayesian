@@ -1,31 +1,10 @@
 import csv
 
-import math
 import pickle
 
 import torch
 import numpy as np
 import os
-
-
-def reset_parameters_conv(weight, bias=None):
-    size = weight.size()
-    in_channels, kernel_size = size[1], size[2:]
-
-    n = in_channels
-    for k in kernel_size:
-        n *= k
-    stdv = 1. / math.sqrt(n)
-    weight.data.uniform_(-stdv, stdv)
-    if bias is not None:
-        bias.data.uniform_(-stdv, stdv)
-
-
-def reset_parameters_linear(weight, bias=None):
-    stdv = 1. / math.sqrt(weight.size(1))
-    weight.data.uniform_(-stdv, stdv)
-    if bias is not None:
-        bias.data.uniform_(-stdv, stdv)
 
 
 def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoint_dir='./'):
@@ -164,6 +143,15 @@ def get_file_path_in_dir(dir_path, file_name=""):
 
 
 def compute_weights_norm(model):
+    """
+    Compute the L2 norm of the weights of the model.
+    Args:
+        model (torch.nn.Module): the model we want to compute the norm of the weights of
+
+    Returns:
+        float: the norm of the weights parameters of the model
+
+    """
     norm = 0
     all_params = model.parameters()
     for param in model.parameters():
@@ -196,3 +184,19 @@ def load_dict(path):
     with open(path, "rb") as f:
         my_dict = pickle.load(f)
     return my_dict
+
+
+def compute_memory_used_tensor(tensor):
+    """
+
+    Args:
+        tensor (torch.Tensor): tensor we want to compute the memory of
+
+    Returns:
+        Dict: different information on the memory use
+    """
+    return dict({
+        'number of elements': tensor.nelement(),
+        'size of an element': tensor.element_size(),
+        'total memory use': tensor.nelement() * tensor.element_size()
+    })

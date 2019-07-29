@@ -70,32 +70,46 @@ criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
 
 (losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc,
- batch_idx_max_acc, val_accs, val_uncs, val_dkls) = train_bayesian(bay_net,
-                                                                   adam_proba,
-                                                                   criterion,
-                                                                   epoch,
-                                                                   trainloader,
-                                                                   valloader,
-                                                                   loss_type=loss_type,
-                                                                   output_dir_tensorboard='./output',
-                                                                   output_dir_results="./output/weights_training",
-                                                                   device=device,
-                                                                   verbose=True)
+ batch_idx_max_acc, val_accs, val_vrs, val_pes, val_mis) = train_bayesian(
+    bay_net,
+    adam_proba,
+    criterion,
+    epoch,
+    trainloader,
+    valloader,
+    loss_type=loss_type,
+    output_dir_tensorboard='./output',
+    output_dir_results="./output/weights_training",
+    device=device,
+    verbose=True
+)
 
 print("Evaluation on MNIST ...")
-seen_eval_acc, seen_eval_uncertainty, seen_eval_dkls = eval_bayesian(bay_net, evalloader,
-                                                                     number_of_tests=number_of_tests, device=device)
+seen_eval_acc, seen_eval_vrs, seen_eval_pes, seen_eval_mis = eval_bayesian(
+    bay_net,
+    evalloader,
+    number_of_tests=number_of_tests,
+    device=device
+)
+
 print("Finished evaluation on MNIST.")
 print(f"Evavuation on {dataset} ...")
-_, unseen_eval_uncertainty, unseen_eval_dkls = eval_bayesian(bay_net, unseen_loader, number_of_tests=number_of_tests,
-                                                             device=device)
+_, unseen_eval_vrs, unseen_eval_pes, unseen_eval_mis = eval_bayesian(
+    bay_net,
+    unseen_loader,
+    number_of_tests=number_of_tests,
+    device=device
+)
+
 print("Finished evaluation on ", dataset)
 
 print(f"MNIST: {round(100*seen_eval_acc,2)} %, "
-      f"Softmax uncertainty:{seen_eval_uncertainty.mean()}, "
-      f"Dkl:{seen_eval_dkls.mean()}")
-print(f"{dataset}: Softmax uncertainty:{unseen_eval_uncertainty.mean()}, "
-      f"Dkl:{unseen_eval_dkls.mean()}")
+      f"Variation-ratios:{seen_eval_vrs.mean()}, "
+      f"Predictive Entropy:{seen_eval_pes.mean()}, "
+      f"Mutual information:{seen_eval_mis.mean()}")
+print(f"{dataset}: Variation-ratios:{unseen_eval_vrs.mean()}, "
+      f"Predictive Entropy:{unseen_eval_pes.mean()}, ",
+      f"Mutual Information:{unseen_eval_mis.mean()}")
 res = dict({
     "dataset": dataset,
     "number of epochs": epoch,
@@ -113,13 +127,16 @@ res = dict({
     "train loss vp": loss_vps,
     "train loss pr": loss_prs,
     "val accuracy": val_accs,
-    "val uncertainty": val_uncs,
-    "val dkls": val_dkls,
+    "val vrs": val_vrs,
+    "val pes": val_pes,
+    "val mis": val_mis,
     "eval accuracy": seen_eval_acc,
-    "seen uncertainty": seen_eval_uncertainty,
-    "seen dkls": seen_eval_dkls,
-    "unseen uncertainty": unseen_eval_uncertainty,
-    "unseen dkls": unseen_eval_dkls
+    "seen vrs": seen_eval_vrs,
+    "seen pes": seen_eval_pes,
+    "seen mis": seen_eval_mis,
+    "unseen vrs": unseen_eval_vrs,
+    "unseen pes": unseen_eval_pes,
+    "unseen mis": unseen_eval_mis
 })
 
 torch.save(res, "./output/results.pt")

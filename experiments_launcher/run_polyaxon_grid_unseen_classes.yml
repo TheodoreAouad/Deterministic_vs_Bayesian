@@ -16,10 +16,13 @@ hptuning:
 
   matrix:
     experiment_file:
-      values: ["experiments/mnist_bay_cnn_init.py"]
+      values: ["experiments/uncertainty_unseen_classes.py"]
 
     dataset:
       values: ["cifar10"]
+
+    split_labels:
+      values: [5]
 
     rho:
       values: [-6, -4, -2]
