@@ -19,7 +19,7 @@ hptuning:
       values: ["experiments/mnist_bay_cnn_init.py"]
 
     dataset:
-      values: ["cifar10"]
+      values: ["cifar10", "omniglot"]
 
     rho:
       values: [-6, -4, -2]
@@ -58,4 +58,4 @@ run:
     # Save experiment script
     - cp {{ experiment_file }} ./output
     # Run the pipeline defined in the pipelines folder
-    - python {{ experiment_file }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}
+    - python {{ experiment_file }} --dataset {{ dataset }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}

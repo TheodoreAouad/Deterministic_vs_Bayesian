@@ -46,8 +46,12 @@ else:
     device = "cpu"
 device = torch.device(device)
 
-trainloader, valloader, evalloader_unseen = get_mnist(train_labels=range(split_labels), eval_labels=range(split_labels, 10),
-                                                      batch_size=batch_size)
+trainloader, valloader, evalloader_unseen = get_mnist(
+    train_labels=range(split_labels),
+    eval_labels=range(split_labels, 10),
+    batch_size=batch_size
+)
+
 _, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), batch_size=batch_size)
 
 
@@ -58,24 +62,34 @@ criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
 
 (losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc,
- batch_idx_max_acc, val_accs,
- val_vrs, val_predictive_entropies, val_mis) = train_bayesian(bay_net,
-                                     adam_proba,
-                                     criterion,
-                                     epoch,
-                                     trainloader,
-                                     valloader,
-                                     loss_type=loss_type,
-                                     output_dir_tensorboard='./output',
-                                     output_dir_results="./output/weights_training",
-                                     device=device,
-                                     verbose=True)
-_, all_outputs_eval_unseen = eval_bayesian(bay_net, evalloader_unseen,
-                                                             number_of_tests=number_of_tests, device=device)
+ batch_idx_max_acc, val_accs, val_vrs, val_predictive_entropies, val_mis) = train_bayesian(
+    bay_net,
+    adam_proba,
+    criterion,
+    epoch,
+    trainloader,
+    valloader,
+    loss_type=loss_type,
+    output_dir_tensorboard='./output',
+    output_dir_results="./output/weights_training",
+    device=device,
+    verbose=True)
+
+_, all_outputs_eval_unseen = eval_bayesian(
+    bay_net,
+    evalloader_unseen,
+    number_of_tests=number_of_tests,
+    device=device
+)
+
 unseen_eval_vr, unseen_eval_predictive_entropy, unseen_eval_mi = get_all_uncertainty_measures(all_outputs_eval_unseen)
 
-seen_eval_acc, all_outputs_eval_seen = eval_bayesian(bay_net, evalloader_seen,
-                                                                     number_of_tests=number_of_tests, device=device)
+seen_eval_acc, all_outputs_eval_seen = eval_bayesian(
+    bay_net,
+    evalloader_seen, number_of_tests=number_of_tests,
+    device=device
+)
+
 seen_eval_vr, seen_eval_predictive_entropy, seen_eval_mi = get_all_uncertainty_measures(all_outputs_eval_seen)
 
 

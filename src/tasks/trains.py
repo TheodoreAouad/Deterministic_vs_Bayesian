@@ -179,9 +179,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
                         writer_loss_llh.add_scalar('loss', current_loss_llh, tensorboard_idx)
                         writer_loss_vp.add_scalar('loss', current_loss_vp, tensorboard_idx)
                         writer_loss_pr.add_scalar('loss', current_loss_pr, tensorboard_idx)
-                    writer_vr.add_scalar('variation ratio', val_acc, tensorboard_idx)
-                    writer_predictive_entropy.add_scalar('predictive entropy', val_acc, tensorboard_idx)
-                    writer_mi.add_scalar('mutual information', val_acc, tensorboard_idx)
+                    writer_vr.add_scalar('variation ratio', val_vr.mean().item(), tensorboard_idx)
+                    writer_predictive_entropy.add_scalar('predictive entropy', val_predictive_entropy.mean().item(), tensorboard_idx)
+                    writer_mi.add_scalar('mutual information', val_mi.mean().item(), tensorboard_idx)
                     writer_accs_train.add_scalar('accuracy', current_train_acc, tensorboard_idx)
                     writer_accs_val.add_scalar('accuracy', val_acc, tensorboard_idx)
                     tensorboard_idx += 1

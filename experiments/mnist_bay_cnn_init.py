@@ -52,27 +52,31 @@ criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
 
 (losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc,
- batch_idx_max_acc, val_accs,
- val_vrs, val_predictive_entropies, val_mis) = train_bayesian(bay_net,
-                                     adam_proba,
-                                     criterion,
-                                     epoch,
-                                     trainloader,
-                                     valloader,
-                                     loss_type=loss_type,
-                                     output_dir_tensorboard='./output',
-                                     output_dir_results="./output/weights_training",
-                                     device=device,
-                                     verbose=True)
+ batch_idx_max_acc, val_accs, val_vrs, val_predictive_entropies, val_mis) = train_bayesian(
+    bay_net,
+    adam_proba,
+    criterion,
+    epoch,
+    trainloader,
+    valloader,
+    loss_type=loss_type,
+    output_dir_tensorboard='./output',
+    output_dir_results="./output/weights_training",
+    device=device,
+    verbose=True
+)
+
 eval_acc, all_outputs_eval = eval_bayesian(bay_net, evalloader, number_of_tests=number_of_tests, device=device)
 eval_vr, eval_predictive_entropy, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
 
-random_vr, random_predictive_entropy, random_mi, seed = eval_random(bay_net,
-                                                                    batch_size=32,
-                                                                    img_channels=1,
-                                                                    img_dim=28,
-                                                                    number_of_tests=number_of_tests,
-                                                                    device=device)
+random_vr, random_predictive_entropy, random_mi, seed = eval_random(
+    bay_net,
+    batch_size=32,
+    img_channels=1,
+    img_dim=28,
+    number_of_tests=number_of_tests,
+    device=device
+)
 
 print(f"Eval acc: {round(100*eval_acc,2)} %, "
       f"Variation-Ratio:{eval_vr.mean()}, "

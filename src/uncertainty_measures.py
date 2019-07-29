@@ -122,6 +122,7 @@ def get_all_uncertainty_measures(data):
         data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes). The output of the test on a batch.
 
     Returns:
+        Tuple (torch.Tensor, torch.Tensor, torch.Tensor: all tensors are of size batch_size (=data.size(1))
 
     """
     return compute_variation_ratio(data), compute_predictive_entropy(data), compute_mutual_information_uncertainty(data)
