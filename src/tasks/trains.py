@@ -10,7 +10,7 @@ from src.uncertainty_measures import get_all_uncertainty_measures
 
 def train(model, optimizer, criterion, number_of_epochs, trainloader, valloader=None, number_of_tests=1,
           output_dir_tensorboard=None, output_dir_results='sandbox_results', device='cpu', verbose = False):
-    return train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, valloader=valloader,
+    return train_bayesian_refactored(model, optimizer, criterion, number_of_epochs, trainloader, valloader=valloader,
                           number_of_tests=number_of_tests, loss_type='criterion', step_function=uniform,
                           output_dir_tensorboard=output_dir_tensorboard, output_dir_results= output_dir_results,
                           device=device, verbose=verbose)
@@ -18,6 +18,347 @@ def train(model, optimizer, criterion, number_of_epochs, trainloader, valloader=
 
 def uniform(_, number_of_batchs):
     return 1/number_of_batchs
+
+
+class TrainBayesian:
+
+    def __init__(self, model, optimizer, criterion, number_of_epochs, trainloader, valloader=None, number_of_tests=10,
+                   loss_type='bbb', step_function=uniform, output_dir_tensorboard=None, output_dir_weights_results=None,
+                   device="cpu", verbose=False):
+        """
+        Train the model in a bayesian fashion, meaning the loss is different. How to use: init the model with
+        the parameters. Then, use the __call__ method to train the model and return the output.
+        Args:
+            model (Torch.nn.Module child): the model we want to train
+            optimizer (torch.optim optimizer): how do we update the weights
+            criterion (function): how do we compute the likelihood
+            number_of_epochs (int): how long do we train our model
+            trainloader (torch.utils.data.dataloader.DataLoader): train data
+            loss_type (str): which type of loss. "bbb" (Bayes By Backprop) or "criterion" (CrossEntropy)
+            step_function (function): takes as args (number of batchs, length of batch) and returns the weight to give to KL
+            output_dir_tensorboard (str): output directory in which to save the tensorboard
+            device (torch.device || str): cpu or gpu
+            verbose (Bool): print training steps or not
+
+        """
+        self.model = model
+        self.optimizer = optimizer
+        self.criterion = criterion
+        self.number_of_epochs = number_of_epochs
+        self.trainloader = trainloader
+        self.valloader = valloader
+        self.number_of_tests = number_of_tests
+        self.loss_type = loss_type
+        self.step_function = step_function
+        self.output_dir_tensorboard = output_dir_tensorboard
+        self.output_dir_weights_results = output_dir_weights_results
+        self.device = device
+        self.verbose = verbose
+        self.number_of_batch = len(self.trainloader)
+
+        #used during training
+        self.weights_writer_idx = None
+        self.tensorboard_idx = None
+        self.writers = None
+        self.val_acc = None
+        self.val_vr = None
+        self.val_predictive_entropy = None
+        self.val_mi = None
+        self.running_loss = None
+        self.running_loss_llh = None
+        self.running_loss_vp = None
+        self.running_loss_pr = None
+        self.number_of_correct_labels = None
+        self.number_of_labels = None
+        self.current_loss = None
+        self.current_loss_llh = None
+        self.current_loss_vp = None
+        self.current_loss_pr = None
+        self.current_train_acc = None
+
+        #outputs
+        self.loss_totals = None
+        self.loss_llhs = None
+        self.loss_vps = None
+        self.loss_prs = None
+        self.train_accs = None
+        self.max_acc = None
+        self.epoch_max_acc = None
+        self.batch_idx_max_acc = None
+        self.val_accs = None
+        self.val_vrs = None
+        self.val_predictive_entropies = None
+        self.val_mis = None
+
+    def fit(self):
+        start_time = time()
+
+        if self.output_dir_tensorboard is not None:
+            self.tensorboard_idx = 0
+            self.init_writers()
+        self.init_save_weight_results()
+
+        interval = max(self.number_of_batch // 10, 1)
+
+        self.init_outputs()
+        self.init_intermediate_values()
+
+        self.model.train()
+        for epoch in range(self.number_of_epochs):  # loop over the dataset multiple times
+
+            self.reset_running_losses()
+            self.number_of_correct_labels = 0
+            self.number_of_labels = 0
+
+            for batch_idx, data in enumerate(self.trainloader, 0):
+                # get the inputs; data is a list of [inputs, labels]
+                inputs, labels = [x.to(self.device) for x in data]
+
+                # zero the parameter gradients
+                self.optimizer.zero_grad()
+
+                # forward + backward + optimize
+                outputs = self.model(inputs)
+
+                kl_weight = self.step_function(batch_idx, self.number_of_batch)
+                loss, loss_likelihood, loss_varational_posterior, loss_prior = self.get_loss(
+                                                                                        outputs,
+                                                                                        labels,
+                                                                                        kl_weight)
+
+                loss.backward()
+                self.optimizer.step()
+                self.update_running_losses(loss, loss_likelihood, loss_prior, loss_varational_posterior)
+                predicted_labels = outputs.argmax(1)
+                self.number_of_correct_labels += torch.sum(predicted_labels - labels == 0).item()
+                self.number_of_labels += labels.size(0)
+
+                if batch_idx % interval == interval - 1:
+                    if self.valloader is not None:
+                        self.val_acc, val_output = eval_bayesian(
+                            self.model,
+                            self.valloader,
+                            number_of_tests=self.number_of_tests,
+                            device=self.device,
+                            val=True
+                        )
+                        self.val_vr, self.val_predictive_entropy, self.val_mi = get_all_uncertainty_measures(val_output)
+                    self.set_current_losses()
+                    self.current_train_acc = self.number_of_correct_labels / self.number_of_labels
+                    if self.max_acc < self.current_train_acc:
+                        self.max_acc = self.current_train_acc
+                        self.epoch_max_acc = epoch
+                        self.batch_idx_max_acc = batch_idx
+                    if self.verbose:
+                        self.show_progress_on_console(batch_idx, epoch, start_time)
+
+                    self.update_output(epoch)
+
+                    if self.output_dir_tensorboard is not None:
+                        self.write_tensorboard()
+
+                    self.save_weight_results()
+                    self.reset_running_losses()
+
+        if self.output_dir_tensorboard is not None:
+            for writer in self.writers.value():
+                writer.close()
+        print('Finished Training')
+
+    def update_running_losses(self, loss, loss_likelihood, loss_prior, loss_varational_posterior):
+        self.running_loss += loss.item()
+        if self.loss_type == 'bbb':
+            self.running_loss_llh += loss_likelihood.item()
+            self.running_loss_vp += loss_varational_posterior.item()
+            self.running_loss_pr += loss_prior.item()
+
+    def write_tensorboard(self):
+        self.writers['loss'].add_scalar('loss', self.current_loss, self.tensorboard_idx)
+        if self.loss_type == 'bbb':
+            self.writers['loss_llh'].add_scalar('loss', self.current_loss_llh, self.tensorboard_idx)
+            self.writers['loss_vp'].add_scalar('loss', self.current_loss_vp, self.tensorboard_idx)
+            self.writers['loss_pr'].add_scalar('loss', self.current_loss_pr, self.tensorboard_idx)
+        self.writers['vr'].add_scalar('variation ratio', self.val_vr.mean().item(), self.tensorboard_idx)
+        self.writers['pe'].add_scalar('predictive entropy', self.val_predictive_entropy.mean().item(),
+                                      self.tensorboard_idx)
+        self.writers['mi'].add_scalar('mutual information', self.val_mi.mean().item(),
+                                      self.tensorboard_idx)
+        self.writers['accs_train'].add_scalar('accuracy', self.current_train_acc, self.tensorboard_idx)
+        self.writers['accs_val'].add_scalar('accuracy', self.val_acc, self.tensorboard_idx)
+        self.tensorboard_idx += 1
+
+    def update_output(self, epoch):
+        self.loss_totals[epoch].append(self.current_loss)
+        if self.loss_type == 'bbb':
+            self.loss_llhs[epoch].append(self.current_loss_llh)
+            self.loss_vps[epoch].append(self.current_loss_vp)
+            self.loss_prs[epoch].append(self.current_loss_pr)
+        self.val_vrs[epoch].append(self.val_vr)
+        self.val_predictive_entropies[epoch].append(self.val_predictive_entropy)
+        self.val_mis[epoch].append(self.val_mi)
+        self.train_accs[epoch].append(self.current_train_acc)
+        self.val_accs[epoch].append(self.val_acc)
+
+    def show_progress_on_console(self, batch_idx, epoch, start_time):
+        if self.loss_type == 'bbb':
+            print(f'Train: [{epoch + 1}, {batch_idx + 1}/{self.number_of_batch}] '
+                  f'Acc: {round(100 * self.current_train_acc, 2)} %, '
+                  f'loss: {round(self.current_loss, 2)}, '
+                  f'loss_llh: {round(self.current_loss_llh, 2)}, '
+                  f'loss_vp: {round(self.current_loss_vp, 2)}, '
+                  f'loss_pr: {round(self.current_loss_pr, 2)}, '
+                  f'Val Acc: {round(100 * self.val_acc, 2)} %, '
+                  f'Val VR: {self.val_vr.mean().item()}, '
+                  f'Val Pred Entropy: {self.val_predictive_entropy.mean().item()}, '
+                  f'Val MI: {self.val_mi.mean().item()}, '
+                  f'Time Elapsed: {round(time() - start_time)} s')
+        else:
+            print(f'Train: [{epoch + 1}, {batch_idx + 1}/{self.number_of_batch}] '
+                  f'Acc: {round(100 * self.current_train_acc, 2)} %, '
+                  f'loss: {round(self.current_loss, 2)}'
+                  f'Val Acc: {round(100 * self.val_acc, 2)} %, '
+                  f'Val VR: {self.val_vr.mean().item()}, '
+                  f'Val Pred Entropy: {self.val_predictive_entropy.mean().item()}, '
+                  f'Val MI: {self.val_mi.mean().item()}, '
+                  f'Time Elapsed: {round(time() - start_time)} s')
+
+    def set_current_losses(self):
+        self.current_loss = self.running_loss / self.number_of_batch
+        if self.loss_type == 'bbb':
+            self.current_loss_llh = self.running_loss_llh / self.number_of_batch
+            self.current_loss_vp = self.running_loss_vp / self.number_of_batch
+            self.current_loss_pr = self.running_loss_pr / self.number_of_batch
+
+    def reset_running_losses(self):
+        self.running_loss = 0.0
+        if self.loss_type == 'bbb':
+            self.running_loss_llh = 0.0
+            self.running_loss_vp = 0.0
+            self.running_loss_pr = 0.0
+
+    def init_intermediate_values(self):
+        self.val_acc = -0.01
+        self.val_vr = torch.tensor(-1).float()
+        self.val_predictive_entropy = torch.tensor(-1).float()
+        self.val_mi = torch.tensor(-1).float()
+
+    def init_outputs(self):
+        self.loss_totals = [[] for _ in range(self.number_of_epochs)]
+        if self.loss_type == 'bbb':
+            self.loss_llhs = [[] for _ in range(self.number_of_epochs)]
+            self.loss_vps = [[] for _ in range(self.number_of_epochs)]
+            self.loss_prs = [[] for _ in range(self.number_of_epochs)]
+        self.train_accs = [[] for _ in range(self.number_of_epochs)]
+        self.max_acc = -1
+        self.epoch_max_acc = 0
+        self.batch_idx_max_acc = 0
+        self.val_accs = [[] for _ in range(self.number_of_epochs)]
+        self.val_vrs = [[] for _ in range(self.number_of_epochs)]
+        self.val_predictive_entropies = [[] for _ in range(self.number_of_epochs)]
+        self.val_mis = [[] for _ in range(self.number_of_epochs)]
+
+    def save_weight_results(self):
+        if self.output_dir_weights_results is not None:
+            file_idx = 'weight' + str(self.weights_writer_idx) + '.pt'
+            torch.save(self.model.state_dict(), os.path.join(self.output_dir_weights_results, file_idx))
+            self.weights_writer_idx += 1
+
+    def init_save_weight_results(self):
+        if self.output_dir_weights_results is not None:
+            self.weights_writer_idx = 0
+            if not os.path.exists(self.output_dir_weights_results):
+                os.mkdir(self.output_dir_weights_results)
+
+    def __call__(self):
+        """
+        Returns:
+            loss_totals (list): list of the total loss for each epoch
+            loss_llhs (list): list of the likelihood loss for each epoch (P(D|W))
+            loss_vps (list): list of the variational posterior loss for each epoch (q(W|D))
+            loss_prs (list): list of the prior loss for each epoch (P(W))
+            train_accs (list): list of the accuracies for each epoch
+            max_acc (float): the maximum accuracy obtained by the net
+            epoch_max_acc (int): the epoch where the max acc is obtained
+            batch_idx_max_acc (int): the batch_idx where the epoch is obtained
+            val_accs (list): list of the validation accuracies
+            val_vrs (list): list of the variation-ratios uncertainty for validation test
+            val_predictive_entropies (list): list of the predictive entropy uncertainty for validation test
+            val_mis (list): list of the mutual information uncertainty for validation test
+        """
+        self.fit()
+        return (
+            self.loss_totals,
+            self.loss_llhs,
+            self.loss_vps,
+            self.loss_prs,
+            self.train_accs,
+            self.max_acc,
+            self.epoch_max_acc,
+            self.batch_idx_max_acc,
+            self.val_accs,
+            self.val_vrs,
+            self.val_predictive_entropies,
+            self.val_mis
+        )
+
+    def init_writers(self):
+
+        self.writers = {
+            'loss': SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, 'total_loss')),
+            'loss_llh': None,
+            'loss_vp': None,
+            'loss_pr': None,
+            'vr': SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, 'variation ratio')),
+            'pe': SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, 'predictive entropy')),
+            'mi': SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, "mutual information")),
+            'accs_train': SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, "train_accuracy")),
+            'accs_val': SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, "val_accuracy"))
+        }
+
+        if self.loss_type == 'bbb':
+            self.writers['loss_llh'] = SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, "loss_llh"))
+            self.writers['loss_vp'] = SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, "loss_vp"))
+            self.writers['loss_pr'] = SummaryWriter(log_dir=os.path.join(self.output_dir_tensorboard, "loss_pr"))
+
+    def get_loss(self, outputs, labels, kl_weight):
+        """
+        Returns the loss of the model
+        Args:
+            outputs:
+            labels:
+            kl_weight
+
+        Returns:
+            loss (torch.Float) :
+            loss_likelihood (torch.Float) :
+            loss_variational_posterior (torch.Float) :
+            loss_prior (torch.Float) :
+
+        """
+        loss_likelihood = self.criterion(outputs, labels)
+        if self.loss_type == 'bbb':
+            weights_used, bias_used = self.model.get_previous_weights()
+            loss_variational_posterior = self.model.variational_posterior(weights_used, bias_used)
+            loss_prior = -self.model.prior(weights_used, bias_used)
+            loss = kl_weight * (loss_variational_posterior + loss_prior) + loss_likelihood
+            return loss, loss_likelihood, loss_variational_posterior, loss_prior
+        elif self.loss_type == 'criterion':
+            loss = loss_likelihood
+            return loss, loss_likelihood, None, None
+        else:
+            raise ValueError('Loss must be either "bbb" for Bayes By Backprop,'
+                             'or "criterion" for CrossEntropy. No other loss is implemented.')
+
+
+def train_bayesian_refactored(model, optimizer, criterion, number_of_epochs, trainloader, valloader=None, number_of_tests=10,
+                   loss_type='bbb', step_function=uniform, output_dir_tensorboard=None, output_dir_results=None,
+                   device="cpu", verbose=False):
+
+    trainer = TrainBayesian(model, optimizer, criterion, number_of_epochs, trainloader, valloader, number_of_tests,
+                   loss_type, step_function, output_dir_tensorboard, output_dir_results,
+                   device, verbose)
+    return trainer()
+
 
 
 def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, valloader=None, number_of_tests=10,
@@ -78,9 +419,9 @@ def train_bayesian(model, optimizer, criterion, number_of_epochs, trainloader, v
     val_predictive_entropies = [[] for _ in range(number_of_epochs)]
     val_mis = [[] for _ in range(number_of_epochs)]
     val_acc = -0.01
-    val_vr = torch.tensor(-1)
-    val_predictive_entropy = torch.tensor(-1)
-    val_mi = torch.tensor(-1)
+    val_vr = torch.tensor(-1).float()
+    val_predictive_entropy = torch.tensor(-1).float()
+    val_mi = torch.tensor(-1).float()
 
     model.train()
     for epoch in range(number_of_epochs):  # loop over the dataset multiple times

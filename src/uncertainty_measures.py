@@ -4,7 +4,7 @@ import torch
 
 def compute_dkl_uniform(count, number_of_possibilities):
     """
-    This function computes the kullback leibler divergence between a discrete distribution of probability
+    This function computes the Kullback-Leibler divergence between a discrete distribution of probability
     and the uniform distribution.
     Args:
         count (array): size (number_of_labels) . Number of times each labels were predicted
@@ -75,7 +75,7 @@ def compute_variation_ratio(data):
         highest_label_freq = counts.max() / counts.sum()
         variation_ratios[img_idx] = 1 - highest_label_freq
 
-    return variation_ratios.to(data.device)
+    return variation_ratios.to(data.device).float()
 
 
 def compute_predictive_entropy(data):
@@ -92,7 +92,7 @@ def compute_predictive_entropy(data):
     mean_of_distributions = data.mean(0).detach()
     predictive_entropies = torch.sum(-mean_of_distributions * torch.log(mean_of_distributions), 1)
 
-    return predictive_entropies
+    return predictive_entropies.float()
 
 
 def compute_mutual_information_uncertainty(data):
@@ -112,7 +112,7 @@ def compute_mutual_information_uncertainty(data):
     x = data * torch.log(data)
     mutual_information_uncertainties = predictive_entropies + 1 / number_of_tests * x.sum(2).sum(0)
 
-    return mutual_information_uncertainties
+    return mutual_information_uncertainties.float()
 
 
 def get_all_uncertainty_measures(data):
