@@ -144,7 +144,7 @@ def get_file_path_in_dir(dir_path, file_name=""):
 
 def compute_weights_norm(model):
     """
-
+    Compute the L2 norm of the weights of the model.
     Args:
         model (torch.nn.Module): the model we want to compute the norm of the weights of
 

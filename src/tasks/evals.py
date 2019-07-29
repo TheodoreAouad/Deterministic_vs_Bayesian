@@ -7,16 +7,17 @@ from src.uncertainty_measures import aggregate_data, get_predictions_from_multip
 
 def evaluate(model, evalloader, device, val=False):
     """
-
+    Evaluate the model on the data evalloader with only one forward per sample. It is a classic evaluation.
     Args:
         model (torch.nn.Module child): the model we evaluate
-        evalloader (torch.utils.data.dataloader.DataLoader): test data
-        device (torch.device || str): cpu or gpu
-        val (Bool): if in validation mode, we do not print the progress bar
+        evalloader (torch.utils.data.dataloader.DataLoader): dataloader of the test set
+        device (torch.device || str): which device to compute on (either on GPU or CPU). Either torch.device type or
+                                      specific string 'cpu' or 'gpu'.
+        val (Bool): if true, we are in evaliation mode and do not print the progress bar
 
     Returns:
         float: accuracy
-        torch.Tensor: size (number of test samples, number of classes) output of softmax of all the inputs
+        torch.Tensor: size = (number of test samples, number of classes): output of softmax of all the inputs
 
     """
     accuracy, all_outputs = eval_bayesian(model, evalloader, number_of_tests=1, device=device, val=val)
@@ -25,17 +26,19 @@ def evaluate(model, evalloader, device, val=False):
 
 def eval_bayesian(model, evalloader, number_of_tests, device='cpu', val=False):
     """
-
+    Evaluate the model on the data evalloader with only multiple forwards per sample. Only useful if the forward can
+    change for the same input. Else, use evaluate.
     Args:
         model (torch.nn.Module child): the model we evaluate
-        evalloader (torch.utils.data.dataloader.DataLoader): test data
+        evalloader (torch.utils.data.dataloader.DataLoader): dataloader of the test set
         number_of_tests (int): the number of times we do a forward for each input
-        device (torch.device || str): cpu or gpu
-        val (Bool): if in validation mode, we do not print the progress bar
+        device (torch.device || str): which device to compute on (either on GPU or CPU). Either torch.device type or
+                                      specific string 'cpu' or 'gpu'.
+        val (Bool): if if true, we are in evaliation mode and do not print the progress bar
 
     Returns:
         float: accuracy
-        torch.Tensor: size (number of test samples, number of classes) output of softmax of all the inputs
+        torch.Tensor: size = (number of test samples, number of classes): output of softmax of all the inputs
     """
     model.eval()
     with torch.no_grad():
@@ -77,7 +80,8 @@ def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, rando
         img_dim (int): dimension of the random sample
         number_of_tests (int): the number of times we do a forward for each input
         random_seed (int): the seed of the random generation, for reproducibility
-        device (torch.device || str): cpu or gpu
+        device (torch.device || str): which device to compute on (either on GPU or CPU). Either torch.device type or
+                                      specific string 'cpu' or 'gpu'.
 
     Returns:
         torch.Tensor: size (batch_size): the variation-ratio uncertainty
