@@ -4,7 +4,7 @@ import sys
 
 import torch
 
-sys.path.append("BayesianFewShotExperiments")
+# sys.path.append("BayesianFewShotExperiments")
 from src.utils import get_interesting_result, write_results_in_csv, get_file_path_in_dir
 
 parser = argparse.ArgumentParser()

@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from src.models.bayesian_models.gaussian_classifiers import GaussianClassifierMNIST
+from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.trains import train, train_bayesian, train_bayesian_refactored
 from src.utils import set_and_print_random_seed, get_file_path_in_dir
 
@@ -50,7 +50,7 @@ class TestTrain:
     def test_training_no_validation():
         randomloader = RandomTrainloader()
         device = "cpu"
-        det_net = GaussianClassifierMNIST("determinist", (0, 0), (1, 1), number_of_classes=10)
+        det_net = GaussianClassifier("determinist", (0, 0), (1, 1), number_of_classes=10)
         det_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(det_net.parameters())
@@ -62,7 +62,7 @@ class TestTrain:
         randomloader = RandomTrainloader()
         randomloaderval = RandomTrainloader()
         device = "cpu"
-        det_net = GaussianClassifierMNIST("determinist", (0, 0), (1, 1), number_of_classes=10)
+        det_net = GaussianClassifier("determinist", (0, 0), (1, 1), number_of_classes=10)
         det_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(det_net.parameters())
@@ -77,7 +77,7 @@ class TestTrainBayesian:
     def test_training_no_validation():
         randomloader = RandomTrainloader()
         device = "cpu"
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -89,7 +89,7 @@ class TestTrainBayesian:
         randomloader = RandomTrainloader()
         randomloaderval = RandomTrainloader()
         device = "cpu"
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -106,7 +106,7 @@ class TestBayesianRefactored:
         randomloader = RandomTrainloader()
 
         seed1 = set_and_print_random_seed()
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -114,7 +114,7 @@ class TestBayesianRefactored:
                                     device=device, verbose=False)
 
         set_and_print_random_seed(seed1)
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -129,7 +129,7 @@ class TestBayesianRefactored:
         randomloader = RandomTrainloader()
 
         seed1 = set_and_print_random_seed()
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -137,7 +137,7 @@ class TestBayesianRefactored:
                                     device=device, verbose=False)
 
         set_and_print_random_seed(seed1)
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -155,7 +155,7 @@ class TestBayesianRefactored:
 
         seed1 = set_and_print_random_seed()
         randomloader = RandomTrainloader()
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -164,7 +164,7 @@ class TestBayesianRefactored:
 
         set_and_print_random_seed(seed1)
         randomloader = RandomTrainloader()
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -180,7 +180,7 @@ class TestBayesianRefactored:
         randomloaderval = RandomTrainloader()
 
         seed1 = set_and_print_random_seed()
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
@@ -194,7 +194,7 @@ class TestBayesianRefactored:
                                     verbose=False)
 
         set_and_print_random_seed(seed1)
-        bay_net = GaussianClassifierMNIST(-3, (0, 0), (1, 1), number_of_classes=10)
+        bay_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
         bay_net.to(device)
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())

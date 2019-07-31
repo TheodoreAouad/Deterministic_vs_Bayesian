@@ -6,7 +6,7 @@ import torch.optim as optim
 import torchvision.transforms as transforms
 from torch.nn import CrossEntropyLoss
 
-from src.models.bayesian_models.gaussian_classifiers import GaussianClassifierMNIST
+from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.trains import train_bayesian
 from src.tasks.evals import eval_bayesian
 from src.utils import set_and_print_random_seed, save_dict
@@ -64,7 +64,7 @@ trainloader, valloader, evalloader = get_mnist(batch_size=batch_size)
 
 
 seed_model = set_and_print_random_seed()
-bay_net = GaussianClassifierMNIST(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
+bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
 bay_net.to(device)
 criterion = CrossEntropyLoss()
 adam_proba = optim.Adam(bay_net.parameters())
