@@ -656,6 +656,24 @@ def train_bayesian_modular(
         device='cpu',
         verbose=False,
 ):
+    """
+    Train Bayesian with modular arguments
+    Args:
+        model (torch.nn.Module child): model we want to train
+        optimizer (torch.optim optimizer): how do we update the weights
+        loss (src.loggers.losses.base_loss.BaseLoss child): loss object
+        observables (src.loggers.observables): observable object
+        number_of_epochs:
+        trainloader:
+        valloader:
+        number_of_epochs (int): how long do we train our model
+        trainloader (torch.utils.data.dataloader.DataLoader): train data
+        output_dir_tensorboard (str): output directory in which to save the tensorboard
+        device (torch.device || str): cpu or gpu
+        verbose (Bool): print training steps or not
+    Returns
+        NOT IMPLEMENTED YET
+    """
     start_time = time()
     number_of_batch = len(trainloader)
     interval = max(number_of_batch // 10, 1)
