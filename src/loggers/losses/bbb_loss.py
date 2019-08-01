@@ -26,6 +26,7 @@ class BBBLoss(BaseLoss):
             'prior': None,
         }
 
+    # TODO: do we have to divise the loss by the batch size?
     def compute(self, outputs, labels):
         """
         Compute the loss L = kl_weight * KL[q(w | theta) || P(w)] - E_q(w)(logP(D|W))
@@ -38,12 +39,12 @@ class BBBLoss(BaseLoss):
         weights_used, bias_used = self.model.get_previous_weights()
         batch_size = outputs.size(0)
 
-        self.logs['likelihood'] = self.criterion(outputs, labels) / batch_size
+        self.logs['likelihood'] = self.criterion(outputs, labels)
         self.logs['variational_posterior'] = kl_weight * self.model.variational_posterior(weights_used,
-                                                                                          bias_used) / batch_size
-        self.logs['prior'] = -kl_weight * self.model.prior(weights_used, bias_used) / batch_size
+                                                                                          bias_used)
+        self.logs['prior'] = -kl_weight * self.model.prior(weights_used, bias_used)
         self.logs['total_loss'] = (self.logs['likelihood'] + self.logs['prior'] +
-                                   self.logs['likelihood']) / batch_size
+                                   self.logs['likelihood'])
         self.add_to_history()
 
     def write_tensorboard(self):

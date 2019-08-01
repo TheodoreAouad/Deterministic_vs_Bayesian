@@ -643,6 +643,8 @@ def get_loss(model, loss_type, outputs, labels, criterion, kl_weight):
                          'or "criterion" for CrossEntropy. No other loss is implemented.')
 
 
+# TODO: Why does the modular function works better in the bayesian case than the not modular...
+#  indeed it works the same for not bbb loss
 def train_bayesian_modular(
         model,
         optimizer,
