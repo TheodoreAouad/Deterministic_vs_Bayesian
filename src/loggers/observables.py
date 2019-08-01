@@ -39,6 +39,7 @@ class AccuracyAndUncertainty(Observables):
         }
         self.max_train_accuracy_on_epoch = 0
         self.epoch_with_max_train_accuracy = 0
+        self.validation_logging = False
 
     def compute_train_on_batch(self, outputs, labels):
         """
@@ -81,6 +82,9 @@ class AccuracyAndUncertainty(Observables):
             val_outputs (torch.Tensor): size = (number_of_tests, batch_size, number_of_classes):
             output of the evaluation on the validation set
         """
+        if not self.validation_logging:
+            self.validation_logging = True
+
         self.logs['val_accuracy'] = val_accuracy
         (
             self.logs['val_uncertainty_vr'],

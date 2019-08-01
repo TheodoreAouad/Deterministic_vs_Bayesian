@@ -1,4 +1,5 @@
 import os
+import torch
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -58,10 +59,14 @@ class Logger:
         if specific_keys is None:
             specific_keys = []
         for specific_key in specific_keys:
-            self.logs_history[specific_key][self.current_epoch].append(self.logs[specific_key])
+            self.logs_history[specific_key][self.current_epoch].append(
+                torch.tensor(self.logs[specific_key]).detach()
+            )
         if not specific_keys:
             for key in self.logs_history.keys():
-                self.logs_history[key][self.current_epoch].append(self.logs[key])
+                self.logs_history[key][self.current_epoch].append(
+                    torch.tensor(self.logs[key]).detach()
+                )
 
     def init_results_writer(self, path):
         """

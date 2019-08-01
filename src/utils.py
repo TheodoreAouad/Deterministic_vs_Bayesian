@@ -159,11 +159,11 @@ def compute_weights_norm(model):
     return norm/len(list(all_params))
 
 
-def save_dict(to_save, path):
+def save_to_file(to_save, path):
     """
-    Saves a dictionary in a file. Warning: will overwrite the file.
+    Saves an object in a file. Warning: will overwrite the file.
     Args:
-        to_save (dict): the dict we want to save.
+        to_save : the object we want to save.
         path (str): path to the file where to write the dict.
 
     """
@@ -171,14 +171,14 @@ def save_dict(to_save, path):
         pickle.dump(to_save, f)
 
 
-def load_dict(path):
+def load_from_file(path):
     """
-    Returns the dict saved in the path.
+    Returns the object saved in the path.
     Args:
-        path (str): the path to the file where the dict is saved.
+        path (str): the path to the file where the object is saved.
 
     Returns:
-        dict: the dictionary loaded.
+        the object loaded.
 
     """
     with open(path, "rb") as f:
@@ -215,9 +215,10 @@ def print_nicely_on_console(dic):
         else:
             value_to_print = value
 
-        if 'accuracy' in key:
-            value_to_print = str(round(100 * value_to_print, 2)) + ' %'
-        else:
-            value_to_print = "{:.2E}".format(value)
-        to_print += f'{key}: {value_to_print}, '
+        if value is not None:
+            if 'accuracy' in key:
+                value_to_print = str(round(100 * value_to_print, 2)) + ' %'
+            else:
+                value_to_print = "{:.2E}".format(value)
+            to_print += f'{key}: {value_to_print}, '
     print(to_print)

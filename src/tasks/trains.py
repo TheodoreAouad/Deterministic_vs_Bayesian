@@ -650,7 +650,7 @@ def train_bayesian_modular(
         observables,
         number_of_epochs,
         trainloader,
-        valloader,
+        valloader=None,
         number_of_tests=10,
         output_dir_tensorboard=None,
         output_dir_results=None,
