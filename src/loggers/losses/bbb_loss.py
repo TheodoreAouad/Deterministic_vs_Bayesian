@@ -7,7 +7,7 @@ class BBBLoss(BaseLoss):
     """
 
     def __init__(self, model, criterion, step_function, ):
-        super(BBBLoss, self).__init__()
+        super(BBBLoss, self).__init__(criterion)
         self.model = model
         self.criterion = criterion
         self.step_function = step_function

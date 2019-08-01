@@ -7,18 +7,14 @@ class BaseLoss(Logger):
     """
     Base class for losses. Losses should inherit this class.
     """
-    def __init__(self):
+    def __init__(self, criterion):
         super(BaseLoss, self).__init__()
-
+        self.criterion = criterion
         self.logs = {'total_loss': None}
 
-    @property
-    def total_loss(self):
-        return self.logs['total_loss']
-
     def compute(self, outputs, labels):
-        raise NotImplementedError
+        self.logs['total_loss'] = self.criterion(outputs, labels)
 
     def backward(self):
-        assert type(self.total_loss) == torch.Tensor, 'Loss type should be torch.Tensor'
-        self.total_loss.backward()
+        assert type(self.logs['total_loss']) == torch.Tensor, 'Loss type should be torch.Tensor'
+        self.logs['total_loss'].backward()

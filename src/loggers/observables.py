@@ -2,7 +2,19 @@ from src.loggers.logger import Logger
 from src.uncertainty_measures import get_all_uncertainty_measures
 
 
-class AccuracyAndUncertainty(Logger):
+class Observables(Logger):
+
+    def compute_train_on_batch(self, outputs, labels):
+        raise NotImplementedError
+
+    def compute_train_on_epoch(self, model, trainloader, device):
+        raise NotImplementedError
+
+    def compute_val(self, val_accuracy, val_outputs):
+        raise NotImplementedError
+
+
+class AccuracyAndUncertainty(Observables):
     """
     Logger to store accuracies and uncertainties
     """
@@ -25,6 +37,8 @@ class AccuracyAndUncertainty(Logger):
             'val_uncertainty_pe': None,
             'val_uncertainty_mi': None,
         }
+        self.max_train_accuracy_on_epoch = 0
+        self.epoch_with_max_train_accuracy = 0
 
     def compute_train_on_batch(self, outputs, labels):
         """
@@ -56,6 +70,9 @@ class AccuracyAndUncertainty(Logger):
         # noinspection PyTypeChecker
         self.logs['train_accuracy_on_epoch'] = number_of_correct_labels / number_of_labels
         self.add_to_history(['train_accuracy_on_epoch'])
+        if self.logs['train_accuracy_on_epoch'] > self.max_train_accuracy_on_epoch:
+            self.max_train_accuracy_on_epoch = self.logs['train_accuracy_on_epoch']
+            self.epoch_with_max_train_accuracy = self.current_epoch
 
     def compute_val(self, val_accuracy, val_outputs):
         """
@@ -84,3 +101,4 @@ class AccuracyAndUncertainty(Logger):
     def write_tensorboard(self):
         board_names = {key: 'accuracy' for key in self.logs.keys() if 'accuracy' in key}
         super(AccuracyAndUncertainty, self).write_tensorboard(**board_names)
+

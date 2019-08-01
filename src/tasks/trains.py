@@ -662,12 +662,12 @@ def train_bayesian_modular(
         model (torch.nn.Module child): model we want to train
         optimizer (torch.optim optimizer): how do we update the weights
         loss (src.loggers.losses.base_loss.BaseLoss child): loss object
-        observables (src.loggers.observables): observable object
-        number_of_epochs:
-        trainloader:
-        valloader:
+        observables (src.loggers.observables.Observables): observable object
         number_of_epochs (int): how long do we train our model
-        trainloader (torch.utils.data.dataloader.DataLoader): train data
+        trainloader (torch.utils.data.dataloader.DataLoader): dataloader of train set
+        valloader (torch.utils.data.dataloader.DataLoader): dataloader of validation set
+        number_of_tests (int): number of tests to perform during validation evaluation
+        output_dir_results (str): output directory in which to save the results (NOT IMPLEMENTED)
         output_dir_tensorboard (str): output directory in which to save the tensorboard
         device (torch.device || str): cpu or gpu
         verbose (Bool): print training steps or not
