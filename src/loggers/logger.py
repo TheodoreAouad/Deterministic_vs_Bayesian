@@ -2,6 +2,8 @@ import os
 
 from torch.utils.tensorboard import SummaryWriter
 
+from src.utils import print_nicely_on_console
+
 
 class Logger:
     """
@@ -17,7 +19,7 @@ class Logger:
             self.current_batch_idx (int): current index of the training batch
             self.number_of_batch (int): number of batches for the training
             self.logs (dict): the current state of variables we want to keep logs of
-            self.logs_history (doct): all the previous states of variables we want to log
+            self.logs_history (dict): all the previous states of variables we want to log
             self.output_dir_results (str): output directory to store results (Not Implemented)
             self.output_dir_tensorboard (str): output directory to store tensorboards
         """
@@ -34,9 +36,7 @@ class Logger:
         self.output_dir_tensorboard = None
 
     def show(self):
-        print(*zip(
-            self.logs.keys(), self.logs.values()
-        ))
+        print_nicely_on_console(self.logs)
 
     def set_number_of_epoch(self, number_of_epoch):
         self.number_of_epoch = number_of_epoch
@@ -54,7 +54,9 @@ class Logger:
     def set_number_of_batch(self, number_of_batch):
         self.number_of_batch = number_of_batch
 
-    def add_to_history(self, specific_keys=[]):
+    def add_to_history(self, specific_keys=None):
+        if specific_keys is None:
+            specific_keys = []
         for specific_key in specific_keys:
             self.logs_history[specific_key][self.current_epoch].append(self.logs[specific_key])
         if not specific_keys:

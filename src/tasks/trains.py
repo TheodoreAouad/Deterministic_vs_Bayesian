@@ -50,7 +50,8 @@ class TrainBayesian:
             number_of_epochs (int): how long do we train our model
             trainloader (torch.utils.data.dataloader.DataLoader): train data
             loss_type (str): which type of loss. "bbb" (Bayes By Backprop) or "criterion" (CrossEntropy)
-            step_function (function): takes as args (number of batchs, length of batch) and returns the weight to give to KL
+            step_function (function): takes as args (number of batchs, length of batch)
+                                      and returns the weight to give to KL
             output_dir_tensorboard (str): output directory in which to save the tensorboard
             device (torch.device || str): cpu or gpu
             verbose (Bool): print training steps or not
@@ -715,7 +716,7 @@ def train_bayesian_modular(
 
                 if verbose:
                     print('======================================')
-                    print(f'Epoch [{epoch+1}/{number_of_epochs}]. Batch [{batch_idx}/{number_of_batch}].')
+                    print(f'Epoch [{epoch + 1}/{number_of_epochs}]. Batch [{batch_idx}/{number_of_batch}].')
                     loss.show()
                     observables.show()
                     print(f'Time Elapsed: {round(time() - start_time)} s')

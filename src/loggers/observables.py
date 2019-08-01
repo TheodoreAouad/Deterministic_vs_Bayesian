@@ -67,7 +67,6 @@ class AccuracyAndUncertainty(Observables):
             predicted_labels = model(inputs).argmax(1)
             number_of_correct_labels += (predicted_labels - labels == 0).sum().item()
             number_of_labels += labels.size(0)
-        # noinspection PyTypeChecker
         self.logs['train_accuracy_on_epoch'] = number_of_correct_labels / number_of_labels
         self.add_to_history(['train_accuracy_on_epoch'])
         if self.logs['train_accuracy_on_epoch'] > self.max_train_accuracy_on_epoch:
@@ -101,4 +100,3 @@ class AccuracyAndUncertainty(Observables):
     def write_tensorboard(self):
         board_names = {key: 'accuracy' for key in self.logs.keys() if 'accuracy' in key}
         super(AccuracyAndUncertainty, self).write_tensorboard(**board_names)
-

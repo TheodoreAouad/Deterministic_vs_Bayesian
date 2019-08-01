@@ -200,3 +200,24 @@ def compute_memory_used_tensor(tensor):
         'size of an element': tensor.element_size(),
         'total memory use': tensor.nelement() * tensor.element_size()
     })
+
+
+def print_nicely_on_console(dic):
+    """
+    Prints nicely a dict on console.
+    Args:
+        dic (dict): the dictionary we want to print nicely on console.
+    """
+    to_print = ''
+    for key, value in zip(dic.keys(), dic.values()):
+        if type(value) == torch.Tensor:
+            value_to_print = value.item()
+        else:
+            value_to_print = value
+
+        if 'accuracy' in key:
+            value_to_print = str(round(100 * value_to_print, 2)) + ' %'
+        else:
+            value_to_print = "{:.2E}".format(value)
+        to_print += f'{key}: {value_to_print}, '
+    print(to_print)
