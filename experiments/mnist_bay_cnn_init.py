@@ -8,7 +8,7 @@ from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.trains import train_bayesian
 from src.tasks.evals import eval_bayesian, eval_random
 from src.uncertainty_measures import get_all_uncertainty_measures
-from src.utils import set_and_print_random_seed, save_dict
+from src.utils import set_and_print_random_seed, save_to_file
 from src.dataset_manager.get_data import get_mnist
 
 
@@ -26,7 +26,7 @@ parser.add_argument("--loss_type", help="which loss to use", choices=["bbb", "cr
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
 args = parser.parse_args()
 
-save_dict(vars(args), './output/arguments.pkl')
+save_to_file(vars(args), './output/arguments.pkl')
 
 rho = args.rho
 epoch = args.epoch
@@ -112,8 +112,8 @@ res = dict({
     "random vr": random_vr,
     "random predictive entropy": random_predictive_entropy,
     "random mi": random_mi,
-    "all softmax outputs": all_outputs_eval
 })
 
+torch.save(all_outputs_eval, './output/softmax_outputs.pt')
 torch.save(res, "./output/results.pt")
 torch.save(bay_net.state_dict(), "./output/final_weights.pt")

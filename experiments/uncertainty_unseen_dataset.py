@@ -9,7 +9,8 @@ from torch.nn import CrossEntropyLoss
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.trains import train_bayesian
 from src.tasks.evals import eval_bayesian
-from src.utils import set_and_print_random_seed, save_dict
+from src.uncertainty_measures import get_all_uncertainty_measures
+from src.utils import set_and_print_random_seed, save_to_file
 from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10
 
 parser = argparse.ArgumentParser()
@@ -28,9 +29,9 @@ parser.add_argument("--loss_type", help="which loss to use", choices=["bbb", "cr
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
 args = parser.parse_args()
 
-save_dict(vars(args), './output/arguments.pkl')
+save_to_file(vars(args), './output/arguments.pkl')
 
-dataset = args.dataset
+dataset = args.dataset.lower()
 rho = args.rho
 epoch = args.epoch
 batch_size = args.batch_size
@@ -58,7 +59,8 @@ elif dataset == "cifar10":
         transform
     ])
     _, unseen_loader = get_cifar10(transform=transform, batch_size=batch_size)
-
+else:
+    raise TypeError('Dataset not yet implemented')
 
 trainloader, valloader, evalloader = get_mnist(batch_size=batch_size)
 
@@ -85,22 +87,23 @@ adam_proba = optim.Adam(bay_net.parameters())
 )
 
 print("Evaluation on MNIST ...")
-seen_eval_acc, seen_eval_vrs, seen_eval_pes, seen_eval_mis = eval_bayesian(
+seen_eval_acc, all_outputs_eval_seen = eval_bayesian(
     bay_net,
     evalloader,
     number_of_tests=number_of_tests,
     device=device
 )
-
+seen_eval_vrs, seen_eval_pes, seen_eval_mis = get_all_uncertainty_measures(all_outputs_eval_seen)
 print("Finished evaluation on MNIST.")
+
 print(f"Evavuation on {dataset} ...")
-_, unseen_eval_vrs, unseen_eval_pes, unseen_eval_mis = eval_bayesian(
+_, all_outputs_eval_unseen = eval_bayesian(
     bay_net,
     unseen_loader,
     number_of_tests=number_of_tests,
     device=device
 )
-
+unseen_eval_vrs, unseen_eval_pes, unseen_eval_mis = get_all_uncertainty_measures(all_outputs_eval_unseen)
 print("Finished evaluation on ", dataset)
 
 print(f"MNIST: {round(100*seen_eval_acc,2)} %, "
@@ -139,5 +142,8 @@ res = dict({
     "unseen mis": unseen_eval_mis
 })
 
+
+torch.save(all_outputs_eval_unseen, './output/softmax_outputs_eval_unseen.pt')
+torch.save(all_outputs_eval_seen, './output/softmax_outputs_eval_seen.pt')
 torch.save(res, "./output/results.pt")
 torch.save(bay_net.state_dict(), "./output/final_weights.pt")

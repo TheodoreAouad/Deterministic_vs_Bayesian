@@ -8,12 +8,16 @@ import torch
 from src.utils import get_interesting_result, write_results_in_csv, get_file_path_in_dir
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--polyaxon_results_path")
-parser.add_argument("--polyaxon_type")
-parser.add_argument("--group_nb")
-parser.add_argument("--exp_nb")
-parser.add_argument("--which_file")
-parser.add_argument("--extra_info")
+parser.add_argument('--polyaxon_results_path', help='path to polyaxon results', type=str)
+parser.add_argument('--polyaxon_type', help='type of the experiments. Is either groups or experiments',
+                    choices=['groups', 'experiments'], type = str, default='groups')
+parser.add_argument('--group_nb', help='number of the group experiment if polyaxon_type is groups', type=str)
+parser.add_argument('--exp_nb', help='number of the experiment if polyaxon_type is experiments',
+                    type=str)
+parser.add_argument('--which_file', help='which file to get from the folder of the output of the experiments.',
+                    type=str, default='results')
+parser.add_argument('--extra_info', help='extra info to write on the name of the csv.', type=str,
+                    default='')
 args = parser.parse_args()
 
 polyaxon_results_path = args.polyaxon_results_path

@@ -8,7 +8,7 @@ from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.trains import train_bayesian
 from src.tasks.evals import eval_bayesian, eval_random
 from src.uncertainty_measures import get_all_uncertainty_measures
-from src.utils import set_and_print_random_seed, save_dict
+from src.utils import set_and_print_random_seed, save_to_file
 from src.dataset_manager.get_data import get_mnist
 
 
@@ -28,7 +28,7 @@ parser.add_argument("--loss_type", help="which loss to use", choices=["bbb", "cr
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
 args = parser.parse_args()
 
-save_dict(vars(args), './output/arguments.pkl')
+save_to_file(vars(args), './output/arguments.pkl')
 
 split_labels = args.split_labels
 rho = args.rho
@@ -124,12 +124,13 @@ res = dict({
     "seen vr": seen_eval_vr,
     "seen predictive entropy": seen_eval_predictive_entropy,
     "seen mi": seen_eval_mi,
-    "all softmax outputs seen": all_outputs_eval_seen,
     "unseen vr": unseen_eval_vr,
     "unseen predictive entropy": unseen_eval_predictive_entropy,
     "unseen mi": seen_eval_mi,
-    "all softmax outputs unseen": all_outputs_eval_unseen
 })
 
+
+torch.save(all_outputs_eval_unseen, './output/softmax_outputs_eval_unseen.pt')
+torch.save(all_outputs_eval_seen, './output/softmax_outputs_eval_seen.pt')
 torch.save(res, "./output/results.pt")
 torch.save(bay_net.state_dict(), "./output/final_weights.pt")
