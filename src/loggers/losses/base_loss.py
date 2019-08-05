@@ -14,6 +14,7 @@ class BaseLoss(Logger):
 
     def compute(self, outputs, labels):
         self.logs['total_loss'] = self.criterion(outputs, labels)
+        self.add_to_history()
 
     def backward(self):
         assert type(self.logs['total_loss']) == torch.Tensor, 'Loss type should be torch.Tensor'

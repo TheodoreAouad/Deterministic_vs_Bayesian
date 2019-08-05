@@ -19,12 +19,12 @@ class BBBLoss(BaseLoss):
             'prior': None,
         }
 
-        self.logs_history = {
-            'total_loss': None,
-            'likelihood': None,
-            'variational_posterior': None,
-            'prior': None,
-        }
+        # self.logs_history = {
+        #         #     'total_loss': None,
+        #         #     'likelihood': None,
+        #         #     'variational_posterior': None,
+        #         #     'prior': None,
+        #         # }
 
     # TODO: do we have to divise the loss by the batch size?
     def compute(self, outputs, labels):

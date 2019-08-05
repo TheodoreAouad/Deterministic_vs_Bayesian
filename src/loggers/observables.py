@@ -29,14 +29,14 @@ class AccuracyAndUncertainty(Observables):
             'val_uncertainty_pe': None,
             'val_uncertainty_mi': None,
         }
-        self.logs_history = {
-            'train_accuracy_on_batch': None,
-            'train_accuracy_on_epoch': None,
-            'val_accuracy': None,
-            'val_uncertainty_vr': None,
-            'val_uncertainty_pe': None,
-            'val_uncertainty_mi': None,
-        }
+        # self.logs_history = {
+        #     'train_accuracy_on_batch': None,
+        #     'train_accuracy_on_epoch': None,
+        #     'val_accuracy': None,
+        #     'val_uncertainty_vr': None,
+        #     'val_uncertainty_pe': None,
+        #     'val_uncertainty_mi': None,
+        # }
         self.max_train_accuracy_on_epoch = 0
         self.epoch_with_max_train_accuracy = 0
         self.validation_logging = False

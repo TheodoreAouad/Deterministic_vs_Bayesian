@@ -20,7 +20,7 @@ class EmptyLoader:
         return 0
 
     def __getitem__(self, index):
-        self.dataset.__getitem__(index)
+        pass
 
 
 def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10), split_val=0.2, transform=transform,
@@ -64,7 +64,7 @@ def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10),
 
 
 def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False):
-    '''
+    """
 
     Args:
         transform (torch.transform): which transformation to perform to the data
@@ -75,7 +75,7 @@ def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False
         torch.utils.data.dataloader.DataLoader: loader of train data
         torch.utils.data.dataloader.DataLoader: loader of evaluation data
 
-    '''
+    """
 
     absolute_path = os.getcwd()
     download_path = os.path.join(absolute_path, 'data')

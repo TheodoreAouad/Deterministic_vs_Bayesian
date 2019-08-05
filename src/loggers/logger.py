@@ -1,4 +1,7 @@
+import pathlib
 import os
+from collections import defaultdict
+
 import torch
 
 from torch.utils.tensorboard import SummaryWriter
@@ -10,6 +13,8 @@ class Logger:
     """
     This is a parent class to objects used to track information during training.
     """
+    logs_history = defaultdict(list)
+
     def __init__(self):
         """
             self.writer (torch.utils.tensorboard.writer.SummaryWriter): torch object to write tensorboard
@@ -31,7 +36,7 @@ class Logger:
         self.number_of_epoch = None
         self.current_batch_idx = None
         self.number_of_batch = None
-        self.logs = {}
+        # self.logs = {}
         self.logs_history = {}
         self.output_dir_results = None
         self.output_dir_tensorboard = None
@@ -41,7 +46,7 @@ class Logger:
 
     def set_number_of_epoch(self, number_of_epoch):
         self.number_of_epoch = number_of_epoch
-        for key in self.logs_history.keys():
+        for key in self.logs.keys():
             self.logs_history[key] = []
 
     def set_current_epoch(self, epoch):
@@ -56,53 +61,47 @@ class Logger:
         self.number_of_batch = number_of_batch
 
     def add_to_history(self, specific_keys=None):
-        if specific_keys is None:
-            specific_keys = []
-        for specific_key in specific_keys:
-            self.logs_history[specific_key][self.current_epoch].append(
-                torch.tensor(self.logs[specific_key]).detach()
+        keys_to_add_to_history = specific_keys or self.logs.keys()
+        for key in keys_to_add_to_history:
+            self.logs_history[key][self.current_epoch].append(
+                torch.tensor(self.logs[key]).detach()
             )
-        if not specific_keys:
-            for key in self.logs_history.keys():
-                self.logs_history[key][self.current_epoch].append(
-                    torch.tensor(self.logs[key]).detach()
-                )
 
     def init_results_writer(self, path):
         """
         NOT IMPLEMENTED
         """
-        if path is not None:
-            self.results_idx = 0
-            self.output_dir_results = path
+        pass
 
-    def init_tensorboard_writer(self, path):
-        if path is not None:
-            self.tensorboard_idx = 0
-            self.output_dir_tensorboard = path
-            os.makedirs(path, exist_ok=True)
-            self.writer = {}
-            for key in self.logs.keys():
-                self.writer[key] = SummaryWriter(log_dir=os.path.join(
-                    self.output_dir_tensorboard,
-                    str(key)
-                ))
+    def init_tensorboard_writer(self, path=None):
+        if path is None:
+            return
+
+        self.tensorboard_idx = 0
+        self.output_dir_tensorboard = pathlib.Path(path)
+        self.output_dir_tensorboard.mkdir(parents=True, exist_ok=True)
+        self.writer = {}
+        for key in self.logs.keys():
+            self.writer[key] = SummaryWriter(log_dir=self.output_dir_tensorboard / key)
 
     def write_tensorboard(self, **kwargs):
-        if self.output_dir_tensorboard is not None:
-            assert self.tensorboard_idx is not None, 'tensorboard index is None'
-            for key in self.writer.keys():
-                self.writer[key].add_scalar(
-                    kwargs.get(key, key),
-                    self.logs[key],
-                    self.tensorboard_idx,
-                )
-            self.tensorboard_idx += 1
+        if self.output_dir_tensorboard is None:
+            return
+
+        for key in self.writer.keys():
+            self.writer[key].add_scalar(
+                kwargs.get(key, key),
+                self.logs[key],
+                self.tensorboard_idx,
+            )
+        self.tensorboard_idx += 1
 
     def close_writer(self):
-        if self.output_dir_tensorboard is not None:
-            for key in self.writer.keys():
-                self.writer[key].close()
+        if self.output_dir_tensorboard is None:
+            return
+
+        for key in self.writer.keys():
+            self.writer[key].close()
 
     def results(self):
         """
