@@ -1,5 +1,7 @@
 from math import log, exp
 import argparse
+
+import pandas as pd
 import torch
 import torch.optim as optim
 from torch.nn import CrossEntropyLoss
@@ -102,7 +104,7 @@ print(f'Random: '
       f'Variation-Ratio:{random_vr.mean()}, '
       f'Predictive Entropy:{random_predictive_entropy.mean()}, '
       f'Mutual Information:{random_mi.mean()}')
-res = dict({
+res = pd.DataFrame.from_dict({
     'number of epochs': epoch,
     'batch_size': batch_size,
     'number of tests': number_of_tests,
@@ -134,5 +136,6 @@ save_to_file(loss, './output/loss.pkl')
 save_to_file(observables, './output/TrainingLogs.pkl')
 torch.save(output_random, './output/random_outputs.pt')
 torch.save(all_outputs_eval, './output/softmax_outputs.pt')
-torch.save(res, './output/results.pt')
+# torch.save(res, './output/results.pt')
+res.to_pickle('./output/results.pkl')
 torch.save(bay_net.state_dict(), './output/final_weights.pt')

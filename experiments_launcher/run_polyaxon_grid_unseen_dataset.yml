@@ -31,7 +31,7 @@ hptuning:
       values: [32]
 
     number_of_tests:
-      values: [10, 20, 30, 40]
+      values: [20, 30, 40]
 
     loss_type:
       values: ["bbb", "criterion"]
@@ -58,4 +58,4 @@ run:
     # Save experiment script
     - cp {{ experiment_file }} ./output
     # Run the pipeline defined in the pipelines folder
-    - python {{ experiment_file }} --dataset {{ dataset }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}
+    - python {{ experiment_file }} --dataset {{ dataset }} --number_of_tests {{ number_of_tests }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}

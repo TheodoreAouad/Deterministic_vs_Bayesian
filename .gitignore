@@ -11,3 +11,4 @@ todelete.pt
 runs/
 **__pycache__
 **todelete**
+**to_delete**

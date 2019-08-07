@@ -16,7 +16,7 @@ hptuning:
 
   matrix:
     experiment_file:
-      values: ["experiments/mnist_bay_cnn_init.py", "experiments/mnist_bay_cnn_init_modular.py"]
+      values: ["experiments/mnist_bay_cnn_init_old.py", "experiments/mnist_bay_cnn_init.py"]
 
     rho:
       values: [-3]
@@ -31,7 +31,7 @@ hptuning:
       values: [10]
 
     loss_type:
-      values: ["criterion"]
+      values: ["bbb"]
 
     std_prior:
       values: [1e-1]

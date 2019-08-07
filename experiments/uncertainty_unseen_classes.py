@@ -1,12 +1,17 @@
 from math import log, exp
 import argparse
+
+import pandas as pd
 import torch
 import torch.optim as optim
 from torch.nn import CrossEntropyLoss
 
+from src.loggers.losses.base_loss import BaseLoss
+from src.loggers.losses.bbb_loss import BBBLoss
+from src.loggers.observables import AccuracyAndUncertainty
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
-from src.tasks.trains import train_bayesian
-from src.tasks.evals import eval_bayesian, eval_random
+from src.tasks.trains import uniform, train_bayesian_modular
+from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_all_uncertainty_measures
 from src.utils import set_and_print_random_seed, save_to_file
 from src.dataset_manager.get_data import get_mnist
@@ -59,21 +64,27 @@ seed_model = set_and_print_random_seed()
 bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
 bay_net.to(device)
 criterion = CrossEntropyLoss()
-adam_proba = optim.Adam(bay_net.parameters())
+if loss_type == 'bbb':
+    step_function = uniform
+    loss = BBBLoss(bay_net, criterion, step_function)
+else:
+    loss = BaseLoss(criterion)
 
-(losses, loss_llhs, loss_vps, loss_prs, accs, max_acc, epoch_max_acc,
- batch_idx_max_acc, val_accs, val_vrs, val_predictive_entropies, val_mis) = train_bayesian(
+optimizer = optim.Adam(bay_net.parameters())
+observables = AccuracyAndUncertainty()
+train_bayesian_modular(
     bay_net,
-    adam_proba,
-    criterion,
-    epoch,
-    trainloader,
-    valloader,
-    loss_type=loss_type,
+    optimizer,
+    loss,
+    observables,
+    number_of_tests=number_of_tests,
+    number_of_epochs=epoch,
+    trainloader=trainloader,
+    valloader=valloader,
     output_dir_tensorboard='./output',
-    output_dir_results="./output/weights_training",
     device=device,
-    verbose=True)
+    verbose=True,
+)
 
 _, all_outputs_eval_unseen = eval_bayesian(
     bay_net,
@@ -101,36 +112,40 @@ print(f"Unseen: "
       f"Variation-Ratio:{unseen_eval_vr.mean()}, "
       f"Predictive Entropy:{unseen_eval_predictive_entropy.mean()}, "
       f"Mutual Information:{unseen_eval_mi.mean()}")
-res = dict({
-    "number of epochs": epoch,
-    "batch_size": batch_size,
-    "number of tests": number_of_tests,
-    "seed_model": seed_model,
-    "stds_prior": std_prior,
-    "rho": rho,
-    "sigma initial": log(1 + exp(rho)),
-    "train accuracy": accs,
-    "train max acc": max_acc,
-    "train max acc epoch": epoch_max_acc,
-    "train loss": losses,
-    "train loss llh": loss_llhs,
-    "train loss vp": loss_vps,
-    "train loss pr": loss_prs,
-    "val accuracy": val_accs,
-    "val vr": val_vrs,
-    "val predictive entropy": val_predictive_entropies,
-    "val mi": val_mis,
-    "eval accuracy": seen_eval_acc,
-    "seen vr": seen_eval_vr,
-    "seen predictive entropy": seen_eval_predictive_entropy,
-    "seen mi": seen_eval_mi,
-    "unseen vr": unseen_eval_vr,
-    "unseen predictive entropy": unseen_eval_predictive_entropy,
-    "unseen mi": seen_eval_mi,
+res = pd.DataFrame.from_dict({
+    'loss_type': [loss_type],
+    'number of epochs': [epoch],
+    'batch_size': [batch_size],
+    'number of tests': [number_of_tests],
+    'seed_model': [seed_model],
+    'stds_prior': [std_prior],
+    'rho': [rho],
+    'sigma initial': [log(1 + exp(rho))],
+    'train accuracy': [observables.logs['train_accuracy_on_epoch']],
+    'train max acc': [observables.max_train_accuracy_on_epoch],
+    'train max acc epoch': [observables.epoch_with_max_train_accuracy],
+    'train loss': [loss.logs.get('total_loss', -1)],
+    'train loss llh': [loss.logs.get('likelihood', -1)],
+    'train loss vp': [loss.logs.get('variational_posterior', -1)],
+    'train loss pr': [loss.logs.get('prior', -1)],
+    'val accuracy': [observables.logs_history['val_accuracy']],
+    'val vr': [observables.logs['val_uncertainty_vr']],
+    'val predictive entropy': [observables.logs['val_uncertainty_pe']],
+    'val mi': [observables.logs['val_uncertainty_mi']],
+    "eval accuracy": [seen_eval_acc],
+    "seen uncertainty vr": [seen_eval_vr],
+    "seen uncertainty predictive entropy": [seen_eval_predictive_entropy],
+    "seen uncertainty mi": [seen_eval_mi],
+    "unseen uncertainty vr": [unseen_eval_vr],
+    "unseen uncertainty predictive entropy": [unseen_eval_predictive_entropy],
+    "unseen uncertainty mi": [seen_eval_mi],
 })
 
 
+save_to_file(loss, './output/loss.pkl')
+save_to_file(observables, './output/TrainingLogs.pkl')
 torch.save(all_outputs_eval_unseen, './output/softmax_outputs_eval_unseen.pt')
 torch.save(all_outputs_eval_seen, './output/softmax_outputs_eval_seen.pt')
-torch.save(res, "./output/results.pt")
+# torch.save(res, "./output/results.pt")
+res.to_pickle('./output/results.pkl')
 torch.save(bay_net.state_dict(), "./output/final_weights.pt")
