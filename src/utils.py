@@ -1,10 +1,10 @@
 import csv
-
+import os
 import pickle
 
 import torch
 import numpy as np
-import os
+import pandas as pd
 
 
 def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoint_dir='./'):
@@ -73,35 +73,52 @@ def get_interesting_result(result):
     """
     Reads the results of a polyaxon experiment and extracts in a dict the desired information.
     Args:
-        result (dict): output of the polyaxon experiment
-        number_of_classes (int): number of classes of the polyaxon experiment (ex: MNIST, 10)
+        result (dict || pandas.core.frame.DataFrame): output of the polyaxon experiment
 
     Returns:
         dict: dictionary of the desired parameters we would like to write in a csv
 
     """
-    interesting_result = dict()
-    for key, value in result.items():
-        try:
-            if key == "val accuracy":
-                interesting_result[key + " max"] = np.array(value).max()
-            else:
-                if type(value) == list:
-                    interesting_result[key] = value[-1][-1]
-                elif "uncertainty" in key or "dkls" in key:
-                    interesting_result[key + "-mean"] = value.mean().item()
-                    interesting_result[key + "-std"] = value.std().item()
+    if type(result) == dict:
+        interesting_result = dict()
+        for key, value in result.items():
+            try:
+                if key == "val accuracy":
+                    interesting_result[key + " max"] = np.array(value).max()
                 else:
-                    interesting_result[key] = value
-        except Exception as e:
-            print(str(key) + " recuperation not implemented, or unexpected error.")
-            print(key, value)
-            raise e
+                    if type(value) == list:
+                        interesting_result[key] = torch.tensor(value[-1][-1]).float().mean().item()
+                    elif type(value) == torch.Tensor and len(value.size()) > 1:
+                        interesting_result[key + "-mean"] = value.mean().item()
+                        interesting_result[key + "-std"] = value.std().item()
+                    else:
+                        interesting_result[key] = value
+            except Exception as e:
+                print(str(key) + " recuperation not implemented, or unexpected error.")
+                print(key, value)
+                raise e
+
+        return interesting_result
+
+    interesting_result = result.copy()
+    interesting_result['val accuracy'] = interesting_result['val accuracy'].apply(
+        lambda x: torch.tensor(x).max().item()
+    )
+    interesting_result = interesting_result.rename(columns={'val accuracy': 'val accuracy max'})
+    uncertainty_keys = [key for key in result.keys() if 'uncertainty' in key]
+    for key in uncertainty_keys:
+        if type(result[key].iloc[3]) == str:
+            print(result[key], key)
+        interesting_result[key + "-mean"] = result[key].apply(lambda x: x.mean().item())
+        interesting_result[key + "-std"] = result[key].apply(lambda x: x.std().item())
+        interesting_result = interesting_result.drop(key, 1)
 
     return interesting_result
 
 
-def write_results_in_csv(results, name="results/results.csv"):
+
+
+def write_dict_in_csv(results, name="results/results.csv"):
     """
 
     This function takes as input a tuple of results from multiple experiments
@@ -124,7 +141,7 @@ def write_results_in_csv(results, name="results/results.csv"):
     file.close()
 
 
-def get_file_path_in_dir(dir_path, file_name=""):
+def get_file_and_dir_path_in_dir(dir_path, file_name=""):
     """
     Get all the paths of the files in a certain directory, with a restriction on the file_name
     Args:
@@ -135,11 +152,13 @@ def get_file_path_in_dir(dir_path, file_name=""):
         list: list of the paths of all the files
     """
     all_files = []
+    all_dirs = []
     for (dirpath, dirnames, filenames) in os.walk(dir_path):
         for file in filenames:
             if file_name in file:
                 all_files.append(os.path.join(dirpath, file))
-    return all_files
+                all_dirs.append(dirpath)
+    return all_files, all_dirs
 
 
 def compute_weights_norm(model):
@@ -222,3 +241,18 @@ def print_nicely_on_console(dic):
                 value_to_print = "{:.2E}".format(value)
             to_print += f'{key}: {value_to_print}, '
     print(to_print)
+
+
+def convert_tensor_to_float(df):
+    """
+    Converts torch.Tensor types of a dataframe into a float
+    Args:
+        df (pandas.core.frame.DataFrame): dataframe to be converted
+    """
+    for key in list(df.columns):
+        if type(df[key].iloc[0]) == torch.Tensor:
+            try: df[key] = df[key].astype(float)
+            except Exception as e:
+                print(key, df[key])
+                raise(e)
+

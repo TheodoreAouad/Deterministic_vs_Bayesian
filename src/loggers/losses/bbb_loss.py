@@ -26,7 +26,7 @@ class BBBLoss(BaseLoss):
         #         #     'prior': None,
         #         # }
 
-    # TODO: do we have to divise the loss by the batch size?
+    # TODO: do we have to divide the loss by the batch size?
     def compute(self, outputs, labels):
         """
         Compute the loss L = kl_weight * KL[q(w | theta) || P(w)] - E_q(w)(logP(D|W))
@@ -43,7 +43,7 @@ class BBBLoss(BaseLoss):
         self.logs['variational_posterior'] = kl_weight * self.model.variational_posterior(weights_used,
                                                                                           bias_used)
         self.logs['prior'] = -kl_weight * self.model.prior(weights_used, bias_used)
-        self.logs['total_loss'] = (self.logs['likelihood'] + self.logs['prior'] +
+        self.logs['total_loss'] = (self.logs['variational_posterior'] + self.logs['prior'] +
                                    self.logs['likelihood'])
         self.add_to_history()
 

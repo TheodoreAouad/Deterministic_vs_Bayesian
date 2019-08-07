@@ -96,5 +96,4 @@ def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, rando
     output_random = torch.Tensor(number_of_tests, batch_size, number_of_classes)
     for test_idx in range(number_of_tests):
         output_random[test_idx] = model(random_noise).detach()
-    random_vr, random_predictive_entropy, random_mi = get_all_uncertainty_measures(output_random)
-    return random_vr, random_predictive_entropy, random_mi, seed
+    return output_random, seed
