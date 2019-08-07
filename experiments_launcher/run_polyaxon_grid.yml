@@ -19,7 +19,7 @@ hptuning:
       values: ["experiments/mnist_bay_cnn_init.py"]
 
     rho:
-      values: [-6, -4, -2]
+      values: [-6]
 
     epoch:
       values: [10]
@@ -28,7 +28,7 @@ hptuning:
       values: [32]
 
     number_of_tests:
-      values: [20, 30, 40]
+      values: [20]
 
     loss_type:
       values: ["bbb", "criterion"]

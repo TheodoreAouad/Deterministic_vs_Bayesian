@@ -6,7 +6,6 @@ import pathlib
 import torch
 import pandas as pd
 
-# sys.path.append("BayesianFewShotExperiments")
 from src.uncertainty_measures import get_all_uncertainty_measures
 from src.utils import get_interesting_result, write_dict_in_csv, get_file_and_dir_path_in_dir, convert_tensor_to_float
 

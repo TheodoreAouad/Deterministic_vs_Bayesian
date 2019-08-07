@@ -1,0 +1,4 @@
+batch_size
+stds_prior
+rho
+number of tests

@@ -1,0 +1,16 @@
+loss_type
+train accuracy
+val accuracy max
+eval accuracy
+seen uncertainty vr-mean
+seen uncertainty vr-std
+random uncertainty vr-mean
+random uncertainty vr-std
+seen uncertainty predictive entropy-mean
+seen uncertainty predictive entropy-std
+random uncertainty predictive entropy-mean
+random uncertainty predictive entropy-std
+seen uncertainty mi-mean
+seen uncertainty mi-std
+random uncertainty mi-mean
+random uncertainty mi-std
