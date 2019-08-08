@@ -267,47 +267,47 @@ class TestBayesianModular:
 
         assert observables.logs_history['val_accuracy'] == old_val_accs
 
-    @staticmethod
-    def test_identity_modular_not_modular_bayesian():
-        device = 'cpu'
-        randomloader = RandomTrainloader()
-        random_valloader = RandomTrainloader(batch_size=100)
-
-        seed1 = set_and_print_random_seed()
-        old_det_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
-        old_det_net.to(device)
-        criterion = nn.CrossEntropyLoss()
-        optimizer = optim.Adam(old_det_net.parameters())
-        _, _, _, _, _, _, _, _, old_val_accs, _, _, _ = train_bayesian(
-            old_det_net,
-            optimizer,
-            criterion,
-            1,
-            trainloader=randomloader,
-            valloader=random_valloader,
-            loss_type='criterion',
-            device=device,
-            verbose=False,
-        )
-
-        set_and_print_random_seed(seed1)
-        new_det_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
-        new_det_net.to(device)
-        criterion = nn.CrossEntropyLoss()
-        loss_ce = BBBLoss(new_det_net, criterion, uniform)
-        optimizer = optim.Adam(new_det_net.parameters())
-        observables = AccuracyAndUncertainty()
-        train_bayesian_modular(
-            new_det_net,
-            optimizer,
-            loss_ce,
-            observables,
-            number_of_tests=1,
-            number_of_epochs=1,
-            trainloader=randomloader,
-            valloader=random_valloader,
-            device=device,
-            verbose=False,
-        )
-
-        assert observables.logs_history['val_accuracy'] == old_val_accs
+    # @staticmethod
+    # def test_identity_modular_not_modular_bayesian():
+    #     device = 'cpu'
+    #     randomloader = RandomTrainloader()
+    #     random_valloader = RandomTrainloader(batch_size=100)
+    #
+    #     seed1 = set_and_print_random_seed()
+    #     old_det_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
+    #     old_det_net.to(device)
+    #     criterion = nn.CrossEntropyLoss()
+    #     optimizer = optim.Adam(old_det_net.parameters())
+    #     _, _, _, _, _, _, _, _, old_val_accs, _, _, _ = train_bayesian(
+    #         old_det_net,
+    #         optimizer,
+    #         criterion,
+    #         1,
+    #         trainloader=randomloader,
+    #         valloader=random_valloader,
+    #         loss_type='criterion',
+    #         device=device,
+    #         verbose=False,
+    #     )
+    #
+    #     set_and_print_random_seed(seed1)
+    #     new_det_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
+    #     new_det_net.to(device)
+    #     criterion = nn.CrossEntropyLoss()
+    #     loss_ce = BBBLoss(new_det_net, criterion, uniform)
+    #     optimizer = optim.Adam(new_det_net.parameters())
+    #     observables = AccuracyAndUncertainty()
+    #     train_bayesian_modular(
+    #         new_det_net,
+    #         optimizer,
+    #         loss_ce,
+    #         observables,
+    #         number_of_tests=1,
+    #         number_of_epochs=1,
+    #         trainloader=randomloader,
+    #         valloader=random_valloader,
+    #         device=device,
+    #         verbose=False,
+    #     )
+    #
+    #     assert observables.logs_history['val_accuracy'] == old_val_accs
