@@ -1,38 +1,21 @@
 import torch
 
+from src.loggers.logger import Logger
 
-class BaseLoss:
 
-    def __init__(self):
-        self.writer = None
-        self.tensorboard_idx = None
-        self.results_idx = None
-        self.total_loss = None
-        self.current_epoch = None
+class BaseLoss(Logger):
+    """
+    Base class for losses. Losses should inherit this class.
+    """
+    def __init__(self, criterion):
+        super(BaseLoss, self).__init__()
+        self.criterion = criterion
+        self.logs = {'total_loss': None}
 
-    def compute(self):
-        raise NotImplementedError
+    def compute(self, outputs, labels):
+        self.logs['total_loss'] = self.criterion(outputs, labels)
+        self.add_to_history()
 
     def backward(self):
-        assert type(self.total_loss) == torch.Tensor, 'Loss is not a torch.Tensor'
-        self.total_loss.backward()
-
-    def show(self):
-        pass
-
-    def set_current_epoch(self, epoch):
-        self.current_epoch = epoch
-
-    def init_results_writer(self, path):
-        self.results_idx = 0
-
-    def init_tensorboard_writer(self, path):
-        self.tensorboard_idx = 0
-
-    def write_tensorboard(self):
-        pass
-
-    def close_writer(self):
-        pass
-
-
+        assert type(self.logs['total_loss']) == torch.Tensor, 'Loss type should be torch.Tensor'
+        self.logs['total_loss'].backward()

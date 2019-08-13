@@ -1,22 +1,24 @@
-import filecmp
 import os
 import shutil
 
-import numpy as np
 import pytest
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from src.loggers.losses.base_loss import BaseLoss
+from src.loggers.losses.bbb_loss import BBBLoss
+from src.loggers.observables import AccuracyAndUncertainty
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
-from src.tasks.trains import train, train_bayesian, train_bayesian_refactored
-from src.utils import set_and_print_random_seed, get_file_path_in_dir
+from src.tasks.trains import train, train_bayesian, train_bayesian_refactored, train_bayesian_modular, uniform
+from src.utils import set_and_print_random_seed
 
 
 class RandomTrainloader:
 
     def __init__(self, number_of_batches=2, batch_size=2, number_of_channels=1, img_dim=28, number_of_classes=10):
         self.batch_size = batch_size
+        self.number_of_batches = number_of_batches
         self.number_of_classes = number_of_classes
         self.dataset = torch.rand((number_of_batches, batch_size, number_of_channels, img_dim, img_dim))
         self.labels = torch.randint(0, number_of_classes, (number_of_batches, batch_size))
@@ -25,7 +27,7 @@ class RandomTrainloader:
         return self.dataset[idx], self.labels[idx]
 
     def __len__(self):
-        return len(self.dataset)
+        return self.number_of_batches
 
 
 @pytest.fixture(scope='class')
@@ -41,6 +43,7 @@ def data_folder_teardown(request):
         if os.path.isdir(download_path_new):
             shutil.rmtree(download_path_new)
             print(f'{download_path_new} deleted.')
+
     request.addfinalizer(fin)
 
 
@@ -142,7 +145,7 @@ class TestBayesianRefactored:
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(bay_net.parameters())
         output_new = train_bayesian_refactored(bay_net, optimizer, criterion, 1, trainloader=randomloader,
-                                    device=device, verbose=False)
+                                               device=device, verbose=False)
 
         assert output_old == output_new
 
@@ -213,5 +216,98 @@ class TestBayesianRefactored:
             elif type(old[0][0]) != torch.Tensor:
                 assert old == new
             else:
-                for o, n in zip(old,new):
+                for o, n in zip(old, new):
                     assert torch.sum(torch.stack(o) - torch.stack(n)) == 0
+
+
+class TestBayesianModular:
+
+    @staticmethod
+    def test_identity_modular_not_modular_determinist():
+        device = 'cpu'
+        randomloader = RandomTrainloader()
+        random_valloader = RandomTrainloader(batch_size=100)
+
+        seed1 = set_and_print_random_seed()
+        old_det_net = GaussianClassifier('determinist', (0, 0), (1, 1), number_of_classes=10)
+        old_det_net.to(device)
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(old_det_net.parameters())
+        _, _, _, _, _, _, _, _, old_val_accs, _, _, _ = train_bayesian(
+            old_det_net,
+            optimizer,
+            criterion,
+            1,
+            trainloader=randomloader,
+            valloader=random_valloader,
+            loss_type='criterion',
+            device=device,
+            verbose=False,
+        )
+
+        set_and_print_random_seed(seed1)
+        new_det_net = GaussianClassifier('determinist', (0, 0), (1, 1), number_of_classes=10)
+        new_det_net.to(device)
+        criterion = nn.CrossEntropyLoss()
+        loss_ce = BaseLoss(criterion)
+        optimizer = optim.Adam(new_det_net.parameters())
+        observables = AccuracyAndUncertainty()
+        train_bayesian_modular(
+            new_det_net,
+            optimizer,
+            loss_ce,
+            observables,
+            number_of_tests=1,
+            number_of_epochs=1,
+            trainloader=randomloader,
+            valloader=random_valloader,
+            device=device,
+            verbose=False,
+        )
+
+        assert observables.logs_history['val_accuracy'] == old_val_accs
+
+    # @staticmethod
+    # def test_identity_modular_not_modular_bayesian():
+    #     device = 'cpu'
+    #     randomloader = RandomTrainloader()
+    #     random_valloader = RandomTrainloader(batch_size=100)
+    #
+    #     seed1 = set_and_print_random_seed()
+    #     old_det_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
+    #     old_det_net.to(device)
+    #     criterion = nn.CrossEntropyLoss()
+    #     optimizer = optim.Adam(old_det_net.parameters())
+    #     _, _, _, _, _, _, _, _, old_val_accs, _, _, _ = train_bayesian(
+    #         old_det_net,
+    #         optimizer,
+    #         criterion,
+    #         1,
+    #         trainloader=randomloader,
+    #         valloader=random_valloader,
+    #         loss_type='criterion',
+    #         device=device,
+    #         verbose=False,
+    #     )
+    #
+    #     set_and_print_random_seed(seed1)
+    #     new_det_net = GaussianClassifier(-3, (0, 0), (1, 1), number_of_classes=10)
+    #     new_det_net.to(device)
+    #     criterion = nn.CrossEntropyLoss()
+    #     loss_ce = BBBLoss(new_det_net, criterion, uniform)
+    #     optimizer = optim.Adam(new_det_net.parameters())
+    #     observables = AccuracyAndUncertainty()
+    #     train_bayesian_modular(
+    #         new_det_net,
+    #         optimizer,
+    #         loss_ce,
+    #         observables,
+    #         number_of_tests=1,
+    #         number_of_epochs=1,
+    #         trainloader=randomloader,
+    #         valloader=random_valloader,
+    #         device=device,
+    #         verbose=False,
+    #     )
+    #
+    #     assert observables.logs_history['val_accuracy'] == old_val_accs

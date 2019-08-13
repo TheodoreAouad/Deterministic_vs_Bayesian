@@ -16,13 +16,10 @@ hptuning:
 
   matrix:
     experiment_file:
-      values: ["experiments/uncertainty_unseen_dataset.py"]
-
-    dataset:
-      values: ["cifar10", "omniglot"]
+      values: ["experiments/mnist_bay_cnn_init_old.py", "experiments/mnist_bay_cnn_init.py"]
 
     rho:
-      values: [-6, -4, -2]
+      values: [-3]
 
     epoch:
       values: [10]
@@ -31,10 +28,10 @@ hptuning:
       values: [32]
 
     number_of_tests:
-      values: [20, 30, 40]
+      values: [10]
 
     loss_type:
-      values: ["bbb", "criterion"]
+      values: ["bbb"]
 
     std_prior:
       values: [1e-1]
@@ -58,4 +55,4 @@ run:
     # Save experiment script
     - cp {{ experiment_file }} ./output
     # Run the pipeline defined in the pipelines folder
-    - python {{ experiment_file }} --dataset {{ dataset }} --number_of_tests {{ number_of_tests }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}
+    - python {{ experiment_file }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }}

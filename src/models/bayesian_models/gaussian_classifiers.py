@@ -18,7 +18,7 @@ class GaussianClassifier(nn.Module):
         """
 
         Args:
-            rho (float): parameter to get the std. std = log(1+exp(rho))
+            rho (float || str): parameter to get the std. std = log(1+exp(rho))
             mus_prior (tuple): the means of the prior (weight and bias). Often will be (0,0)
             stds_prior (tuple): the stds of the prior (weight and bias)
             number_of_classes (int): number of different classes in the problem
