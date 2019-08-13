@@ -14,3 +14,4 @@ runs/
 **to_delete**
 ResultsBayesian**
 venv/
+pyro_tests.py

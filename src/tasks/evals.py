@@ -70,7 +70,8 @@ def eval_bayesian(model, evalloader, number_of_tests, device='cpu', val=False):
         return accuracy, all_outputs
 
 
-def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, random_seed=None, device='cpu'):
+def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, random_seed=None, show_progress=False,
+                device='cpu'):
     """
 
     Args:
@@ -94,6 +95,10 @@ def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, rando
     seed = set_and_print_random_seed(random_seed)
     random_noise = torch.randn(batch_size, img_channels, img_dim, img_dim).to(device)
     output_random = torch.Tensor(number_of_tests, batch_size, number_of_classes)
-    for test_idx in range(number_of_tests):
+    if show_progress:
+        iterator = tqdm(range(number_of_tests))
+    else:
+        iterator = range(number_of_tests)
+    for test_idx in iterator:
         output_random[test_idx] = model(random_noise).detach()
     return output_random, seed

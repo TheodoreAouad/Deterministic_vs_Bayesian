@@ -32,13 +32,13 @@ which_file = args.which_file
 type_of_test = args.type_of_test
 extra_info = args.extra_info
 
-filename = "results/"
+filename = pathlib.Path("results/raw_results/")
 if group_nb is not None:
     _, all_dirs = get_file_and_dir_path_in_dir(os.path.join(polyaxon_results_path, polyaxon_type, group_nb), which_file)
-    filename = "results/group" + str(group_nb) + str(extra_info)
+    filename = filename / (str(group_nb) + str(extra_info))
 elif exp_nb is not None:
     _, all_dirs = get_file_and_dir_path_in_dir(os.path.join(polyaxon_results_path, polyaxon_type, exp_nb), which_file)
-    filename = "results/experiment" + str(exp_nb) + str(extra_info)
+    filename = filename / (str(exp_nb) + str(extra_info))
 
 # results = []
 # for file_path in all_dirs:

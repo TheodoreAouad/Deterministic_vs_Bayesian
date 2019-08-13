@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 which_parameters = args.which_parameters
 which_values = args.which_values
-results_dir_path = pathlib.Path(args.results_dir_path)
+results_dir_path = pathlib.Path(args.results_dir_path) / 'raw_results'
 polyaxon_type = args.polyaxon_type
 exp_nb = args.exp_nb
 extra_info = args.extra_info
