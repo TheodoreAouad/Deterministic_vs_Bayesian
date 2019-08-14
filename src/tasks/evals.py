@@ -81,6 +81,7 @@ def eval_random(model, batch_size, img_channels, img_dim, number_of_tests, rando
         img_dim (int): dimension of the random sample
         number_of_tests (int): the number of times we do a forward for each input
         random_seed (int): the seed of the random generation, for reproducibility
+        show_progress (Bool): whether we want a progress bar or not
         device (torch.device || str): which device to compute on (either on GPU or CPU). Either torch.device type or
                                       specific string 'cpu' or 'gpu'.
 

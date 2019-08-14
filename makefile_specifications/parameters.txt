@@ -1,3 +1,4 @@
+loss_type
 batch_size
 stds_prior
 rho

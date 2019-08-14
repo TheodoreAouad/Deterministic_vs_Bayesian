@@ -110,7 +110,7 @@ accuracies = correct_labels.mean(1)
 random_idxs = (true_labels_shuffled == -1).float()
 random_idxs_reshaped = random_idxs.reshape(size_of_batch, nb_of_batches)
 prop_of_rand = random_idxs_reshaped.mean(0)
-labels_not_shuffled = true_labels.reshape(total_nb_of_data // real_size_of_batch, real_size_of_batch).mean(1) == -1
+labels_not_shuffled = (true_labels == -1).reshape(total_nb_of_data // real_size_of_batch, real_size_of_batch).mean(1)
 
 # get uncertainties
 unc_soft_shuffled, pe_shuffled = get_all_uncertainty_measures_not_bayesian(all_outputs_shuffled)
