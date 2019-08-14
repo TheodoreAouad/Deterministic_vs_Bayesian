@@ -27,7 +27,7 @@ parser.add_argument('--batch_size', help='number of batches to split the data in
 parser.add_argument('--number_of_tests', help='number of evaluations to perform for each each image to check for '
                                               'uncertainty', type=int, default=10)
 parser.add_argument('--loss_type', help='which loss to use', choices=['exp', 'uniform', 'criterion'], type=str,
-                    default='bbb')
+                    default='uniform')
 parser.add_argument('--std_prior', help='the standard deviation of the prior', type=float, default=1)
 args = parser.parse_args()
 

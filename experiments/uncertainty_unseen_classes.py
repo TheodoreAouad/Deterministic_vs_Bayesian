@@ -28,8 +28,8 @@ parser.add_argument("--batch_size", help="number of batches to split the data in
                     type=int, default=32)
 parser.add_argument("--number_of_tests", help="number of evaluations to perform for each each image to check for "
                                               "uncertainty", type=int, default=10)
-parser.add_argument("--loss_type", help="which loss to use", choices=["bbb", "criterion"], type=str,
-                    default="bbb")
+parser.add_argument("--loss_type", help="which loss to use", choices=["unfirom", "exp", "criterion"], type=str,
+                    default="uniform")
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
 args = parser.parse_args()
 
@@ -64,8 +64,12 @@ seed_model = set_and_print_random_seed()
 bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
 bay_net.to(device)
 criterion = CrossEntropyLoss()
-if loss_type == 'bbb':
+if loss_type == 'uniform':
     step_function = uniform
+    loss = BBBLoss(bay_net, criterion, step_function)
+elif loss_type == 'exp':
+    def step_function(batch_idx, number_of_batches):
+        return 2**(number_of_batches - batch_idx)/(2**number_of_batches - 1)
     loss = BBBLoss(bay_net, criterion, step_function)
 else:
     loss = BaseLoss(criterion)
