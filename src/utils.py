@@ -262,6 +262,11 @@ def convert_tensor_to_float(df):
 
 
 def convert_df_to_cpu(df):
+    """
+    Put dataframe in cpu.
+    Args:
+        df (pandas.core.frame.DataFrame): dataframe to be converted
+    """
     for key in list(df.columns):
         if type(df[key].iloc[0]) == torch.Tensor:
             df[key] = df[key].apply(lambda x: x.to('cpu'))

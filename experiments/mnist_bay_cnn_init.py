@@ -16,7 +16,6 @@ from src.uncertainty_measures import get_all_uncertainty_measures
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--rho', help='variable symbolizing the variance. std = log(1+exp(rho))',
                     type=float, default=-5)
@@ -29,6 +28,7 @@ parser.add_argument('--number_of_tests', help='number of evaluations to perform 
 parser.add_argument('--loss_type', help='which loss to use', choices=['exp', 'uniform', 'criterion'], type=str,
                     default='uniform')
 parser.add_argument('--std_prior', help='the standard deviation of the prior', type=float, default=1)
+parser.add_argument('--split_train', nargs=2, help='the portion of training data we take', type=float, default=(0, 1))
 args = parser.parse_args()
 
 save_to_file(vars(args), './output/arguments.pkl')
@@ -39,7 +39,7 @@ batch_size = args.batch_size
 number_of_tests = args.number_of_tests
 loss_type = args.loss_type
 std_prior = args.std_prior
-
+split_train = args.split_train
 stds_prior = (std_prior, std_prior)
 
 if torch.cuda.is_available():
@@ -48,7 +48,8 @@ else:
     device = 'cpu'
 device = torch.device(device)
 
-trainloader, valloader, evalloader = get_mnist(train_labels=range(10), eval_labels=range(10), batch_size=batch_size)
+trainloader, valloader, evalloader = get_mnist(train_labels=range(10), eval_labels=range(10), split_train=split_train,
+                                               batch_size=batch_size)
 
 seed_model = set_and_print_random_seed()
 bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
@@ -59,7 +60,9 @@ if loss_type == 'uniform':
     loss = BBBLoss(bay_net, criterion, step_function)
 elif loss_type == 'exp':
     def step_function(batch_idx, number_of_batches):
-        return 2**(number_of_batches - batch_idx)/(2**number_of_batches - 1)
+        return 2 ** (number_of_batches - batch_idx) / (2 ** number_of_batches - 1)
+
+
     loss = BBBLoss(bay_net, criterion, step_function)
 else:
     loss = BaseLoss(criterion)
@@ -99,8 +102,7 @@ output_random, seed = eval_random(
 
 random_vr, random_predictive_entropy, random_mi = get_all_uncertainty_measures(output_random)
 
-
-print(f'Eval acc: {round(100*eval_acc,2)} %, '
+print(f'Eval acc: {round(100 * eval_acc, 2)} %, '
       f'Variation-Ratio:{eval_vr.mean()}, '
       f'Predictive Entropy:{eval_predictive_entropy.mean()}, '
       f'Mutual Information:{eval_mi.mean()}')
@@ -112,6 +114,7 @@ res = pd.DataFrame.from_dict({
     'loss_type': [loss_type],
     'number of epochs': [epoch],
     'batch_size': [batch_size],
+    'split_train': [len(trainloader.dataset)],
     'number of tests': [number_of_tests],
     'seed_model': [seed_model],
     'stds_prior': [std_prior],

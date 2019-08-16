@@ -13,7 +13,7 @@ from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.trains import uniform, train_bayesian_modular
 from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_all_uncertainty_measures
-from src.utils import set_and_print_random_seed, save_to_file
+from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist
 
 
@@ -31,6 +31,7 @@ parser.add_argument("--number_of_tests", help="number of evaluations to perform 
 parser.add_argument("--loss_type", help="which loss to use", choices=["unfirom", "exp", "criterion"], type=str,
                     default="uniform")
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
+parser.add_argument('--split_train', nargs=2, help='the portion of training data we take', type=float, default=(0, 1))
 args = parser.parse_args()
 
 save_to_file(vars(args), './output/arguments.pkl')
@@ -42,6 +43,7 @@ batch_size = args.batch_size
 number_of_tests = args.number_of_tests
 loss_type = args.loss_type
 std_prior = args.std_prior
+split_train = args.split_train
 
 stds_prior = (std_prior, std_prior)
 
@@ -57,7 +59,8 @@ trainloader, valloader, evalloader_unseen = get_mnist(
     batch_size=batch_size
 )
 
-_, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), batch_size=batch_size)
+_, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), split_train=split_train,
+                                  batch_size=batch_size)
 
 
 seed_model = set_and_print_random_seed()
@@ -120,6 +123,7 @@ res = pd.DataFrame.from_dict({
     'loss_type': [loss_type],
     'number of epochs': [epoch],
     'batch_size': [batch_size],
+    'nb of data': [len(trainloader.dataset)],
     'number of tests': [number_of_tests],
     'seed_model': [seed_model],
     'stds_prior': [std_prior],
@@ -145,6 +149,7 @@ res = pd.DataFrame.from_dict({
     "unseen uncertainty mi": [seen_eval_mi],
 })
 
+convert_df_to_cpu(res)
 
 save_to_file(loss, './output/loss.pkl')
 save_to_file(observables, './output/TrainingLogs.pkl')

@@ -9,9 +9,9 @@ from src.tasks.evals import eval_bayesian, eval_random
 from src.utils import load_from_file, get_file_and_dir_path_in_dir, compute_figures
 
 ###### TO CHANGE ###########
-group_nbs = ['187']
-exp_nbs = ['3842']
-type_of_unseen = 'random'
+group_nbs = ['189']
+exp_nbs = ['3861', '3864']
+type_of_unseen = 'unseen_dataset'
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000

@@ -15,3 +15,10 @@ write-specific-results-csv-unseen-test:
 
 test:
 	python -m pytest src/
+
+run-polyaxon:
+	polyaxon run -u -f experiments_launcher/run_polyaxon_grid.yml;
+	polyaxon run -u -f experiments_launcher/run_polyaxon_grid_unseen_classes.yml;
+	polyaxon run -u -f experiments_launcher/run_polyaxon_grid_unseen_dataset.yml;
+
+
