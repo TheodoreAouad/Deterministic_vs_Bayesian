@@ -284,6 +284,25 @@ def compute_figures(
         save_fig=True,
         save_path=None,
 ):
+    """
+    Show 6 scatter plots of accuracy against the uncertainty, two for each uncertainty measure.
+    Each point is a batch of size_of_batch images. The difference lays in the proportion of seen / unseen image in the
+    batch.
+    Args:
+        arguments (dict): the arguments of the python executed line in the terminal
+        all_outputs_seen (torch.Tensor): size (nb_of_tests, size_of_testset_seen, nb_of_classes): the output of the
+                                         softmax of the seen test set
+        true_labels_seen (torch.Tensor): size (size_of_testset): the true labels of the seen test set
+        all_outputs_unseen (torch.Tensor): size (nb_of_tests, size_of_testset_unseen): the output of the softmax of the
+                                           unseen dataset
+        nb_of_batches (int): number of points to show
+        size_of_batch (int): number of images per point
+        type_of_unseen (str): Type of experiment. Either 'random', 'unseen_classes' or 'unseen_dataset'
+        show_fig (bool): whether we show the figure
+        save_fig (bool): whether we save the figure
+        save_path (str): where to save the figures
+
+    """
     arguments['type_of_unseen'] = type_of_unseen
     nb_of_seen = true_labels_seen.size(0)
     nb_of_unseen = all_outputs_unseen.size(1)
@@ -430,6 +449,14 @@ def compute_figures(
 
 
 def get_divisors(n):
+    """
+    Get the divisors of an integer.
+    Args:
+        n (int): number we want to get the divisors of
+
+    Returns:
+        list: list of divisors of n
+    """
     res = []
     for k in range(1, int(np.sqrt(n))):
         if n % k == 0:
@@ -438,5 +465,14 @@ def get_divisors(n):
 
 
 def get_exact_batch_size(size_of_batch, total_nb_sample):
+    """
+    Does the computation of the exact size of batch (cf func compute_figures) depending on an approximate size
+    Args:
+        size_of_batch (int): the size of batch we would like optimally
+        total_nb_sample (int): the number of images we want to divide into batches
+
+    Returns:
+        int: the size of batch we can divide the number of samples into
+    """
     divisors = get_divisors(total_nb_sample)
     return min(divisors, key=lambda x: abs(x - size_of_batch))
