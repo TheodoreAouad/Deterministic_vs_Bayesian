@@ -1,3 +1,8 @@
+"""
+This script is used to create the figures of accuracies against uncertainty. This is used to get results of a single
+experiment. It cannot be used to create a figure across multiple experiments.
+To use it, change the arguments in the TO CHANGE box.
+"""
 import pathlib
 
 import torch
@@ -6,19 +11,18 @@ import torchvision.transforms as transforms
 from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.evals import eval_bayesian, eval_random
-from src.utils import load_from_file, get_file_and_dir_path_in_dir, compute_figures
+from src.utils import load_from_file, get_file_and_dir_path_in_dir
+from scripts.utils import compute_figures
 
 ###### TO CHANGE ###########
 group_nbs = ['189']
 exp_nbs = ['3861', '3864']
-type_of_unseen = 'unseen_dataset'
+type_of_unseen = 'unseen_dataset'  # Choose between 'random', 'unseen_classes' and 'unseen_dataset'
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000
 save_fig = True
 do_eval_mnist = True
-
-
 ############################
 
 def get_seen_outputs_and_labels(bay_net_trained, type_of_unseen, arguments):

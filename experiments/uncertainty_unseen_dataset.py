@@ -31,9 +31,9 @@ parser.add_argument("--number_of_tests", help="number of evaluations to perform 
 parser.add_argument("--loss_type", help="which loss to use", choices=["uniform", 'exp', "criterion"], type=str,
                     default="uniform")
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
-parser.add_argument('--split_train', nargs=2, help='the portion of training data we take', type=float, default=(0, 1))
-args = parser.parse_args()
+parser.add_argument('--split_train',help='the portion of training data we take', type=int)
 
+args = parser.parse_args()
 save_to_file(vars(args), './output/arguments.pkl')
 
 dataset = args.dataset.lower()

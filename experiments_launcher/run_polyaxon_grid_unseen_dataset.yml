@@ -40,7 +40,7 @@ hptuning:
       values: [1e-1]
 
     split_train:
-      values: [.2, .3, .4, .5, .6, .7, .8, .9]
+      values: [1, 5, 10, 15, 20]
 
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8
@@ -61,4 +61,4 @@ run:
     # Save experiment script
     - cp {{ experiment_file }} ./output
     # Run the pipeline defined in the pipelines folder
-    - python {{ experiment_file }} --dataset {{ dataset }} --number_of_tests {{ number_of_tests }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }} --split_train 0.1 {{ split_train }}
+    - python {{ experiment_file }} --dataset {{ dataset }} --number_of_tests {{ number_of_tests }} --rho {{ rho }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }} --split_train {{ split_train }}

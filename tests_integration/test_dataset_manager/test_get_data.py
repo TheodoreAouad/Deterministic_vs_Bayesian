@@ -15,12 +15,12 @@ def data_folder_teardown(request):
         if os.path.isdir(download_path):
             shutil.rmtree(download_path)
             print(f'{download_path} deleted.')
+
     request.addfinalizer(fin)
 
 
-#TODO: mock the MNIST to avoid downloading everything
+# TODO: mock the MNIST to avoid downloading everything
 class TestGetMnist:
-
 
     @staticmethod
     def test_label_specification(data_folder_teardown):
@@ -44,6 +44,13 @@ class TestGetMnist:
                                                        split_val=0)
         size_full_test = len(evalloader.dataset)
         trainloader, valloader, evalloader = get_mnist(root=dir_path, train_labels=range(6), eval_labels=range(6),
-                                                               split_val=0.5)
+                                                       split_val=0.5)
         assert size_full_test == len(valloader.dataset) + len(evalloader.dataset)
 
+    @staticmethod
+    def test_number_number_of_train(data_folder_teardown):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        dir_path = os.path.join(dir_path, 'data')
+
+        trainloader, evalloader, evalloader = get_mnist(root=dir_path, number_of_labels=5)
+        assert len(trainloader.dataset) == 5

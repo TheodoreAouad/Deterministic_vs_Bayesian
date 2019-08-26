@@ -28,12 +28,12 @@ parser.add_argument("--batch_size", help="number of batches to split the data in
                     type=int, default=32)
 parser.add_argument("--number_of_tests", help="number of evaluations to perform for each each image to check for "
                                               "uncertainty", type=int, default=10)
-parser.add_argument("--loss_type", help="which loss to use", choices=["unfirom", "exp", "criterion"], type=str,
+parser.add_argument("--loss_type", help="which loss to use", choices=["uniform", "exp", "criterion"], type=str,
                     default="uniform")
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
-parser.add_argument('--split_train', nargs=2, help='the portion of training data we take', type=float, default=(0, 1))
-args = parser.parse_args()
+parser.add_argument('--split_train',help='the portion of training data we take', type=int)
 
+args = parser.parse_args()
 save_to_file(vars(args), './output/arguments.pkl')
 
 split_labels = args.split_labels
@@ -56,7 +56,8 @@ device = torch.device(device)
 trainloader, valloader, evalloader_unseen = get_mnist(
     train_labels=range(split_labels),
     eval_labels=range(split_labels, 10),
-    batch_size=batch_size
+    batch_size=batch_size,
+    split_train=split_train,
 )
 
 _, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), split_train=split_train,
