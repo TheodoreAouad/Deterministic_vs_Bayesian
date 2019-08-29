@@ -83,12 +83,7 @@ train_bayesian_modular(
     verbose=True,
 )
 
-eval_acc, all_outputs_eval = eval_bayesian(
-    bay_net,
-    evalloader,
-    number_of_tests=number_of_tests,
-    device=device,
-)
+eval_acc, all_outputs_eval = eval_bayesian(bay_net, evalloader, number_of_tests=number_of_tests, device=device)
 eval_vr, eval_predictive_entropy, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
 
 output_random, seed = eval_random(

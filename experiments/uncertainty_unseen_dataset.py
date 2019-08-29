@@ -102,22 +102,13 @@ train_bayesian_modular(
 )
 
 print("Evaluation on MNIST ...")
-seen_eval_acc, all_outputs_eval_seen = eval_bayesian(
-    bay_net,
-    evalloader,
-    number_of_tests=number_of_tests,
-    device=device
-)
+seen_eval_acc, all_outputs_eval_seen = eval_bayesian(bay_net, evalloader, number_of_tests=number_of_tests,
+                                                     device=device)
 seen_eval_vrs, seen_eval_pes, seen_eval_mis = get_all_uncertainty_measures(all_outputs_eval_seen)
 print("Finished evaluation on MNIST.")
 
 print(f"Evavuation on {dataset} ...")
-_, all_outputs_eval_unseen = eval_bayesian(
-    bay_net,
-    unseen_loader,
-    number_of_tests=number_of_tests,
-    device=device
-)
+_, all_outputs_eval_unseen = eval_bayesian(bay_net, unseen_loader, number_of_tests=number_of_tests, device=device)
 unseen_eval_vrs, unseen_eval_pes, unseen_eval_mis = get_all_uncertainty_measures(all_outputs_eval_unseen)
 print("Finished evaluation on ", dataset)
 

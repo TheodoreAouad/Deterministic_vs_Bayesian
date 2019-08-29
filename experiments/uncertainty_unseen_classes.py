@@ -94,20 +94,12 @@ train_bayesian_modular(
     verbose=True,
 )
 
-_, all_outputs_eval_unseen = eval_bayesian(
-    bay_net,
-    evalloader_unseen,
-    number_of_tests=number_of_tests,
-    device=device
-)
+_, all_outputs_eval_unseen = eval_bayesian(bay_net, evalloader_unseen, number_of_tests=number_of_tests, device=device)
 
 unseen_eval_vr, unseen_eval_predictive_entropy, unseen_eval_mi = get_all_uncertainty_measures(all_outputs_eval_unseen)
 
-seen_eval_acc, all_outputs_eval_seen = eval_bayesian(
-    bay_net,
-    evalloader_seen, number_of_tests=number_of_tests,
-    device=device
-)
+seen_eval_acc, all_outputs_eval_seen = eval_bayesian(bay_net, evalloader_seen, number_of_tests=number_of_tests,
+                                                     device=device)
 
 seen_eval_vr, seen_eval_predictive_entropy, seen_eval_mi = get_all_uncertainty_measures(all_outputs_eval_seen)
 

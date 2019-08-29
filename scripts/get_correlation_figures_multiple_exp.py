@@ -6,11 +6,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from src.utils import load_from_file, get_file_and_dir_path_in_dir, get_unc_key
+from scripts.utils import get_deadzone
 
 #### TO CHANGE ######
 
 group_nbs = ['205', '207', '208']
-# group_nbs = ['193', '194', '195']
+# group_nbs = ['193','209', '195']
 show_fig = False
 save_fig = True
 info_supp = '_few_shot'
@@ -19,6 +20,8 @@ info_supp = '_few_shot'
 nb_of_exps = len(group_nbs)
 save_path = pathlib.Path(f'results/correlations_figures/few_shot')
 save_path.mkdir(parents=True, exist_ok=True)
+
+
 
 def get_all_path_exps(group_nbs, result_dir):
     all_path_exps = []
@@ -76,6 +79,8 @@ useful_arguments = {key: value for (key, value) in arguments.items() if key not 
 
 for exp_type in ['random', 'unseen_classes', 'unseen_dataset']:
     results_of_type = results[results['exp_type'] == exp_type]
+    if len(results_of_type) == 0:
+        continue
 
     plt.figure(figsize=(15, 15))
     plt.suptitle('Accuracy vs uncertainty, size of dataset' + f'\n Exp Type: {exp_type}, {useful_arguments}', wrap=True)
@@ -87,18 +92,35 @@ for exp_type in ['random', 'unseen_classes', 'unseen_dataset']:
         cbar.set_label('Size of trainset', rotation=270)
         plt.ylabel('acc')
         plt.xlabel('unc')
-        plt.title('VR - ' + loss_type)
+        max_seen, min_unseen, deadzone = get_deadzone(results_of_loss["vr"], results_of_loss["acc"] == 0)
+        plt.title(
+            f'VR - {loss_type}. deadzone: {round(deadzone, 2)}')
+        if max_seen < min_unseen:
+            plt.axvspan(max_seen, min_unseen, color='green', alpha=0.2)
+        else:
+            plt.axvspan(min_unseen, max_seen, color='red', alpha=0.2)
+
         plt.subplot(3, 3, 3 * i + 2)
         plt.scatter(results_of_loss['pe'], results_of_loss['acc'], c=results_of_loss['nb_of_data'])
-        plt.title('PE - ' + loss_type)
-        cbar = plt.colorbar()
+        max_seen, min_unseen, deadzone = get_deadzone(results_of_loss["pe"], results_of_loss["acc"] == 0)
+        plt.title(
+            f'PE - {loss_type}. deadzone: {round(deadzone, 2)}')
+        if max_seen < min_unseen:
+            plt.axvspan(max_seen, min_unseen, color='green', alpha=0.2)
+        else:
+            plt.axvspan(min_unseen, max_seen, color='red', alpha=0.2)
         cbar.set_label('Size of trainset', rotation=270)
         plt.ylabel('acc')
         plt.xlabel('unc')
         plt.subplot(3, 3, 3 * i + 3)
         plt.scatter(results_of_loss['mi'], results_of_loss['acc'], c=results_of_loss['nb_of_data'])
-        plt.title('MI - ' + loss_type)
-        cbar = plt.colorbar()
+        max_seen, min_unseen, deadzone = get_deadzone(results_of_loss["mi"], results_of_loss["acc"] == 0)
+        plt.title(
+            f'MI - {loss_type}. deadzone: {round(deadzone, 2)}')
+        if max_seen < min_unseen:
+            plt.axvspan(max_seen, min_unseen, color='green', alpha=0.2)
+        else:
+            plt.axvspan(min_unseen, max_seen, color='red', alpha=0.2)
         cbar.set_label('Size of trainset', rotation=270)
         plt.ylabel('acc')
         plt.xlabel('unc')
@@ -109,13 +131,13 @@ for exp_type in ['random', 'unseen_classes', 'unseen_dataset']:
         plt.show()
 
     plt.figure(figsize=(12, 6))
-    plt.suptitle('Accuracy vs size of dataset' + f'\n Exp Type: {exp_type}, {useful_arguments}', wrap=True)
+    plt.suptitle(f'Accuracy vs size of dataset' + f'\n Exp Type: {exp_type}, {useful_arguments}', wrap=True)
     for i, loss_type in enumerate(loss_types):
         results_of_loss = results_of_type[results_of_type['loss_type'] == loss_type]
         results_of_loss = results_of_loss[results_of_loss['acc'] != 0]
         plt.subplot(1, 3, i + 1)
         plt.scatter(results_of_loss['nb_of_data'], results_of_loss['acc'])
-        plt.title(loss_type)
+        plt.title(f'{loss_type}')
         plt.ylabel('acc')
         plt.xlabel('dataset size')
     if save_fig:
@@ -125,7 +147,7 @@ for exp_type in ['random', 'unseen_classes', 'unseen_dataset']:
         plt.show()
 
     plt.figure(figsize=(20, 14))
-    plt.suptitle('Uncertainty vs size of dataset' + f'\n Exp Type: {exp_type}, {useful_arguments}', wrap=True)
+    plt.suptitle(f'Uncertainty vs size of dataset' + f'\n Exp Type: {exp_type}, {useful_arguments}', wrap=True)
     for i, loss_type in enumerate(loss_types):
         results_of_loss = results_of_type[results_of_type['loss_type'] == loss_type]
         seen_or_unseen = results_of_loss['acc'] != 0
@@ -133,19 +155,19 @@ for exp_type in ['random', 'unseen_classes', 'unseen_dataset']:
         plt.scatter(results_of_loss['nb_of_data'], results_of_loss['vr'], c=seen_or_unseen, alpha=0.5, )
         plt.ylabel('unc')
         plt.xlabel('size of trainset')
-        plt.title('VR - ' + loss_type)
+        plt.title(f'VR - {loss_type}')
         cbar = plt.colorbar()
         cbar.set_label('Seen 1 / Unseen 0', rotation=270)
         plt.subplot(3, 3, 3 * i + 2)
         plt.scatter(results_of_loss['nb_of_data'], results_of_loss['pe'], c=seen_or_unseen, alpha=0.5, )
-        plt.title('PE - ' + loss_type)
+        plt.title(f'PE - {loss_type}')
         plt.ylabel('unc')
         plt.xlabel('size of trainset')
         cbar = plt.colorbar()
         cbar.set_label('Seen 1 / Unseen 0', rotation=270)
         plt.subplot(3, 3, 3 * i + 3)
         plt.scatter(results_of_loss['nb_of_data'], results_of_loss['mi'], c=seen_or_unseen, alpha=0.5, )
-        plt.title('MI - ' + loss_type)
+        plt.title(f'MI - {loss_type}')
         plt.ylabel('unc')
         plt.xlabel('size of trainset')
         cbar = plt.colorbar()

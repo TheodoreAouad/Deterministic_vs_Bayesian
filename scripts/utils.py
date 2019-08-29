@@ -16,6 +16,7 @@ def compute_figures(
         nb_of_batches,
         size_of_batch,
         type_of_unseen,
+        scale='linear',
         show_fig=True,
         save_fig=True,
         save_path=None,
@@ -34,6 +35,7 @@ def compute_figures(
         nb_of_batches (int): number of points to show
         size_of_batch (int): number of images per point
         type_of_unseen (str): Type of experiment. Either 'random', 'unseen_classes' or 'unseen_dataset'
+        scale (str): scale of the plot. Strongly advice 'linear'.
         show_fig (bool): whether we show the figure
         save_fig (bool): whether we save the figure
         save_path (str): where to save the figures
@@ -83,53 +85,70 @@ def compute_figures(
     if 'rho' in arguments.keys():
         vr_shuffled, pe_shuffled, mi_shuffled = get_all_uncertainty_measures(all_outputs_shuffled)
         vr, pe, mi = get_all_uncertainty_measures(all_outputs)
-        vr_regrouped_shuffled = vr_shuffled.reshape(size_of_batch, nb_of_batches).mean(0)
-        pe_regrouped_shuffled = pe_shuffled.reshape(size_of_batch, nb_of_batches).mean(0)
-        mi_regrouped_shuffled = mi_shuffled.reshape(size_of_batch, nb_of_batches).mean(0)
-        vr_regrouped = vr.reshape(total_nb_of_data // real_size_of_batch, real_size_of_batch).mean(1)
-        pe_regrouped = pe.reshape(total_nb_of_data // real_size_of_batch, real_size_of_batch).mean(1)
-        mi_regrouped = mi.reshape(total_nb_of_data // real_size_of_batch, real_size_of_batch).mean(1)
+        vr_regrouped_shuffled, pe_regrouped_shuffled, mi_regrouped_shuffled = reshape_shuffled(
+            (vr_shuffled, pe_shuffled, mi_shuffled), size_of_batch, nb_of_batches,
+        )
+        vr_regrouped, pe_regrouped, mi_regrouped = reshape_for_not_shuffled(
+            (vr, pe, mi), total_nb_of_data, real_size_of_batch,
+        )
 
-        if show_fig or save_fig:
-            # plot graphs
-            try:
-                arguments['nb_of_tests'] = arguments.pop('number_of_tests')
-            except KeyError:
-                pass
-            print('Plotting figures...')
-            plt.figure(figsize=(8, 10))
-            plt.suptitle(arguments, wrap=True)
-            plt.subplot(321)
-            plt.scatter(vr_regrouped, accuracies, c=labels_not_shuffled)
-            plt.ylabel('accuracy')
-            plt.title('VR - not shuffled')
-            plt.subplot(322)
-            plt.scatter(vr_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
-            plt.ylabel('accuracy')
-            plt.title('VR - shuffled')
-            cbar = plt.colorbar()
-            cbar.set_label(f'{type_of_unseen} ratio', rotation=270)
-            plt.subplot(323)
-            plt.scatter(pe_regrouped, accuracies, c=labels_not_shuffled)
-            plt.ylabel('accuracy')
-            plt.title('PE - not shuffled')
-            plt.subplot(324)
-            plt.scatter(pe_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
-            plt.ylabel('accuracy')
-            plt.title('PE - shuffled')
-            cbar = plt.colorbar()
-            cbar.set_label(f'{type_of_unseen} ratio', rotation=270)
-            plt.subplot(325)
-            plt.title('MI - not shuffled')
-            plt.scatter(mi_regrouped, accuracies, c=labels_not_shuffled)
-            plt.ylabel('accuracy')
-            plt.subplot(326)
-            plt.title('MI - shuffled')
-            plt.scatter(mi_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
-            plt.ylabel('accuracy')
-            cbar = plt.colorbar()
-            cbar.set_label(f'{type_of_unseen} ratio', rotation=270)
-            print('Figures plotted.')
+        # plot graphs
+        try:
+            arguments['nb_of_tests'] = arguments.pop('number_of_tests')
+        except KeyError:
+            pass
+        print('Plotting figures...')
+        plt.figure(figsize=(8, 10))
+        plt.suptitle(arguments, wrap=True)
+        plt.subplot(321)
+        plt.yscale(scale)
+        plt.scatter(vr_regrouped, accuracies, c=labels_not_shuffled)
+        plt.ylabel('accuracy')
+        max_seen, min_unseen, deadzone = get_deadzone(vr_regrouped, labels_not_shuffled)
+        plt.title(f'VR - not shuffled, deadzone: {round(deadzone, 2)}')
+        if max_seen < min_unseen:
+            plt.axvspan(max_seen, min_unseen, color='green', alpha=0.5)
+        else:
+            plt.axvspan(min_unseen, max_seen, color='red', alpha=0.5)
+        plt.subplot(322)
+        plt.scatter(vr_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
+        plt.ylabel('accuracy')
+        plt.title(f'VR - shuffled, corr: {round(correlation(vr_regrouped_shuffled, accuracies_shuffled), 2)}')
+        cbar = plt.colorbar()
+        cbar.set_label(f'{type_of_unseen} ratio', rotation=270)
+        plt.subplot(323)
+        plt.yscale(scale)
+        plt.scatter(pe_regrouped, accuracies, c=labels_not_shuffled)
+        plt.ylabel('accuracy')
+        max_seen, min_unseen, deadzone = get_deadzone(pe_regrouped, labels_not_shuffled)
+        plt.title(f'PE - not shuffled, deadzone: {round(deadzone, 2)}')
+        if max_seen < min_unseen:
+            plt.axvspan(max_seen, min_unseen, color='green', alpha=0.5)
+        else:
+            plt.axvspan(min_unseen, max_seen, color='red', alpha=0.5)
+        plt.subplot(324)
+        plt.scatter(pe_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
+        plt.ylabel('accuracy')
+        plt.title(f'PE - shuffled, corr: {round(correlation(pe_regrouped_shuffled, accuracies_shuffled), 2)}')
+        cbar = plt.colorbar()
+        cbar.set_label(f'{type_of_unseen} ratio', rotation=270)
+        plt.subplot(325)
+        max_seen, min_unseen, deadzone = get_deadzone(mi_regrouped, labels_not_shuffled)
+        plt.title(f'MI - not shuffled, deadzone: {round(deadzone, 2)}')
+        if max_seen < min_unseen:
+            plt.axvspan(max_seen, min_unseen, color='green', alpha=0.5)
+        else:
+            plt.axvspan(min_unseen, max_seen, color='red', alpha=0.5)
+        plt.yscale(scale)
+        plt.scatter(mi_regrouped, accuracies, c=labels_not_shuffled)
+        plt.ylabel('accuracy')
+        plt.subplot(326)
+        plt.title(f'MI - shuffled, corr: {round(correlation(mi_regrouped_shuffled, accuracies_shuffled), 2)}')
+        plt.scatter(mi_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
+        plt.ylabel('accuracy')
+        cbar = plt.colorbar()
+        cbar.set_label(f'{type_of_unseen} ratio', rotation=270)
+        print('Figures plotted.')
 
     else:
         unc_soft_shuffled, pe_shuffled = get_all_uncertainty_measures_not_bayesian(all_outputs_shuffled)
@@ -147,23 +166,37 @@ def compute_figures(
         plt.figure(figsize=(8, 10))
         plt.suptitle(arguments, wrap=True)
         plt.subplot(221)
+        plt.yscale(scale)
         plt.scatter(unc_soft_regrouped, accuracies, c=labels_not_shuffled)
         plt.ylabel('accuracy')
-        plt.title('Uncertainty Softmax - not shuffled')
+        max_seen, min_unseen, deadzone = get_deadzone(unc_soft_regrouped, labels_not_shuffled)
+        plt.title(f'US - not shuffled, deadzone: {round(deadzone, 2)}')
+        if max_seen < min_unseen:
+            plt.axvspan(max_seen, min_unseen, color='green', alpha=0.5)
+        else:
+            plt.axvspan(min_unseen, max_seen, color='red', alpha=0.5)
         plt.subplot(222)
         plt.scatter(unc_soft_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
         plt.ylabel('accuracy')
-        plt.title('Uncertainty Softmax - shuffled')
+        plt.title(
+            f'US - shuffled, corr: '
+            f'{round(correlation(unc_soft_regrouped_shuffled, accuracies_shuffled), 2)}')
         cbar = plt.colorbar()
         cbar.set_label('random ratio', rotation=270)
         plt.subplot(223)
+        plt.yscale(scale)
         plt.scatter(pe_regrouped, accuracies, c=labels_not_shuffled)
         plt.ylabel('accuracy')
-        plt.title('PE - not shuffled')
+        max_seen, min_unseen, deadzone = get_deadzone(pe_regrouped, labels_not_shuffled)
+        plt.title(f'PE - not shuffled, deadzone: {round(deadzone, 2)}')
+        if max_seen < min_unseen:
+            plt.axvspan(max_seen, min_unseen, color='green', alpha=0.5)
+        else:
+            plt.axvspan(min_unseen, max_seen, color='red', alpha=0.5)
         plt.subplot(224)
         plt.scatter(pe_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
         plt.ylabel('accuracy')
-        plt.title('PE - shuffled')
+        plt.title(f'PE - shuffled, corr: {round(correlation(pe_regrouped_shuffled, accuracies_shuffled), 2)}')
         cbar = plt.colorbar()
         cbar.set_label('random ratio', rotation=270)
     if save_fig:
@@ -212,3 +245,89 @@ def get_exact_batch_size(size_of_batch, total_nb_sample):
     """
     divisors = get_divisors(total_nb_sample)
     return min(divisors, key=lambda x: abs(x - size_of_batch))
+
+
+def correlation(a, b):
+    x = a - a.mean()
+    y = b - b.mean()
+
+    return ((x * y).sum() / (np.sqrt((x ** 2).sum()) * np.sqrt((y ** 2).sum()))).item()
+
+
+def get_deadzone(unc, is_false_label):
+    unseen_uncs = unc[is_false_label == 1]
+    seen_uncs = unc[is_false_label == 0]
+    max_seen = seen_uncs.max()
+    min_unseen = unseen_uncs.min()
+    res = ((min_unseen - max_seen) / np.abs(seen_uncs.max() - seen_uncs.min()))
+    if type(res) == torch.Tensor:
+        return max_seen, min_unseen, res.item()
+    else:
+        return max_seen, min_unseen, res
+    #
+    # nb_of_ambiguous_seen = (seen_uncs >= min_unc_unseen).sum()
+    # nb_of_ambiguous_unseen = (unseen_uncs <= max_unc_seen).sum()
+    #
+    # return nb_of_ambiguous_seen, nb_of_ambiguous_unseen, nb_of_ambiguous_seen + nb_of_ambiguous_unseen
+
+
+def reshape_shuffled(tensors_to_shuffle, size_of_batch, nb_of_batches):
+    if type(tensors_to_shuffle) == torch.Tensor:
+        return tensors_to_shuffle.reshape(size_of_batch, nb_of_batches).mean(0)
+    tensors_reshaped = []
+    for to_shuffle in tensors_to_shuffle:
+        tensors_reshaped.append(to_shuffle.reshape(size_of_batch, nb_of_batches).mean(0))
+    return tensors_reshaped
+
+
+def reshape_for_not_shuffled(tensors_to_shuffle, total_nb_of_data, real_size_of_batch):
+    if type(tensors_to_shuffle) == torch.Tensor:
+        return tensors_to_shuffle.reshape(total_nb_of_data // real_size_of_batch, real_size_of_batch).mean(1)
+    tensors_reshaped = []
+    for to_shuffle in tensors_to_shuffle:
+        tensors_reshaped.append(to_shuffle.reshape(total_nb_of_data // real_size_of_batch, real_size_of_batch).mean(1))
+    return tensors_reshaped
+
+
+def compute_histogram(
+        arguments,
+        all_outputs_seen,
+        all_outputs_unseen,
+        show_fig,
+        save_fig,
+        save_path=None,
+        **kwargs,
+):
+    vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures(all_outputs_seen)
+    vr_unseen, pe_unseen, mi_unseen = get_all_uncertainty_measures(all_outputs_unseen)
+
+    plt.figure(figsize=(8, 10))
+    plt.suptitle(f'Distribution of uncertainties - \n{arguments}', wrap=True)
+
+    plt.subplot(311)
+    plt.title('VR')
+    plt.hist(vr_seen, label='seen', **kwargs)
+    plt.hist(vr_unseen, label='seen', **kwargs)
+    plt.legend()
+
+    plt.subplot(312)
+    plt.title('PE')
+    plt.hist(pe_seen,label='seen', **kwargs)
+    plt.hist(pe_unseen, label='unseen', **kwargs)
+    plt.legend()
+
+    plt.subplot(313)
+    plt.title('MI')
+    plt.hist(mi_seen,label='seen', **kwargs)
+    plt.hist(mi_unseen, label='unseen', **kwargs)
+    plt.legend()
+
+    if save_fig:
+        assert save_path is not None
+        print('Saving figure...')
+        plt.savefig(save_path)
+        print('Figure saved.')
+    if show_fig:
+        print('Showing figures...')
+        plt.show()
+        print('Figure shown.')

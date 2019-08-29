@@ -12,15 +12,17 @@ from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.evals import eval_bayesian, eval_random
 from src.utils import load_from_file, get_file_and_dir_path_in_dir
-from scripts.utils import compute_figures
+from scripts.utils import compute_figures, compute_histogram
 
 ###### TO CHANGE ###########
-group_nbs = ['189']
-exp_nbs = ['3861', '3864']
-type_of_unseen = 'unseen_dataset'  # Choose between 'random', 'unseen_classes' and 'unseen_dataset'
+exp_nbs = ['3716', '3722', '3752', '3781', '3832', '3834', '3839', '3840', '3842', '3851', '3861', '3864']
+# exp_nbs = ['3716']
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000
+do_compute_correlation = False
+do_compute_histogram = True
+show_fig = False
 save_fig = True
 do_eval_mnist = True
 ############################
@@ -83,41 +85,49 @@ def get_unseen_outputs(bay_net_trained, type_of_unseen, arguments, nb_of_random=
     return all_unseen_outputs
 
 
-for group_nb in group_nbs:
-    for exp_nb in exp_nbs:
-        exp_path = pathlib.Path('polyaxon_results/groups')
-        _, all_dirs = get_file_and_dir_path_in_dir(exp_path / group_nb / exp_nb, 'argumen')
-        dirpath = all_dirs[0]
-        exp_nb = dirpath.split('/')[-1]
-        dirpath = pathlib.Path(dirpath)
+for exp_nb in exp_nbs:
+    print(exp_nb)
+    exp_path = pathlib.Path('polyaxon_results/groups')
+    _, all_dirs = get_file_and_dir_path_in_dir(exp_path, f'{exp_nb}/argumen')
+    dirpath = all_dirs[0]
+    group_nb = dirpath.split('/')[-2]
+    dirpath = pathlib.Path(dirpath)
+    arguments = load_from_file(dirpath / 'arguments.pkl')
+    arguments['group_nb'] = group_nb
+    arguments['exp_nb'] = exp_nb
+    if 'split_labels' in arguments.keys():
+        type_of_unseen = 'unseen_classes'
+    elif 'dataset' in arguments.keys():
+        type_of_unseen = 'unseen_dataset'
+    else:
+        type_of_unseen = 'random'
+    final_weigths = torch.load(dirpath / 'final_weights.pt', map_location='cpu')
+    std_prior = arguments.get('std_prior', 0)
+    bay_net_trained = GaussianClassifier(
+        rho=arguments.get('rho', 'determinist'),
+        stds_prior=(std_prior, std_prior),
+        number_of_classes=10,
+        dim_input=28,
+    )
+    bay_net_trained.load_state_dict(final_weigths)
 
-        arguments = load_from_file(dirpath / 'arguments.pkl')
-        final_weigths = torch.load(dirpath / 'final_weights.pt', map_location='cpu')
-        std_prior = arguments.get('std_prior', 0)
-        bay_net_trained = GaussianClassifier(
-            rho=arguments.get('rho', 'determinist'),
-            stds_prior=(std_prior, std_prior),
-            number_of_classes=10,
-            dim_input=28,
-        )
-        bay_net_trained.load_state_dict(final_weigths)
+    all_eval_outputs, true_labels_mnist = get_seen_outputs_and_labels(
+        bay_net_trained,
+        type_of_unseen,
+        arguments
+    )
 
-        save_path = pathlib.Path(f'results/correlations_figures/{arguments.get("loss_type", "determinist")}')
-        save_path.mkdir(parents=True, exist_ok=True)
-        save_path = save_path / f'{group_nb}_{exp_nb}_correlation_uncertainty_error.png'
+    all_outputs_unseen = get_unseen_outputs(
+        bay_net_trained,
+        type_of_unseen,
+        arguments,
+        nb_of_random
+    )
 
-        all_eval_outputs, true_labels_mnist = get_seen_outputs_and_labels(
-            bay_net_trained,
-            type_of_unseen,
-            arguments
-        )
-
-        all_outputs_unseen = get_unseen_outputs(
-            bay_net_trained,
-            type_of_unseen,
-            arguments,
-            nb_of_random
-        )
+    if do_compute_correlation:
+        save_path_cor = pathlib.Path(f'results/correlations_figures/{arguments.get("loss_type", "determinist")}')
+        save_path_cor.mkdir(parents=True, exist_ok=True)
+        save_path_cor = save_path_cor / f'{group_nb}_{exp_nb}_correlation_uncertainty_error.png'
 
         compute_figures(
             arguments=arguments,
@@ -127,6 +137,24 @@ for group_nb in group_nbs:
             nb_of_batches=nb_of_batches,
             size_of_batch=size_of_batch,
             type_of_unseen=type_of_unseen,
+            scale='linear',
+            show_fig=show_fig,
             save_fig=save_fig,
-            save_path=save_path,
+            save_path=save_path_cor,
+        )
+
+    if do_compute_histogram:
+        save_path_hists = pathlib.Path(f'results/uncertainty_histogram/{arguments.get("loss_type", "determinist")}')
+        save_path_hists.mkdir(parents=True, exist_ok=True)
+        save_path_hists = save_path_hists / f'{group_nb}_{exp_nb}_uncertainty_histogram.png'
+
+        compute_histogram(
+            arguments=arguments,
+            all_outputs_seen=all_eval_outputs,
+            all_outputs_unseen=all_outputs_unseen,
+            show_fig=show_fig,
+            save_fig=save_fig,
+            save_path=save_path_hists,
+            log=True,
+            alpha=0.5
         )

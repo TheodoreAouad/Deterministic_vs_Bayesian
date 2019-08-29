@@ -154,7 +154,7 @@ def get_file_and_dir_path_in_dir(dir_path, file_name=""):
     all_dirs = []
     for (dirpath, dirnames, filenames) in os.walk(dir_path):
         for file in filenames:
-            if file_name in file:
+            if file_name in os.path.join(dirpath, file):
                 all_files.append(os.path.join(dirpath, file))
                 all_dirs.append(dirpath)
     return all_files, all_dirs
