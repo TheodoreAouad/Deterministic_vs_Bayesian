@@ -10,28 +10,30 @@ from src.loggers.losses.base_loss import BaseLoss
 from src.loggers.losses.bbb_loss import BBBLoss
 from src.loggers.observables import AccuracyAndUncertainty
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
+from src.risk_control import get_selection_threshold_all_unc
 from src.tasks.trains import train_bayesian_modular, uniform
-from src.tasks.evals import eval_bayesian, eval_random
-from src.uncertainty_measures import get_all_uncertainty_measures
+from src.tasks.evals import eval_bayesian
+from src.uncertainty_measures import get_all_uncertainty_measures, get_predictions_from_multiple_tests
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--rho', help='variable symbolizing the variance. std = log(1+exp(rho))',
-                    type=float, default=-5)
+                    type=float, default=-6)
 parser.add_argument('--epoch', help='number of times we train the model on the same data',
-                    type=int, default=3)
+                    type=int, default=30)
 parser.add_argument('--batch_size', help='number of batches to split the data into',
                     type=int, default=32)
 parser.add_argument('--number_of_tests', help='number of evaluations to perform for each each image to check for '
-                                              'uncertainty', type=int, default=10)
+                                              'uncertainty', type=int, default=20)
 parser.add_argument('--loss_type', help='which loss to use', choices=['exp', 'uniform', 'criterion'], type=str,
                     default='uniform')
-parser.add_argument('--std_prior', help='the standard deviation of the prior', type=float, default=1)
-parser.add_argument('--split_train', help='the portion of training data we take', type=int)
+parser.add_argument('--std_prior', help='the standard deviation of the prior', type=float, default=0.1)
+parser.add_argument('--risk', help='maximum accepted error for selective classification', type=float)
+parser.add_argument('--delta', help='probability upper bound of error higher that risk', type=float)
 
 args = parser.parse_args()
-save_to_file(vars(args), './output/arguments.pkl')
+# save_to_file(vars(args), './output/arguments.pkl')
 
 rho = args.rho
 epoch = args.epoch
@@ -39,8 +41,9 @@ batch_size = args.batch_size
 number_of_tests = args.number_of_tests
 loss_type = args.loss_type
 std_prior = args.std_prior
-split_train = args.split_train
 stds_prior = (std_prior, std_prior)
+risk = args.risk
+delta = args.delta
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -48,7 +51,7 @@ else:
     device = 'cpu'
 device = torch.device(device)
 
-trainloader, valloader, evalloader = get_mnist(train_labels=range(10), eval_labels=range(10), split_train=split_train,
+trainloader, valloader, evalloader = get_mnist(train_labels=range(10), eval_labels=range(10),
                                                batch_size=batch_size)
 
 seed_model = set_and_print_random_seed()
@@ -83,22 +86,59 @@ train_bayesian_modular(
     verbose=True,
 )
 
-eval_acc, all_outputs_eval = eval_bayesian(bay_net, evalloader, number_of_tests=number_of_tests, device=device)
-eval_vr, eval_predictive_entropy, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
+true_labels_train, all_outputs_train = eval_bayesian(
+    bay_net,
+    trainloader,
+    return_accuracy=False,
+    number_of_tests=number_of_tests,
+    device=device,
+)
 
-output_random, seed = eval_random(bay_net, batch_size=32, img_channels=1, img_dim=28, number_of_tests=number_of_tests,
-                                  device=device)
+train_vr, train_pe, train_mi = get_all_uncertainty_measures(all_outputs_train)
 
-random_vr, random_predictive_entropy, random_mi = get_all_uncertainty_measures(output_random)
 
-print(f'Eval acc: {round(100 * eval_acc, 2)} %, '
-      f'Variation-Ratio:{eval_vr.mean()}, '
-      f'Predictive Entropy:{eval_predictive_entropy.mean()}, '
-      f'Mutual Information:{eval_mi.mean()}')
-print(f'Random: '
-      f'Variation-Ratio:{random_vr.mean()}, '
-      f'Predictive Entropy:{random_predictive_entropy.mean()}, '
-      f'Mutual Information:{random_mi.mean()}')
+threshold_vr, threshold_pe, threshold_mi = get_selection_threshold_all_unc(
+    bay_net,
+    true_labels_train,
+    all_outputs_train,
+    risk,
+    delta,
+    (train_vr, train_pe, train_mi),
+    number_of_tests,
+    verbose=False,
+    device=device,
+)
+
+true_eval_labels, all_outputs_eval = eval_bayesian(
+    bay_net,
+    evalloader,
+    return_accuracy=False,
+    number_of_tests=number_of_tests,
+    device=device,
+)
+eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
+
+eval_preds = get_predictions_from_multiple_tests(all_outputs_eval)
+correct_preds = (eval_preds.float() == true_eval_labels.float()).float()
+
+eval_acc_vr = correct_preds[-eval_vr >= threshold_vr].mean().item()
+eval_acc_pe = correct_preds[-eval_pe >= threshold_pe].mean().item()
+eval_acc_mi = correct_preds[-eval_mi >= threshold_mi].mean().item()
+
+eval_coverage_vr = (correct_preds[-eval_vr >= threshold_vr].sum()/correct_preds.size(0)).item()
+eval_coverage_pe = (correct_preds[-eval_pe >= threshold_pe].sum()/correct_preds.size(0)).item()
+eval_coverage_mi = (correct_preds[-eval_mi >= threshold_mi].sum()/correct_preds.size(0)).item()
+
+print(f'Eval acc vr: {round(100 * eval_acc_vr, 2)} %')
+print(f'Eval acc pe: {round(100 * eval_acc_pe, 2)} %')
+print(f'Eval acc mi: {round(100 * eval_acc_mi, 2)} %')
+print(f'Eval coverage vr: {round(100 * eval_coverage_vr, 2)} %')
+print(f'Eval coverage pe: {round(100 * eval_coverage_pe, 2)} %')
+print(f'Eval coverage mi: {round(100 * eval_coverage_mi, 2)} %')
+print(f'Variation-Ratio:{eval_vr.mean()}')
+print(f'Predictive Entropy:{eval_pe.mean()}')
+print(f'Mutual Information:{eval_mi.mean()}')
+
 res = pd.DataFrame.from_dict({
     'loss_type': [loss_type],
     'number of epochs': [epoch],
@@ -118,22 +158,30 @@ res = pd.DataFrame.from_dict({
     'train loss pr': [loss.logs.get('prior', -1)],
     'val accuracy': [observables.logs['val_accuracy']],
     'val vr': [observables.logs['val_uncertainty_vr']],
-    'val predictive entropy': [observables.logs['val_uncertainty_pe']],
+    'val pe': [observables.logs['val_uncertainty_pe']],
     'val mi': [observables.logs['val_uncertainty_mi']],
-    'eval accuracy': [eval_acc],
+    'risk': [risk],
+    'delta': [delta],
+    'eval accuracy vr': [eval_acc_vr],
+    'eval accuracy pe': [eval_acc_pe],
+    'eval accuracy mi': [eval_acc_mi],
+    'eval coverage vr': [eval_coverage_vr],
+    'eval coverage pe': [eval_coverage_pe],
+    'eval coverage mi': [eval_coverage_mi],
     'seen uncertainty vr': [eval_vr],
-    'seen uncertainty predictive entropy': [eval_predictive_entropy],
+    'seen uncertainty pe': [eval_pe],
     'seen uncertainty mi': [eval_mi],
-    'random uncertainty vr': [random_vr],
-    'random uncertainty predictive entropy': [random_predictive_entropy],
-    'random uncertainty mi': [random_mi],
+    'threshold vr': [threshold_vr],
+    'threshold pe': [threshold_pe],
+    'threshold mi': [threshold_mi],
+    'true labels': [true_eval_labels],
+    'eval preds': [eval_preds],
 })
 
 convert_df_to_cpu(res)
 
 save_to_file(loss, './output/loss.pkl')
 save_to_file(observables, './output/TrainingLogs.pkl')
-torch.save(output_random, './output/random_outputs.pt')
 torch.save(all_outputs_eval, './output/softmax_outputs.pt')
 # torch.save(res, './output/results.pt')
 res.to_pickle('./output/results.pkl')

@@ -69,14 +69,8 @@ adam_proba = optim.Adam(bay_net.parameters())
 eval_acc, all_outputs_eval = eval_bayesian(bay_net, evalloader, number_of_tests=number_of_tests, device=device)
 eval_vr, eval_predictive_entropy, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
 
-output_random, seed = eval_random(
-    bay_net,
-    batch_size=32,
-    img_channels=1,
-    img_dim=28,
-    number_of_tests=number_of_tests,
-    device=device
-)
+output_random, seed = eval_random(bay_net, batch_size=32, img_channels=1, img_dim=28, number_of_tests=number_of_tests,
+                                  device=device)
 
 random_vr, random_predictive_entropy, random_mi = get_all_uncertainty_measures(output_random)
 

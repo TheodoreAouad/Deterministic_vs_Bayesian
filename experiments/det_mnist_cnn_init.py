@@ -62,14 +62,7 @@ train_bayesian_modular(
 eval_acc, all_outputs_eval = eval_bayesian(det_net, evalloader, number_of_tests=1, device=device)
 eval_unc_soft, eval_predictive_entropy = get_all_uncertainty_measures_not_bayesian(all_outputs_eval)
 
-output_random, seed = eval_random(
-    det_net,
-    batch_size=32,
-    img_channels=1,
-    img_dim=28,
-    number_of_tests=1,
-    device=device
-)
+output_random, seed = eval_random(det_net, batch_size=32, img_channels=1, img_dim=28, number_of_tests=1, device=device)
 
 random_unc_soft, random_predictive_entropy = get_all_uncertainty_measures_not_bayesian(output_random)
 

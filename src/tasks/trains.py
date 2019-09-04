@@ -704,7 +704,7 @@ def train_bayesian_modular(
             if batch_idx % interval == interval - 1:
                 if valloader is not None:
                     val_acc, val_outputs = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
-                                                         device=device, verbose=verbose)
+                                                         device=device, verbose=False)
                     observables.compute_val(val_acc, val_outputs)
 
                 if verbose:

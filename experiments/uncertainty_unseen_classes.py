@@ -16,7 +16,6 @@ from src.uncertainty_measures import get_all_uncertainty_measures
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument("--split_labels", help="up to which label the training goes",
                     type=int, default=5)
@@ -31,7 +30,7 @@ parser.add_argument("--number_of_tests", help="number of evaluations to perform 
 parser.add_argument("--loss_type", help="which loss to use", choices=["uniform", "exp", "criterion"], type=str,
                     default="uniform")
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
-parser.add_argument('--split_train',help='the portion of training data we take', type=int)
+parser.add_argument('--split_train', help='the portion of training data we take', type=int)
 
 args = parser.parse_args()
 save_to_file(vars(args), './output/arguments.pkl')
@@ -63,7 +62,6 @@ trainloader, valloader, evalloader_unseen = get_mnist(
 _, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), split_train=split_train,
                                   batch_size=batch_size)
 
-
 seed_model = set_and_print_random_seed()
 bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
 bay_net.to(device)
@@ -73,7 +71,9 @@ if loss_type == 'uniform':
     loss = BBBLoss(bay_net, criterion, step_function)
 elif loss_type == 'exp':
     def step_function(batch_idx, number_of_batches):
-        return 2**(number_of_batches - batch_idx)/(2**number_of_batches - 1)
+        return 2 ** (number_of_batches - batch_idx) / (2 ** number_of_batches - 1)
+
+
     loss = BBBLoss(bay_net, criterion, step_function)
 else:
     loss = BaseLoss(criterion)
@@ -94,17 +94,23 @@ train_bayesian_modular(
     verbose=True,
 )
 
-_, all_outputs_eval_unseen = eval_bayesian(bay_net, evalloader_unseen, number_of_tests=number_of_tests, device=device)
-
+_, all_outputs_eval_unseen = eval_bayesian(
+    bay_net,
+    evalloader_unseen,
+    number_of_tests=number_of_tests,
+    device=device,
+)
 unseen_eval_vr, unseen_eval_predictive_entropy, unseen_eval_mi = get_all_uncertainty_measures(all_outputs_eval_unseen)
 
-seen_eval_acc, all_outputs_eval_seen = eval_bayesian(bay_net, evalloader_seen, number_of_tests=number_of_tests,
-                                                     device=device)
-
+seen_eval_acc, all_outputs_eval_seen = eval_bayesian(
+    bay_net,
+    evalloader_seen,
+    number_of_tests=number_of_tests,
+    device=device,
+)
 seen_eval_vr, seen_eval_predictive_entropy, seen_eval_mi = get_all_uncertainty_measures(all_outputs_eval_seen)
 
-
-print(f"Seen: {round(100*seen_eval_acc,2)} %, "
+print(f"Seen: {round(100 * seen_eval_acc, 2)} %, "
       f"Variation-Ratio:{seen_eval_vr.mean()}, "
       f"Predictive Entropy:{seen_eval_predictive_entropy.mean()}, "
       f"Mutual Information:{seen_eval_mi.mean()}")
