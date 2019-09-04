@@ -17,3 +17,8 @@ output
 .DS_Store
 ./.polyaxon
 **todelete**
+runs
+pyro_tests.py
+base_requirements.txt
+mac-requirements.txt
+**pytest_cache**

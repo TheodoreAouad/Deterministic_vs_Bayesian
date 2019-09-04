@@ -20,7 +20,7 @@ class RandomTrainloader:
         self.batch_size = batch_size
         self.number_of_batches = number_of_batches
         self.number_of_classes = number_of_classes
-        self.dataset = torch.rand((number_of_batches, batch_size, number_of_channels, img_dim, img_dim))
+        self.dataset = torch.randn((number_of_batches, batch_size, number_of_channels, img_dim, img_dim))
         self.labels = torch.randint(0, number_of_classes, (number_of_batches, batch_size))
 
     def __getitem__(self, idx):

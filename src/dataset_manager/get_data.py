@@ -23,7 +23,8 @@ class EmptyLoader:
         pass
 
 
-def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10), split_val=0.2, transform=transform,
+def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10), split_train=(0, 1), split_val=0.2,
+              transform=transform,
               batch_size=16, shuffle=True):
     """
 
@@ -31,6 +32,8 @@ def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10),
         root (str): path to the directory where we want to download the data
         train_labels (list || tuple || array): labels we want to keep in the training set
         eval_labels (list || tuple || array): labels we want to keep in the testing set
+        split_train (Tuple): (beginning of the split: end of the split) split of the train data, in few shot we take
+                              small splits.
         split_val (float): the proportion of the evaluation set we use for validation
         transform (torch.transform): which transformation to perform to the data
         batch_size (int): size of the batch
@@ -46,7 +49,8 @@ def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10),
     print(root)
     trainloader, valloader, evalloader = EmptyLoader(), EmptyLoader(), EmptyLoader()
     if len(train_labels) > 0:
-        trainset = MNISTSpecificLabels(root=root, labels=train_labels, train=True, transform=transform,
+        trainset = MNISTSpecificLabels(root=root, labels=train_labels, train=True, split=split_train,
+                                       transform=transform,
                                        download=True)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
@@ -85,7 +89,7 @@ def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
     testset = torchvision.datasets.CIFAR10(root=download_path, train=False, transform=transform, download=download)
-    evalloader = torch.utils.data.DataLoader(testset, batch_size= batch_size, shuffle=shuffle)
+    evalloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
 
     return trainloader, evalloader
 

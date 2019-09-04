@@ -25,6 +25,11 @@ class GaussianClassifier(nn.Module):
             dim_input (int): dimension of a size of a squared image
         """
         super().__init__()
+        self.mu_prior = None
+        self.std_prior = None
+        self.mu_bias_prior = None
+        self.std_bias_prior = None
+
         if rho == "determinist":
             self.determinist = True
         elif type(rho) in [int, float]:
@@ -143,7 +148,7 @@ class GaussianClassifier(nn.Module):
                          2 * torch.sum(torch.log(std)) + 2 * torch.sum(torch.log(std_bias)))
 
     def prior(self, weights, bias):
-        '''
+        """
         logP(W). We choose the prior to be gaussian.
         Args:
             weights (torch.Tensor): 1 dimension tensor with size the number of weights parameters
@@ -151,7 +156,7 @@ class GaussianClassifier(nn.Module):
 
         Returns:
             prior_loss (torch.Tensor): size (1)
-        '''
+        """
         return -1 / 2 * ((torch.sum((weights - self.mu_prior) ** 2 / self.std_prior) +
                           torch.sum((bias - self.mu_bias_prior) ** 2 / self.std_bias_prior)))
 

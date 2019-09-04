@@ -22,7 +22,7 @@ args = parser.parse_args()
 
 which_parameters = args.which_parameters
 which_values = args.which_values
-results_dir_path = pathlib.Path(args.results_dir_path)
+results_dir_path = pathlib.Path(args.results_dir_path) / 'raw_results'
 polyaxon_type = args.polyaxon_type
 exp_nb = args.exp_nb
 extra_info = args.extra_info
@@ -34,11 +34,21 @@ if type(which_parameters) == str:
 if type(which_values) == str:
     with open(which_values, 'r') as f:
         which_values = f.read().splitlines()
+which_values = set(which_values)-set(which_parameters)
 
 filename = polyaxon_type + exp_nb + extra_info
 all_results = pd.read_pickle(results_dir_path / (filename + '.pkl'))
+which_parameters = list(set(which_parameters).intersection(set(all_results.keys())))
 all_results_sorted = all_results.sort_values(which_parameters)
-specific_results = all_results_sorted.groupby(which_parameters).mean()
+which_values = which_values.intersection(set(all_results.keys()))
+operations = {
+    col: 'mean' for col in which_values
+}
+operations.update({
+    "experiment": lambda x: list(x)
+})
+which_values.add('experiment')
+specific_results = all_results_sorted.groupby(which_parameters).agg(operations)
 specific_results = specific_results[which_values]
 specific_results.to_pickle(results_dir_path / (filename + '_specific_results.pkl'))
 specific_results.to_csv(results_dir_path / (filename + '_specific_results.csv'))

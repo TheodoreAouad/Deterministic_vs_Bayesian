@@ -151,13 +151,9 @@ class TrainBayesian:
 
                 if batch_idx % interval == interval - 1:
                     if self.valloader is not None:
-                        self.val_acc, val_output = eval_bayesian(
-                            self.model,
-                            self.valloader,
-                            number_of_tests=self.number_of_tests,
-                            device=self.device,
-                            val=True
-                        )
+                        self.val_acc, val_output = eval_bayesian(self.model, self.valloader,
+                                                                 number_of_tests=self.number_of_tests,
+                                                                 device=self.device, verbose=True)
                         self.val_vr, self.val_predictive_entropy, self.val_mi = get_all_uncertainty_measures(val_output)
                     self.set_current_losses()
                     self.current_train_acc = self.number_of_correct_labels / self.number_of_labels
@@ -495,7 +491,7 @@ def train_bayesian(
             if batch_idx % interval == interval - 1:
                 if valloader is not None:
                     val_acc, val_outputs = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
-                                                         device=device, val=True)
+                                                         device=device, verbose=True)
                     val_vr, val_predictive_entropy, val_mi = get_all_uncertainty_measures(val_outputs)
                 current_loss = running_loss / number_of_batch
                 if loss_type == 'bbb':
@@ -707,13 +703,8 @@ def train_bayesian_modular(
 
             if batch_idx % interval == interval - 1:
                 if valloader is not None:
-                    val_acc, val_outputs = eval_bayesian(
-                        model,
-                        valloader,
-                        number_of_tests=number_of_tests,
-                        device=device,
-                        val=True,
-                    )
+                    val_acc, val_outputs = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
+                                                         device=device, verbose=verbose)
                     observables.compute_val(val_acc, val_outputs)
 
                 if verbose:

@@ -7,6 +7,13 @@ class BBBLoss(BaseLoss):
     """
 
     def __init__(self, model, criterion, step_function, ):
+        """
+
+        Args:
+            model (torch.module.nn child):
+            criterion (function): takes 2 inputs, prediction, target, and gives a scalar
+            step_function (function): takes 2 inputs, current batch idx, nb of batch, and gives a scalar
+        """
         super(BBBLoss, self).__init__(criterion)
         self.model = model
         self.criterion = criterion
@@ -18,13 +25,6 @@ class BBBLoss(BaseLoss):
             'variational_posterior': None,
             'prior': None,
         }
-
-        # self.logs_history = {
-        #         #     'total_loss': None,
-        #         #     'likelihood': None,
-        #         #     'variational_posterior': None,
-        #         #     'prior': None,
-        #         # }
 
     # TODO: do we have to divide the loss by the batch size?
     def compute(self, outputs, labels):

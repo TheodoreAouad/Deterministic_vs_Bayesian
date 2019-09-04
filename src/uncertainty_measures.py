@@ -56,6 +56,22 @@ def aggregate_data(data):
     return predicted, uncertainty, torch.tensor(dkls).float().to(data.device)
 
 
+def uncertainty_softmax(data):
+    """
+    Computes the variation ratio for each sample. It computes the frequency of the most predicted label,
+    then returns 1-this frquency.
+    Args:
+        data (torch.Tensor): size (1, batch_size, number_of_classes). The output of the test on a batch.
+
+    Returns:
+        torch.Tensor: size (batch_size). The variation-ratio uncertainty measure for each sample.
+
+    """
+    data = data.squeeze()
+    return 1 - data.max(1).values
+
+
+
 def compute_variation_ratio(data):
     """
     Computes the variation ratio for each sample. It computes the frequency of the most predicted label,
@@ -131,3 +147,16 @@ def get_all_uncertainty_measures(data):
 
     """
     return compute_variation_ratio(data), compute_predictive_entropy(data), compute_mutual_information_uncertainty(data)
+
+
+def get_all_uncertainty_measures_not_bayesian(data):
+    """
+        Gets all the uncertainty measures in this order: Variation-Ratio, Predictive entropy, Mutual information
+        Args:
+            data (torch.Tensor): size (1, batch_size, number_of_classes). The output of the test on a batch.
+
+        Returns:
+            Tuple (torch.Tensor, torch.Tensor, torch.Tensor: all tensors are of size batch_size (=data.size(1))
+
+        """
+    return uncertainty_softmax(data), compute_predictive_entropy(data)

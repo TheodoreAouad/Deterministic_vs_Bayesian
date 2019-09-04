@@ -13,7 +13,7 @@ from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.trains import uniform, train_bayesian_modular
 from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_all_uncertainty_measures
-from src.utils import set_and_print_random_seed, save_to_file
+from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist
 
 
@@ -28,11 +28,12 @@ parser.add_argument("--batch_size", help="number of batches to split the data in
                     type=int, default=32)
 parser.add_argument("--number_of_tests", help="number of evaluations to perform for each each image to check for "
                                               "uncertainty", type=int, default=10)
-parser.add_argument("--loss_type", help="which loss to use", choices=["bbb", "criterion"], type=str,
-                    default="bbb")
+parser.add_argument("--loss_type", help="which loss to use", choices=["uniform", "exp", "criterion"], type=str,
+                    default="uniform")
 parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
-args = parser.parse_args()
+parser.add_argument('--split_train',help='the portion of training data we take', type=int)
 
+args = parser.parse_args()
 save_to_file(vars(args), './output/arguments.pkl')
 
 split_labels = args.split_labels
@@ -42,6 +43,7 @@ batch_size = args.batch_size
 number_of_tests = args.number_of_tests
 loss_type = args.loss_type
 std_prior = args.std_prior
+split_train = args.split_train
 
 stds_prior = (std_prior, std_prior)
 
@@ -54,18 +56,24 @@ device = torch.device(device)
 trainloader, valloader, evalloader_unseen = get_mnist(
     train_labels=range(split_labels),
     eval_labels=range(split_labels, 10),
-    batch_size=batch_size
+    batch_size=batch_size,
+    split_train=split_train,
 )
 
-_, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), batch_size=batch_size)
+_, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(split_labels), split_train=split_train,
+                                  batch_size=batch_size)
 
 
 seed_model = set_and_print_random_seed()
 bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
 bay_net.to(device)
 criterion = CrossEntropyLoss()
-if loss_type == 'bbb':
+if loss_type == 'uniform':
     step_function = uniform
+    loss = BBBLoss(bay_net, criterion, step_function)
+elif loss_type == 'exp':
+    def step_function(batch_idx, number_of_batches):
+        return 2**(number_of_batches - batch_idx)/(2**number_of_batches - 1)
     loss = BBBLoss(bay_net, criterion, step_function)
 else:
     loss = BaseLoss(criterion)
@@ -86,20 +94,12 @@ train_bayesian_modular(
     verbose=True,
 )
 
-_, all_outputs_eval_unseen = eval_bayesian(
-    bay_net,
-    evalloader_unseen,
-    number_of_tests=number_of_tests,
-    device=device
-)
+_, all_outputs_eval_unseen = eval_bayesian(bay_net, evalloader_unseen, number_of_tests=number_of_tests, device=device)
 
 unseen_eval_vr, unseen_eval_predictive_entropy, unseen_eval_mi = get_all_uncertainty_measures(all_outputs_eval_unseen)
 
-seen_eval_acc, all_outputs_eval_seen = eval_bayesian(
-    bay_net,
-    evalloader_seen, number_of_tests=number_of_tests,
-    device=device
-)
+seen_eval_acc, all_outputs_eval_seen = eval_bayesian(bay_net, evalloader_seen, number_of_tests=number_of_tests,
+                                                     device=device)
 
 seen_eval_vr, seen_eval_predictive_entropy, seen_eval_mi = get_all_uncertainty_measures(all_outputs_eval_seen)
 
@@ -116,6 +116,7 @@ res = pd.DataFrame.from_dict({
     'loss_type': [loss_type],
     'number of epochs': [epoch],
     'batch_size': [batch_size],
+    'nb of data': [len(trainloader.dataset)],
     'number of tests': [number_of_tests],
     'seed_model': [seed_model],
     'stds_prior': [std_prior],
@@ -141,6 +142,7 @@ res = pd.DataFrame.from_dict({
     "unseen uncertainty mi": [seen_eval_mi],
 })
 
+convert_df_to_cpu(res)
 
 save_to_file(loss, './output/loss.pkl')
 save_to_file(observables, './output/TrainingLogs.pkl')
