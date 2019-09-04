@@ -315,3 +315,33 @@ def get_unc_key(keys, approximate_key):
         is_correct_seen_or_unseen = sum([this_seen in key for this_seen in seen_or_unseen]) if is_uncertainty else True
         if is_correct_seen_or_unseen and is_correct_unc:
             return key
+
+
+def get_divisors(n):
+    """
+    Get the divisors of an integer.
+    Args:
+        n (int): number we want to get the divisors of
+
+    Returns:
+        list: list of divisors of n
+    """
+    res = []
+    for k in range(1, int(n//2)):
+        if n % k == 0:
+            res.append(k)
+    return res
+
+
+def get_exact_batch_size(size_of_batch, total_nb_sample):
+    """
+    Does the computation of the exact size of batch (cf func compute_figures) depending on an approximate size
+    Args:
+        size_of_batch (int): the size of batch we would like optimally
+        total_nb_sample (int): the number of images we want to divide into batches
+
+    Returns:
+        int: the size of batch we can divide the number of samples into
+    """
+    divisors = get_divisors(total_nb_sample)
+    return min(divisors, key=lambda x: abs(x - size_of_batch))

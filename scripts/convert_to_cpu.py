@@ -5,7 +5,7 @@ import pandas as pd
 
 from src.utils import convert_df_to_cpu, get_file_and_dir_path_in_dir
 
-groups = ['187', '188', '189']
+groups = ['169', '170', '172', '180', '182', '185', '187', '188', '189']
 cur_dir = os.getcwd()
 
 for group in groups:

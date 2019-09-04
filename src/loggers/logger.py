@@ -85,6 +85,14 @@ class Logger:
             self.writer[key] = SummaryWriter(log_dir=self.output_dir_tensorboard / key)
 
     def write_tensorboard(self, **kwargs):
+        """
+
+        Args:
+            **kwargs (dict): tell on which tensorboard to write each key.
+
+        Returns:
+
+        """
         if self.output_dir_tensorboard is None:
             return
 

@@ -4,6 +4,9 @@ pull-output-group:
 pull-output-all:
 	rsync -ave ssh muaddib:/output/sicara/BayesianFewShotExperiments/ ./polyaxon_results/  --exclude 'weights*'
 
+pull-deadzone:
+	rsync -ave ssh muaddib:/home/muaddib/Sicara/theodore/BayesianFewShotExperiments/results/deadzones ./results/
+
 write-all-results-csv:
 	python scripts/write_all_results_csv.py --polyaxon_results_path polyaxon_results --polyaxon_type groups --group_nb $(GROUP_NB)
 
