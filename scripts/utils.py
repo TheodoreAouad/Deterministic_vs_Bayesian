@@ -2,7 +2,6 @@ import pathlib
 
 import numpy as np
 import torch
-import seaborn as sns
 from matplotlib import pyplot as plt
 from torchvision import transforms as transforms
 from tqdm import tqdm
@@ -13,7 +12,7 @@ from src.tasks.evals import eval_bayesian, eval_random
 
 from src.uncertainty_measures import get_predictions_from_multiple_tests, get_all_uncertainty_measures, \
     get_all_uncertainty_measures_not_bayesian
-from src.utils import get_exact_batch_size, get_file_and_dir_path_in_dir, load_from_file
+from src.utils import get_exact_batch_size, get_file_and_dir_path_in_dir, load_from_file, plot_density_on_ax
 
 
 # TODO: refactor this function into modular functions
@@ -376,7 +375,8 @@ def compute_density(
 
     for unc, ax in axs.items():
         ax.set_title(unc)
-        plot_density(ax, uncs[unc], label, **kwargs)
+        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        ax.legend()
 
     if save_fig:
         assert save_path is not None
@@ -389,14 +389,19 @@ def compute_density(
         print('Figure shown.')
 
 
-def plot_density(ax, uncs, labels, **kwargs):
-    for unc, label in zip(uncs, labels):
-        sns.distplot(unc, hist=False, kde_kws={"shade": True}, label=label, ax=ax, **kwargs)
-    plt.legend()
-
-
-
 def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbose=True,):
+    """
+    Gives the outputs of the model on the seen testset
+    Args:
+        bay_net_trained (torch.nn.Module child): model trained to evaluate
+        arguments (dict): arguments of the experiment that produced the trained model. Used to get the type of unseen,
+                          the labels of the testset and the number of tests
+        device (torch.device): device to compute on
+        verbose (bool): show progress bar
+
+    Returns:
+        torch.Tensor, torch.Tensor: size (nb of tests, size of testset, nb of classes), size (nb of tests)
+    """
     type_of_unseen = arguments['type_of_unseen']
     if type_of_unseen == 'unseen_classes':
         _, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(arguments['split_labels']), batch_size=128,
@@ -418,6 +423,19 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
 
 
 def get_unseen_outputs(bay_net_trained, arguments, nb_of_random=None, device='cpu', verbose=True,):
+    """
+    Gives the outputs of the model on the unseen testset
+    Args:
+        bay_net_trained (torch.nn.Module child): model trained to evaluate
+        arguments (dict): arguments of the experiment that produced the trained model. Used to get the type of unseen,
+                          the labels of the testset and the number of tests
+        nb_of_random (int): number of random generated images if type of unseen is random
+        device (torch.device): device to compute on
+        verbose (bool): show progress bar
+
+    Returns:
+        torch.Tensor: size (nb of tests, size of testset, nb of classes)
+    """
     global evalloader_unseen
     type_of_unseen = arguments['type_of_unseen']
     if type_of_unseen == 'random':
@@ -459,6 +477,15 @@ def get_unseen_outputs(bay_net_trained, arguments, nb_of_random=None, device='cp
 
 
 def get_trained_model_and_args_and_groupnb(exp_nb, exp_path='polyaxon_results/groups'):
+    """
+    Gives the model, arguments.pkl output of the experiment and the group number of this experiment
+    Args:
+        exp_nb (str): experiment number
+        exp_path (str): path to the polyaxon groups results
+
+    Returns:
+        dict, dict, int: the results.pkl, arguments used plus the type of unseen, grp nb and exp_nb
+    """
     exp_path = pathlib.Path(exp_path)
     _, all_dirs = get_file_and_dir_path_in_dir(exp_path, f'{exp_nb}/argumen')
     dirpath = all_dirs[0]
@@ -488,6 +515,15 @@ def get_trained_model_and_args_and_groupnb(exp_nb, exp_path='polyaxon_results/gr
 
 
 def get_res_args_groupnb(exp_nb, exp_path='polyaxon_results/groups'):
+    """
+    Gives the results.pkl, arguments.pkl output of the experiment and the group number of this experiment
+    Args:
+        exp_nb (str): experiment number
+        exp_path (str): path to the polyaxon groups results
+
+    Returns:
+        dict, dict, int: the results.pkl, arguments used plus the type of unseen, grp nb and exp_nb
+    """
     exp_path = pathlib.Path(exp_path)
     dirpath = get_file_and_dir_path_in_dir(exp_path, f'{exp_nb}/argumen')[1][0]
     group_nb = dirpath.split('/')[-2]
@@ -506,8 +542,18 @@ def get_res_args_groupnb(exp_nb, exp_path='polyaxon_results/groups'):
 
     return results, arguments, group_nb
 
-
+# TODO: refactor all these get_args to factorize them
 def get_args(exp_nb, exp_path='polyaxon_results/groups'):
+    """
+    Gives the arguments.pkl output of the experiment. Almost the same as get_res_args_groupnb but doesn't give the same
+    output.
+    Args:
+        exp_nb (str): experiment number
+        exp_path (str): path to the polyaxon groups results
+
+    Returns:
+        dict: the arguments used plus the type of unseen, grp nb and exp_nb
+    """
     exp_path = pathlib.Path(exp_path)
     dirpath = get_file_and_dir_path_in_dir(exp_path, f'{exp_nb}/argumen')[1][0]
     group_nb = dirpath.split('/')[-2]
@@ -525,7 +571,19 @@ def get_args(exp_nb, exp_path='polyaxon_results/groups'):
 
     return arguments
 
-def get_train_outputs(bay_net_trained, arguments, device='cpu'):
+def get_train_outputs(bay_net_trained, arguments, device='cpu', verbose=True):
+    """
+    Gives the outputs of the model on the trainset
+    Args:
+        bay_net_trained (torch.nn.Module child): model trained to evaluate
+        arguments (dict): arguments of the experiment that produced the trained model. Used to get the type of unseen,
+                          the labels of the trainset and the number of tests
+        device (torch.device): device to compute on
+        verbose (bool): shows progress bar
+
+    Returns:
+        torch.Tensor: size (nb of tests, size of trainset, nb of classes)
+    """
     type_of_unseen = arguments['type_of_unseen']
     if type_of_unseen == 'unseen_classes':
         trainloader, _, _ = get_mnist(train_labels=range(arguments['split_labels']), eval_labels=(), split_val=0,
@@ -534,6 +592,6 @@ def get_train_outputs(bay_net_trained, arguments, device='cpu'):
         trainloader, _, _ = get_mnist(eval_labels=(), split_val=0, batch_size=128)
     print('Evaluation on train ...')
     _, all_outputs_train = eval_bayesian(bay_net_trained, trainloader, arguments.get('number_of_tests', 1),
-                                         device=device, verbose=True)
+                                         device=device, verbose=verbose)
     print('Finished evaluation on train.')
     return all_outputs_train

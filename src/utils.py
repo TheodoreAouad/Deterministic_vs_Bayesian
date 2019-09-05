@@ -2,8 +2,10 @@ import csv
 import os
 import pickle
 
+import seaborn as sns
 import torch
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoint_dir='./'):
@@ -345,3 +347,21 @@ def get_exact_batch_size(size_of_batch, total_nb_sample):
     """
     divisors = get_divisors(total_nb_sample)
     return min(divisors, key=lambda x: abs(x - size_of_batch))
+
+
+def plot_density_on_ax(ax, uncs, labels, **kwargs):
+    """
+    Plots density uncertainty on the given ax using kde smoothing.
+    Args:
+        ax (matplotlib.axes._subplots.AxesSubplot): ax on which to plot the density
+        uncs (tuple): tuple of arrays of the uncertainties. The number of elements is the number of uncertainties.
+        labels (tuple): tuple of string. Each element is the label of the corresponding element of 'uncs'.
+        **kwargs: kwargs to change the distplot.
+
+    """
+    for unc, label in zip(uncs, labels):
+        sns.distplot(unc, hist=False, kde_kws={"shade": True}, label=label, ax=ax, **kwargs)
+
+
+def get_fig_size(ax):
+    return ax.figure.get_size_inches()*ax.figure.dpi

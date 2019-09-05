@@ -5,6 +5,7 @@ Selective Classification for Deep Neural Networks (Geifman, El Yaniv, 2017)
 """
 
 import numpy as np
+import torch
 from scipy.stats import binom
 import scipy
 import math
@@ -51,14 +52,14 @@ def calculate_bound(delta, m, erm, precision=1e-6, max_iter=1000,):
         i += 1
         if i > max_iter:
             break
-    return b
+    return b.item() if type(b) == torch.Tensor else b
 
 
-def bound(rstar, delta, kappa, residuals, verbose=True, **kwargs):
+def bound_animate(rstar, delta, kappa, residuals, verbose=True, **kwargs):
     """
-    A function to calculate the risk bound proposed in the paper, the algorithm is based on algorithm 1
-    from the paper. It is possible to add a validation, see repo.
+    See bound docstring. This is the same but we keep all thetas and bounds.
     Args:
+        verbose:
         rstar (float): the requested risk bound
         delta (float): the desired delta
         kappa (array-like): size (batch_size): rating function over the points (higher values is
@@ -66,7 +67,7 @@ def bound(rstar, delta, kappa, residuals, verbose=True, **kwargs):
         residuals (array-like): a vector of the residuals of the samples 0 is correct prediction and 1 corresponding
                                 to an error
     Returns:
-        float, float: [theta, bound] (also prints latex text for the tables in the paper). Theta is the threshold
+        list, list: [thetas, bounds] (also prints latex text for the tables in the paper). Thetas are the threshold
                        for selection.
     """
 
@@ -79,6 +80,8 @@ def bound(rstar, delta, kappa, residuals, verbose=True, **kwargs):
     b = m - 1
     deltahat = delta / math.ceil(math.log2(m))
 
+    thetas, bounds, risks, coverages = [], [], [], []
+
     iterator = range(math.ceil(math.log2(m)) + 1)
     if verbose:
         iterator = tqdm(iterator)
@@ -90,6 +93,7 @@ def bound(rstar, delta, kappa, residuals, verbose=True, **kwargs):
         mi = len(fy[probs_idx_sorted[mid:]])
         theta = probs[probs_idx_sorted[mid]]
         risk = sum(fy[probs_idx_sorted[mid:]]) / mi
+        if type(risk) == torch.Tensor: risk = risk.item()
 
         bound = calculate_bound(deltahat, mi, risk, **kwargs)
         coverage = mi / m
@@ -97,10 +101,35 @@ def bound(rstar, delta, kappa, residuals, verbose=True, **kwargs):
             a = mid
         else:
             b = mid
+        thetas.append(theta)
+        bounds.append(bound)
+        risks.append(risk)
+        coverages.append(coverage)
 
     if verbose:
         print("%.5f & %.6f & %.4f & %.4f   \\\\" % (rstar, risk, coverage, bound))
-    return [theta, bound]
+    return [thetas, bounds, risks, coverages, ]
+
+
+def bound(rstar, delta, kappa, residuals, verbose=True, **kwargs):
+    """
+    A function to calculate the risk bound proposed in the paper, the algorithm is based on algorithm 1
+    from the paper. It is possible to add a validation, see repo.
+    Args:
+        verbose:
+        rstar (float): the requested risk bound
+        delta (float): the desired delta
+        kappa (array-like): size (batch_size): rating function over the points (higher values is
+                            more confident prediction)
+        residuals (array-like): a vector of the residuals of the samples 0 is correct prediction and 1 corresponding
+                                to an error
+    Returns:
+        float, float: [theta, bound] (also prints latex text for the tables in the paper). Theta is the threshold
+                       for selection.
+    """
+
+    thetas, bounds = bound_animate(rstar, delta, kappa, residuals, verbose, **kwargs)[:2]
+    return thetas[-1], bounds[-1]
 
 
 def get_selection_threshold_one_unc(
