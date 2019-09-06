@@ -1,3 +1,10 @@
+"""
+This file computes the deadzone of each uncertainty for each of the experiments.
+To use:
+- change the TO CHANGE parameters
+- run in console
+"""
+
 import pathlib
 from time import time
 

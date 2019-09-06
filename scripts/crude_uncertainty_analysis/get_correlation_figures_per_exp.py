@@ -8,7 +8,7 @@ from time import time
 
 import torch
 
-from scripts.utils import compute_figures, compute_density, get_seen_outputs_and_labels, get_unseen_outputs, \
+from scripts.utils import compute_figures, compute_density_train_seen_unseen, get_seen_outputs_and_labels, get_unseen_outputs, \
     get_trained_model_and_args_and_groupnb, get_train_outputs
 
 ###### TO CHANGE ###########
@@ -19,8 +19,6 @@ exp_nbs = ['3713', '3832']
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000
-do_compute_correlation = False
-do_compute_histogram = True
 show_fig = True
 save_fig = False
 do_eval_mnist = True
@@ -54,45 +52,23 @@ for exp_nb in exp_nbs:
         device=device,
     )
 
-    if do_compute_correlation:
-        save_path_cor = pathlib.Path(f'results/correlations_figures/{arguments.get("loss_type", "determinist")}')
-        save_path_cor.mkdir(parents=True, exist_ok=True)
-        save_path_cor = save_path_cor / f'{group_nb}_{exp_nb}_correlation_uncertainty_error.png'
+    save_path_cor = pathlib.Path(f'results/correlations_figures/{arguments.get("loss_type", "determinist")}')
+    save_path_cor.mkdir(parents=True, exist_ok=True)
+    save_path_cor = save_path_cor / f'{group_nb}_{exp_nb}_correlation_uncertainty_error.png'
 
-        compute_figures(
-            arguments=arguments,
-            all_outputs_seen=all_eval_outputs,
-            true_labels_seen=true_labels_mnist,
-            all_outputs_unseen=all_outputs_unseen,
-            nb_of_batches=nb_of_batches,
-            size_of_batch=size_of_batch,
-            scale='linear',
-            show_fig=show_fig,
-            save_fig=save_fig,
-            save_path=save_path_cor,
-            figsize=(10, 10),
-        )
-
-    if do_compute_histogram:
-        all_outputs_train = get_train_outputs(
-            bay_net_trained,
-            arguments,
-            device=device,
-        )
-        save_path_hists = pathlib.Path(f'results/uncertainty_density/{arguments.get("loss_type", "determinist")}')
-        save_path_hists.mkdir(parents=True, exist_ok=True)
-        save_path_hists = save_path_hists / f'{group_nb}_{exp_nb}_uncertainty_density.png'
-
-        compute_density(
-            arguments=arguments,
-            all_outputs_train=all_outputs_train,
-            all_outputs_seen=all_eval_outputs,
-            all_outputs_unseen=all_outputs_unseen,
-            show_fig=show_fig,
-            save_fig=save_fig,
-            save_path=save_path_hists,
-            figsize=(12, 10),
-        )
+    compute_figures(
+        arguments=arguments,
+        all_outputs_seen=all_eval_outputs,
+        true_labels_seen=true_labels_mnist,
+        all_outputs_unseen=all_outputs_unseen,
+        nb_of_batches=nb_of_batches,
+        size_of_batch=size_of_batch,
+        scale='linear',
+        show_fig=show_fig,
+        save_fig=save_fig,
+        save_path=save_path_cor,
+        figsize=(10, 10),
+    )
 
     print(f'Time Elapsed:{round(time() - start_time)} s.')
 

@@ -317,11 +317,15 @@ def get_unc_key(keys, approximate_key):
         if not found_the_uncertainty:
             assert False, 'Uncertainty not valid'
 
+    all_keys = []
     for key in keys:
         is_correct_unc = sum([this_writing in key for this_writing in this_is_the_keys])
         is_correct_seen_or_unseen = sum([this_seen in key for this_seen in seen_or_unseen]) if is_uncertainty else True
         if is_correct_seen_or_unseen and is_correct_unc:
-            return key
+            all_keys.append(key)
+    if len(all_keys) == 1:
+        return all_keys[0]
+    return all_keys
 
 
 def get_divisors(n):

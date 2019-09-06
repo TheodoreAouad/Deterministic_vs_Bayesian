@@ -8,23 +8,39 @@ from time import time
 
 import torch
 
-from scripts.utils import compute_figures, compute_density_train_seen_unseen, get_seen_outputs_and_labels, get_unseen_outputs, \
-    get_trained_model_and_args_and_groupnb, get_train_outputs
+from scripts.utils import compute_density_train_seen_unseen, get_seen_outputs_and_labels, \
+    get_unseen_outputs, \
+    get_trained_model_and_args_and_groupnb, get_train_outputs, compute_density_train_seen, \
+    compute_density_correct_false, compute_density_train_seen_correct_false
+
+from importlib import reload
+import scripts.utils as utils
+reload(utils)
 
 ###### TO CHANGE ###########
-# exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3832', '3834', '3839',
-#            '3840', '3842', '3851', '3861', '3864']
+exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3832', '3834', '3839',
+           '3840', '3842', '3851', '3861', '3864']
 
-exp_nbs = ['3713', '3832']
+# exp_nbs = ['3713', ]
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000
-do_compute_correlation = False
-do_compute_histogram = True
-show_fig = True
-save_fig = False
-do_eval_mnist = True
 
+do_train_seen_unseen = True
+do_train_correct_false = True
+do_seen_correct_false = True
+do_train_seen = True
+do_train_seen_correct_false = True
+do_train_seen_unseen_correct_false = True
+
+figsize = (12, 12)
+show_fig = True
+save_fig = True
+do_eval_mnist = True
+save_path = 'results/uncertainty_density'
+
+GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
+CPUPATH = 'polyaxon_results/groups'
 
 ############################
 
@@ -35,13 +51,27 @@ else:
     device = "cpu"
 device = torch.device(device)
 print(device)
+
+if device == torch.device('cuda'):
+    path = GPUPATH
+if device == torch.device('cpu'):
+    path = CPUPATH
+
+def get_save_path(save_path, dirname, arguments, group_nb, exp_nb):
+    save_path_hists = pathlib.Path(save_path) / dirname / arguments.get("loss_type", "determinist")
+
+    save_path_hists.mkdir(parents=True, exist_ok=True)
+    save_path_hists = save_path_hists / f'{group_nb}_{exp_nb}_uncertainty_density.png'
+    return save_path_hists
+
+
 start_time = time()
 for exp_nb in exp_nbs:
     print(f'{exp_nb}')
 
-    bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp_nb)
+    bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp_nb, exp_path=path)
 
-    all_eval_outputs, true_labels_mnist = get_seen_outputs_and_labels(
+    all_outputs_seen, true_labels_seen = get_seen_outputs_and_labels(
         bay_net_trained,
         arguments,
         device=device,
@@ -54,40 +84,106 @@ for exp_nb in exp_nbs:
         device=device,
     )
 
-    if do_compute_correlation:
-        save_path_cor = pathlib.Path(f'results/correlations_figures/{arguments.get("loss_type", "determinist")}')
-        save_path_cor.mkdir(parents=True, exist_ok=True)
-        save_path_cor = save_path_cor / f'{group_nb}_{exp_nb}_correlation_uncertainty_error.png'
+    all_outputs_train, true_labels_train = get_train_outputs(
+        bay_net_trained,
+        arguments,
+        device=device,
+    )
 
-        compute_figures(
+    if do_train_seen_unseen:
+        print('Do train unseen seen ...')
+        save_path_hists = get_save_path(save_path, 'train_seen_unseen', arguments, group_nb, exp_nb)
+
+        utils.compute_density_train_seen_unseen(
             arguments=arguments,
-            all_outputs_seen=all_eval_outputs,
-            true_labels_seen=true_labels_mnist,
+            all_outputs_train=all_outputs_train,
+            all_outputs_seen=all_outputs_seen,
             all_outputs_unseen=all_outputs_unseen,
-            nb_of_batches=nb_of_batches,
-            size_of_batch=size_of_batch,
-            scale='linear',
             show_fig=show_fig,
             save_fig=save_fig,
-            save_path=save_path_cor,
-            figsize=(10, 10),
+            save_path=save_path_hists,
+            figsize=figsize,
         )
+        print('Done')
 
-    if do_compute_histogram:
-        all_outputs_train = get_train_outputs(
-            bay_net_trained,
-            arguments,
-            device=device,
+    if do_train_correct_false:
+        print('Do train correct false...')
+        save_path_hists = get_save_path(save_path, 'train_correct_false', arguments, group_nb, exp_nb)
+
+        utils.compute_density_correct_false(
+            arguments=arguments,
+            all_outputs=all_outputs_train,
+            true_labels=true_labels_train,
+            show_fig=show_fig,
+            save_fig=save_fig,
+            save_path=save_path_hists,
+            figsize=figsize,
         )
-        save_path_hists = pathlib.Path(f'results/uncertainty_density/{arguments.get("loss_type", "determinist")}')
-        save_path_hists.mkdir(parents=True, exist_ok=True)
-        save_path_hists = save_path_hists / f'{group_nb}_{exp_nb}_uncertainty_density.png'
+        print('Done')
 
-        compute_density_train_seen_unseen(arguments=arguments, all_outputs_train=all_outputs_train,
-                                          all_outputs_seen=all_eval_outputs, all_outputs_unseen=all_outputs_unseen,
-                                          show_fig=show_fig, save_fig=save_fig, save_path=save_path_hists,
-                                          figsize=(12, 10))
+    if do_seen_correct_false:
+        print('Do seen correct false...')
+        save_path_hists = get_save_path(save_path, 'eval_correct_false', arguments, group_nb, exp_nb)
+
+        utils.compute_density_correct_false(
+            arguments=arguments,
+            all_outputs=all_outputs_seen,
+            true_labels=true_labels_seen,
+            show_fig=show_fig,
+            save_fig=save_fig,
+            save_path=save_path_hists,
+            figsize=figsize,
+        )
+        print('Done')
+
+    if do_train_seen:
+        print('Do train seen ...')
+        save_path_hists = get_save_path(save_path, 'train_eval', arguments, group_nb, exp_nb)
+
+        utils.compute_density_train_seen(
+            arguments=arguments,
+            all_outputs_train=all_outputs_train,
+            all_outputs_seen=all_outputs_seen,
+            show_fig=show_fig,
+            save_fig=save_fig,
+            save_path=save_path_hists,
+            figsize=figsize,
+        )
+        print('Done')
+
+    if do_train_seen_correct_false:
+        print('Do train seen correct false ...')
+        save_path_hists = get_save_path(save_path, 'train_eval_correct_false', arguments, group_nb, exp_nb)
+
+        utils.compute_density_train_seen_correct_false(
+            arguments=arguments,
+            all_outputs_train=all_outputs_train,
+            true_labels_train=true_labels_train,
+            all_outputs_seen=all_outputs_seen,
+            true_labels_seen=true_labels_seen,
+            show_fig=show_fig,
+            save_fig=save_fig,
+            save_path=save_path_hists,
+            figsize=figsize,
+        )
+        print('Done')
+
+    if do_train_seen_unseen_correct_false:
+        print('Do train seen unseen correct false ...')
+        save_path_hists = get_save_path(save_path, 'train_eval_unseen_correct_false', arguments, group_nb, exp_nb)
+
+        utils.compute_density_train_seen_unseen_correct_false(
+            arguments=arguments,
+            all_outputs_train=all_outputs_train,
+            true_labels_train=true_labels_train,
+            all_outputs_seen=all_outputs_seen,
+            true_labels_seen=true_labels_seen,
+            all_outputs_unseen=all_outputs_unseen,
+            show_fig=show_fig,
+            save_fig=save_fig,
+            save_path=save_path_hists,
+            figsize=figsize,
+        )
+        print('Done')
 
     print(f'Time Elapsed:{round(time() - start_time)} s.')
-
-

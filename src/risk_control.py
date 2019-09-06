@@ -171,15 +171,11 @@ def get_selection_threshold_one_unc(
     return threshold
 
 def get_selection_threshold_all_unc(
-        bay_net,
         true_labels,
         all_outputs_train,
         risk,
         delta,
         uncs,
-        number_of_tests,
-        verbose=False,
-        device='cpu',
 ):
     """
 

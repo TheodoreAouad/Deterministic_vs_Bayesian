@@ -122,7 +122,8 @@ def compute_figures(
         plt.subplot(322)
         plt.scatter(vr_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
         plt.ylabel('accuracy')
-        plt.title(f'VR - shuffled ({size_of_batch} imgs/pt), corr: {round(correlation(vr_regrouped_shuffled, accuracies_shuffled), 2)}')
+        plt.title(f'VR - shuffled ({size_of_batch} imgs/pt), '
+                  f'corr: {round(correlation(vr_regrouped_shuffled, accuracies_shuffled), 2)}')
         cbar = plt.colorbar()
         cbar.set_label(f'{type_of_unseen} ratio', rotation=270)
         plt.subplot(323)
@@ -138,7 +139,8 @@ def compute_figures(
         plt.subplot(324)
         plt.scatter(pe_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
         plt.ylabel('accuracy')
-        plt.title(f'PE - shuffled ({size_of_batch} imgs/pt), corr: {round(correlation(pe_regrouped_shuffled, accuracies_shuffled), 2)}')
+        plt.title(f'PE - shuffled ({size_of_batch} imgs/pt), '
+                  f'corr: {round(correlation(pe_regrouped_shuffled, accuracies_shuffled), 2)}')
         cbar = plt.colorbar()
         cbar.set_label(f'{type_of_unseen} ratio', rotation=270)
         plt.subplot(325)
@@ -152,7 +154,8 @@ def compute_figures(
         plt.scatter(mi_regrouped, accuracies, c=labels_not_shuffled)
         plt.ylabel('accuracy')
         plt.subplot(326)
-        plt.title(f'MI - shuffled ({size_of_batch} imgs/pt), corr: {round(correlation(mi_regrouped_shuffled, accuracies_shuffled), 2)}')
+        plt.title(f'MI - shuffled ({size_of_batch} imgs/pt), '
+                  f'corr: {round(correlation(mi_regrouped_shuffled, accuracies_shuffled), 2)}')
         plt.scatter(mi_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
         plt.ylabel('accuracy')
         cbar = plt.colorbar()
@@ -205,7 +208,8 @@ def compute_figures(
         plt.subplot(224)
         plt.scatter(pe_regrouped_shuffled, accuracies_shuffled, c=prop_of_unseen)
         plt.ylabel('accuracy')
-        plt.title(f'PE - shuffled ({size_of_batch} imgs/pt), corr: {round(correlation(pe_regrouped_shuffled, accuracies_shuffled), 2)}')
+        plt.title(f'PE - shuffled ({size_of_batch} imgs/pt), '
+                  f'corr: {round(correlation(pe_regrouped_shuffled, accuracies_shuffled), 2)}')
         cbar = plt.colorbar()
         cbar.set_label('random ratio', rotation=270)
     if save_fig:
@@ -268,17 +272,8 @@ def reshape_for_not_shuffled(tensors_to_shuffle, total_nb_of_data, real_size_of_
     return tensors_reshaped
 
 
-def compute_density(
-        arguments,
-        all_outputs_train,
-        all_outputs_seen,
-        all_outputs_unseen,
-        show_fig,
-        save_fig,
-        save_path=None,
-        figsize=(8,10),
-        **kwargs,
-):
+def compute_density_train_seen_unseen(arguments, all_outputs_train, all_outputs_seen, all_outputs_unseen, show_fig,
+                                      save_fig, save_path=None, figsize=(8, 10), **kwargs):
     """
     Compute and show the density distribution of uncertainties.
     Args:
@@ -302,7 +297,7 @@ def compute_density(
 
     """
     fig = plt.figure(figsize=figsize)
-    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} \n{arguments}', wrap=True)
+    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen unseen \n{arguments}', wrap=True)
     if 'rho' in arguments.keys():
 
         vr_train, pe_train, mi_train = get_all_uncertainty_measures(all_outputs_train)
@@ -322,25 +317,6 @@ def compute_density(
             'MI': fig.add_subplot(313),
         }
 
-        # plt.subplot(311)
-        # plt.title('VR')
-        # sns.distplot(vr_train, hist=False, kde_kws={"shade": True}, label='train', **kwargs)
-        # sns.distplot(vr_seen, hist=False, kde_kws={"shade": True}, label='seen', **kwargs)
-        # sns.distplot(vr_unseen, hist=False, kde_kws={"shade": True}, label='unseen', **kwargs)
-        # plt.legend()
-        #
-        # plt.subplot(312)
-        # plt.title('PE')
-        # sns.distplot(pe_train, hist=False, kde_kws={"shade": True}, label='train', **kwargs)
-        # sns.distplot(pe_seen, hist=False, kde_kws={"shade": True}, label='seen', **kwargs)
-        # sns.distplot(pe_unseen, hist=False, kde_kws={"shade": True}, label='unseen', **kwargs)
-        # plt.legend()
-        #
-        # plt.subplot(313)
-        # plt.title('MI')
-        # sns.distplot(mi_train, hist=False, kde_kws={"shade": True}, label='train', **kwargs)
-        # sns.distplot(mi_seen, hist=False, kde_kws={"shade": True}, label='seen', **kwargs)
-        # sns.distplot(mi_unseen, hist=False, kde_kws={"shade": True}, label='unseen', **kwargs)
         plt.legend()
 
     else:
@@ -358,20 +334,6 @@ def compute_density(
             'US': fig.add_subplot(211),
             'PE': fig.add_subplot(212),
         }
-        #
-        # plt.subplot(311)
-        # plt.title('US')
-        # sns.distplot(us_train, hist=False, kde_kws={"shade": True}, label='train', **kwargs)
-        # sns.distplot(us_seen, hist=False, kde_kws={"shade": True}, label='seen', **kwargs)
-        # sns.distplot(us_unseen, hist=False, kde_kws={"shade": True}, label='seen', **kwargs)
-        # plt.legend()
-        #
-        # plt.subplot(312)
-        # plt.title('PE')
-        # sns.distplot(pe_train, hist=False, kde_kws={"shade": True}, label='train', **kwargs)
-        # sns.distplot(pe_seen, hist=False, kde_kws={"shade": True}, label='seen', **kwargs)
-        # sns.distplot(pe_unseen, hist=False, kde_kws={"shade": True}, label='unseen', **kwargs)
-        # plt.legend()
 
     for unc, ax in axs.items():
         ax.set_title(unc)
@@ -389,7 +351,354 @@ def compute_density(
         print('Figure shown.')
 
 
-def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbose=True,):
+def compute_density_train_seen(arguments, all_outputs_train, all_outputs_seen, show_fig,
+                               save_fig, save_path=None, figsize=(8, 10), **kwargs):
+    """
+    Compute and show the density distribution of uncertainties.
+    Args:
+        arguments (dict): the arguments of the python executed line in the terminal
+        all_outputs_seen (torch.Tensor): size (nb_of_tests, size_of_testset_seen, nb_of_classes): the output of the
+                                         softmax of the seen test set
+        all_outputs_unseen (torch.Tensor): size (nb_of_tests, size_of_testset_unseen): the output of the softmax of the
+                                           unseen dataset
+        show_fig:
+        save_fig:
+        save_path:
+        **kwargs:
+
+
+
+        scale (str): scale of the plot. Strongly advice 'linear'.
+        show_fig (bool): whether we show the figure
+        save_fig (bool): whether we save the figure
+        save_path (str): where to save the figures
+    Returns:
+
+    """
+    fig = plt.figure(figsize=figsize)
+    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen\n{arguments}', wrap=True)
+    if 'rho' in arguments.keys():
+
+        vr_train, pe_train, mi_train = get_all_uncertainty_measures(all_outputs_train)
+        vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures(all_outputs_seen)
+
+        uncs = {
+            'VR': (vr_train, vr_seen,),
+            'PE': (pe_train, pe_seen,),
+            'MI': (mi_train, mi_seen,),
+        }
+        label = ('train', 'seen',)
+
+        axs = {
+            'VR': fig.add_subplot(311),
+            'PE': fig.add_subplot(312),
+            'MI': fig.add_subplot(313),
+        }
+
+        plt.legend()
+
+    else:
+        us_train, pe_train = get_all_uncertainty_measures_not_bayesian(all_outputs_train)
+        us_seen, pe_seen = get_all_uncertainty_measures_not_bayesian(all_outputs_seen)
+
+        uncs = {
+            'US': (us_train, us_seen,),
+            'PE': (pe_train, pe_seen,),
+        }
+        label = ('train', 'seen',)
+
+        axs = {
+            'US': fig.add_subplot(211),
+            'PE': fig.add_subplot(212),
+        }
+
+    for unc, ax in axs.items():
+        ax.set_title(unc)
+        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        ax.legend()
+
+    if save_fig:
+        assert save_path is not None
+        print('Saving figure...')
+        plt.savefig(save_path)
+        print('Figure saved.')
+    if show_fig:
+        print('Showing figures...')
+        plt.show()
+        print('Figure shown.')
+
+
+def compute_density_correct_false(arguments, all_outputs, true_labels, show_fig,
+                                  save_fig, save_path=None, figsize=(8, 10), **kwargs):
+    """
+    Compute and show the density distribution of uncertainties.
+    Args:
+        arguments (dict): the arguments of the python executed line in the terminal
+        all_outputs_seen (torch.Tensor): size (nb_of_tests, size_of_testset_seen, nb_of_classes): the output of the
+                                         softmax of the seen test set
+        all_outputs_unseen (torch.Tensor): size (nb_of_tests, size_of_testset_unseen): the output of the softmax of the
+                                           unseen dataset
+        show_fig:
+        save_fig:
+        save_path:
+        **kwargs:
+
+
+
+        scale (str): scale of the plot. Strongly advice 'linear'.
+        show_fig (bool): whether we show the figure
+        save_fig (bool): whether we save the figure
+        save_path (str): where to save the figures
+    Returns:
+
+    """
+    fig = plt.figure(figsize=figsize)
+    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - correct false \n{arguments}', wrap=True)
+    preds = get_predictions_from_multiple_tests(all_outputs).float()
+    correct_preds = (true_labels == preds)
+    all_outputs_correct = all_outputs[:, correct_preds == 1, :]
+    all_outputs_false = all_outputs[:, correct_preds == 0, :]
+    if 'rho' in arguments.keys():
+
+        vr_train, pe_train, mi_train = get_all_uncertainty_measures(all_outputs_correct)
+        vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures(all_outputs_false)
+
+        uncs = {
+            'VR': (vr_train, vr_seen,),
+            'PE': (pe_train, pe_seen,),
+            'MI': (mi_train, mi_seen,),
+        }
+        label = ('correct', 'false',)
+
+        axs = {
+            'VR': fig.add_subplot(311),
+            'PE': fig.add_subplot(312),
+            'MI': fig.add_subplot(313),
+        }
+
+        plt.legend()
+
+    else:
+        us_train, pe_train = get_all_uncertainty_measures_not_bayesian(all_outputs_correct)
+        us_seen, pe_seen = get_all_uncertainty_measures_not_bayesian(all_outputs_false)
+
+        uncs = {
+            'US': (us_train, us_seen,),
+            'PE': (pe_train, pe_seen,),
+        }
+        label = ('correct', 'false',)
+
+        axs = {
+            'US': fig.add_subplot(211),
+            'PE': fig.add_subplot(212),
+        }
+
+    for unc, ax in axs.items():
+        ax.set_title(unc)
+        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        ax.legend()
+
+    if save_fig:
+        assert save_path is not None
+        print('Saving figure...')
+        plt.savefig(save_path)
+        print('Figure saved.')
+    if show_fig:
+        print('Showing figures...')
+        plt.show()
+        print('Figure shown.')
+
+
+def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_labels_train, all_outputs_seen,
+                                             true_labels_seen, show_fig,
+                                             save_fig, save_path=None, figsize=(8, 10), **kwargs):
+    """
+    Compute and show the density distribution of uncertainties.
+    Args:
+        arguments (dict): the arguments of the python executed line in the terminal
+        all_outputs_seen (torch.Tensor): size (nb_of_tests, size_of_testset_seen, nb_of_classes): the output of the
+                                         softmax of the seen test set
+        all_outputs_unseen (torch.Tensor): size (nb_of_tests, size_of_testset_unseen): the output of the softmax of the
+                                           unseen dataset
+        show_fig:
+        save_fig:
+        save_path:
+        **kwargs:
+
+
+
+        scale (str): scale of the plot. Strongly advice 'linear'.
+        show_fig (bool): whether we show the figure
+        save_fig (bool): whether we save the figure
+        save_path (str): where to save the figures
+    Returns:
+
+    """
+    fig = plt.figure(figsize=figsize)
+    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen correct false\n{arguments}', wrap=True)
+    preds_train = get_predictions_from_multiple_tests(all_outputs_train).float()
+    correct_preds_train = (true_labels_train == preds_train)
+    all_outputs_train_correct = all_outputs_train[:, correct_preds_train == 1, :]
+    all_outputs_train_false = all_outputs_train[:, correct_preds_train == 0, :]
+
+    preds_seen = get_predictions_from_multiple_tests(all_outputs_seen).float()
+    correct_preds_seen = (true_labels_seen == preds_seen)
+    all_outputs_seen_correct = all_outputs_seen[:, correct_preds_seen == 1, :]
+    all_outputs_seen_false = all_outputs_seen[:, correct_preds_seen == 0, :]
+
+    if 'rho' in arguments.keys():
+
+        vr_train_correct, pe_train_correct, mi_train_correct = get_all_uncertainty_measures(all_outputs_train_correct)
+        vr_train_false, pe_train_false, mi_train_false = get_all_uncertainty_measures(all_outputs_train_false)
+        vr_seen_correct, pe_seen_correct, mi_seen_correct = get_all_uncertainty_measures(all_outputs_seen_correct)
+        vr_seen_false, pe_seen_false, mi_seen_false = get_all_uncertainty_measures(all_outputs_seen_false)
+
+
+        uncs = {
+            'VR': (vr_train_correct, vr_train_false, vr_seen_correct, vr_seen_false,),
+            'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false,),
+            'MI': (mi_train_correct, mi_train_false, mi_seen_correct, mi_seen_false,),
+        }
+        label = ('train correct', 'train false', 'seen correct', 'seen false',)
+
+        axs = {
+            'VR': fig.add_subplot(311),
+            'PE': fig.add_subplot(312),
+            'MI': fig.add_subplot(313),
+        }
+
+        plt.legend()
+
+    else:
+        us_train_correct, pe_train_correct = get_all_uncertainty_measures_not_bayesian(all_outputs_train_correct)
+        us_train_false, pe_train_false = get_all_uncertainty_measures_not_bayesian(all_outputs_train_false)
+        us_seen_correct, pe_seen_correct = get_all_uncertainty_measures_not_bayesian(all_outputs_seen_correct)
+        us_seen_false, pe_seen_false = get_all_uncertainty_measures_not_bayesian(all_outputs_seen_false)
+
+
+        uncs = {
+            'US': (us_train_correct, us_train_false, us_seen_correct, us_seen_false),
+            'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false),
+        }
+        label = ('train correct', 'train false', 'seen correct', 'seen false',)
+
+        axs = {
+            'US': fig.add_subplot(211),
+            'PE': fig.add_subplot(212),
+        }
+
+    for unc, ax in axs.items():
+        ax.set_title(unc)
+        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        ax.legend()
+
+    if save_fig:
+        assert save_path is not None
+        print('Saving figure...')
+        plt.savefig(save_path)
+        print('Figure saved.')
+    if show_fig:
+        print('Showing figures...')
+        plt.show()
+        print('Figure shown.')
+
+def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train, true_labels_train, all_outputs_seen,
+                                             true_labels_seen, all_outputs_unseen, show_fig,
+                                             save_fig, save_path=None, figsize=(8, 10), **kwargs):
+    """
+    Compute and show the density distribution of uncertainties.
+    Args:
+        arguments (dict): the arguments of the python executed line in the terminal
+        all_outputs_seen (torch.Tensor): size (nb_of_tests, size_of_testset_seen, nb_of_classes): the output of the
+                                         softmax of the seen test set
+        all_outputs_unseen (torch.Tensor): size (nb_of_tests, size_of_testset_unseen): the output of the softmax of the
+                                           unseen dataset
+        show_fig:
+        save_fig:
+        save_path:
+        **kwargs:
+
+
+
+        scale (str): scale of the plot. Strongly advice 'linear'.
+        show_fig (bool): whether we show the figure
+        save_fig (bool): whether we save the figure
+        save_path (str): where to save the figures
+    Returns:
+
+    """
+    fig = plt.figure(figsize=figsize)
+    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen correct false\n{arguments}', wrap=True)
+    preds_train = get_predictions_from_multiple_tests(all_outputs_train).float()
+    correct_preds_train = (true_labels_train == preds_train)
+    all_outputs_train_correct = all_outputs_train[:, correct_preds_train == 1, :]
+    all_outputs_train_false = all_outputs_train[:, correct_preds_train == 0, :]
+
+    preds_seen = get_predictions_from_multiple_tests(all_outputs_seen).float()
+    correct_preds_seen = (true_labels_seen == preds_seen)
+    all_outputs_seen_correct = all_outputs_seen[:, correct_preds_seen == 1, :]
+    all_outputs_seen_false = all_outputs_seen[:, correct_preds_seen == 0, :]
+
+    if 'rho' in arguments.keys():
+
+        vr_train_correct, pe_train_correct, mi_train_correct = get_all_uncertainty_measures(all_outputs_train_correct)
+        vr_train_false, pe_train_false, mi_train_false = get_all_uncertainty_measures(all_outputs_train_false)
+        vr_seen_correct, pe_seen_correct, mi_seen_correct = get_all_uncertainty_measures(all_outputs_seen_correct)
+        vr_seen_false, pe_seen_false, mi_seen_false = get_all_uncertainty_measures(all_outputs_seen_false)
+        vr_unseen, pe_unseen, mi_unseen = get_all_uncertainty_measures(all_outputs_unseen)
+
+
+        uncs = {
+            'VR': (vr_train_correct, vr_train_false, vr_seen_correct, vr_seen_false, vr_unseen),
+            'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false, pe_unseen),
+            'MI': (mi_train_correct, mi_train_false, mi_seen_correct, mi_seen_false, mi_unseen),
+        }
+        label = ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',)
+
+        axs = {
+            'VR': fig.add_subplot(311),
+            'PE': fig.add_subplot(312),
+            'MI': fig.add_subplot(313),
+        }
+
+        plt.legend()
+
+    else:
+        us_train_correct, pe_train_correct = get_all_uncertainty_measures_not_bayesian(all_outputs_train_correct)
+        us_train_false, pe_train_false = get_all_uncertainty_measures_not_bayesian(all_outputs_train_false)
+        us_seen_correct, pe_seen_correct = get_all_uncertainty_measures_not_bayesian(all_outputs_seen_correct)
+        us_seen_false, pe_seen_false = get_all_uncertainty_measures_not_bayesian(all_outputs_seen_false)
+        us_unseen, pe_unseen = get_all_uncertainty_measures_not_bayesian(all_outputs_unseen)
+
+
+        uncs = {
+            'US': (us_train_correct, us_train_false, us_seen_correct, us_seen_false, us_unseen),
+            'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false, pe_unseen),
+        }
+        label = ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',)
+
+        axs = {
+            'US': fig.add_subplot(211),
+            'PE': fig.add_subplot(212),
+        }
+
+    for unc, ax in axs.items():
+        ax.set_title(unc)
+        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        ax.legend()
+
+    if save_fig:
+        assert save_path is not None
+        print('Saving figure...')
+        plt.savefig(save_path)
+        print('Figure saved.')
+    if show_fig:
+        print('Showing figures...')
+        plt.show()
+        print('Figure shown.')
+
+
+def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbose=True, ):
     """
     Gives the outputs of the model on the seen testset
     Args:
@@ -422,7 +731,7 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
     return all_eval_outputs, true_labels_seen
 
 
-def get_unseen_outputs(bay_net_trained, arguments, nb_of_random=None, device='cpu', verbose=True,):
+def get_unseen_outputs(bay_net_trained, arguments, nb_of_random=None, device='cpu', verbose=True, ):
     """
     Gives the outputs of the model on the unseen testset
     Args:
@@ -542,6 +851,7 @@ def get_res_args_groupnb(exp_nb, exp_path='polyaxon_results/groups'):
 
     return results, arguments, group_nb
 
+
 # TODO: refactor all these get_args to factorize them
 def get_args(exp_nb, exp_path='polyaxon_results/groups'):
     """
@@ -571,6 +881,7 @@ def get_args(exp_nb, exp_path='polyaxon_results/groups'):
 
     return arguments
 
+
 def get_train_outputs(bay_net_trained, arguments, device='cpu', verbose=True):
     """
     Gives the outputs of the model on the trainset
@@ -587,11 +898,16 @@ def get_train_outputs(bay_net_trained, arguments, device='cpu', verbose=True):
     type_of_unseen = arguments['type_of_unseen']
     if type_of_unseen == 'unseen_classes':
         trainloader, _, _ = get_mnist(train_labels=range(arguments['split_labels']), eval_labels=(), split_val=0,
-                                      batch_size=128)
+                                      batch_size=128, shuffle=False)
     else:
-        trainloader, _, _ = get_mnist(eval_labels=(), split_val=0, batch_size=128)
+        trainloader, _, _ = get_mnist(eval_labels=(), split_val=0, batch_size=128, shuffle=False)
+
+    shuffle_train = torch.randperm(len(trainloader.dataset))
+    trainloader.dataset.data = trainloader.dataset.data[shuffle_train]
+    trainloader.dataset.targets = trainloader.dataset.targets[shuffle_train]
+    true_labels_train = trainloader.dataset.targets.float()
     print('Evaluation on train ...')
     _, all_outputs_train = eval_bayesian(bay_net_trained, trainloader, arguments.get('number_of_tests', 1),
                                          device=device, verbose=verbose)
     print('Finished evaluation on train.')
-    return all_outputs_train
+    return all_outputs_train, true_labels_train
