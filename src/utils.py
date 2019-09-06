@@ -103,18 +103,22 @@ def get_interesting_result(result):
 
         return interesting_result
 
-    interesting_result = result.copy()
-    interesting_result['val accuracy'] = interesting_result['val accuracy'].apply(
-        lambda x: torch.tensor(x).max().item()
-    )
-    interesting_result = interesting_result.rename(columns={'val accuracy': 'val accuracy max'})
-    uncertainty_keys = [key for key in result.keys() if 'uncertainty' in key]
-    for key in uncertainty_keys:
-        if type(result[key].iloc[0]) == str:
-            print(result[key], key)
-        interesting_result[key + "-mean"] = result[key].apply(lambda x: x.mean().item())
-        interesting_result[key + "-std"] = result[key].apply(lambda x: x.std().item())
-        interesting_result = interesting_result.drop(key, 1)
+    try:
+        interesting_result = result.copy()
+        interesting_result['val accuracy'] = interesting_result['val accuracy'].apply(
+            lambda x: torch.tensor(x).max().item()
+        )
+        interesting_result = interesting_result.rename(columns={'val accuracy': 'val accuracy max'})
+        uncertainty_keys = [key for key in result.keys() if 'uncertainty' in key]
+        for key in uncertainty_keys:
+            if type(result[key].iloc[0]) == str:
+                print(result[key], key)
+            interesting_result[key + "-mean"] = result[key].apply(lambda x: x.mean().item())
+            interesting_result[key + "-std"] = result[key].apply(lambda x: x.std().item())
+            interesting_result = interesting_result.drop(key, 1)
+    except KeyError as e:
+        print(result['experiment'])
+        raise(e)
 
     return interesting_result
 
@@ -253,7 +257,8 @@ def convert_tensor_to_float(df):
     for key in list(df.columns):
         if type(df[key].iloc[0]) == torch.Tensor:
             try:
-                df[key] = df[key].astype(float)
+                # df[key] = df[key].astype(float)
+                df[key] = df[key].apply(lambda x: x.detach().numpy() if type(x) == torch.Tensor else x)
             except Exception as e:
                 print(key, df[key])
                 raise e

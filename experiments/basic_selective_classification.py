@@ -33,7 +33,7 @@ parser.add_argument('--risk', help='maximum accepted error for selective classif
 parser.add_argument('--delta', help='probability upper bound of error higher that risk', type=float)
 
 args = parser.parse_args()
-# save_to_file(vars(args), './output/arguments.pkl')
+save_to_file(vars(args), './output/arguments.pkl')
 
 rho = args.rho
 epoch = args.epoch

@@ -38,7 +38,8 @@ which_values = set(which_values)-set(which_parameters)
 
 filename = polyaxon_type + exp_nb + extra_info
 all_results = pd.read_pickle(results_dir_path / (filename + '.pkl'))
-which_parameters = list(set(which_parameters).intersection(set(all_results.keys())))
+to_keep = set(which_parameters).intersection(set(all_results.keys()))
+which_parameters = [p for p in which_parameters if p in to_keep]
 all_results_sorted = all_results.sort_values(which_parameters)
 which_values = which_values.intersection(set(all_results.keys()))
 operations = {

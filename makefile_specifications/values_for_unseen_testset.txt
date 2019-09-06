@@ -1,16 +1,13 @@
-loss_typeÒ
+loss_type
 train accuracy
 val accuracy max
 eval accuracy
-seen uncertainty vr-mean
-seen uncertainty vr-std
-unseen uncertainty vr-mean
-unseen uncertainty vr-std
-seen uncertainty predictive entropy-mean
-seen uncertainty predictive entropy-std
-unseen uncertainty predictive entropy-mean
-unseen uncertainty predictive entropy-std
-seen uncertainty mi-mean
-seen uncertainty mi-std
-unseen uncertainty mi-mean
-unseen uncertainty mi-std
+eval accuracy vr
+eval accuracy pe
+eval accuracy mi
+eval coverage vr
+eval coverage pe
+eval coverage mi
+threshold vr
+threshold pe
+threshold mi

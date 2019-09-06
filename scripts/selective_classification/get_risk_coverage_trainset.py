@@ -1,3 +1,7 @@
+"""
+This file computes the bounds for a given risk and delta, for the given experiments. The accuracy / coverage are
+computed on the trainset.
+"""
 import os
 import pathlib
 import time
