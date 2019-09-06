@@ -1,6 +1,9 @@
 """
 This file computes the bounds for a given risk and delta, for the given experiments. The accuracy / coverage are
 computed on the trainset.
+To use it:
+- change the 'to change' parameters
+- run the code in the console
 """
 import os
 import pathlib
@@ -20,7 +23,7 @@ from src.uncertainty_measures import compute_predictive_entropy, get_predictions
     get_all_uncertainty_measures
 from src.utils import convert_tensor_to_float, plot_density_on_ax
 
-###### TO CHANGE #########
+###### TO CHANGE ######################################################
 
 exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3842', '3851', '3861', '3864']
 # exp_nbs = ['3713']
@@ -42,7 +45,7 @@ save_csv_path = 'results/risk_coverage/'
 save_fig_path = 'results/risk_coverage/'
 GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
 CPUPATH = 'polyaxon_results/groups'
-##########################
+#######################################################################
 
 
 if torch.cuda.is_available():

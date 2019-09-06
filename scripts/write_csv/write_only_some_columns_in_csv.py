@@ -49,7 +49,8 @@ operations.update({
     "experiment": lambda x: list(x)
 })
 which_values.add('experiment')
-specific_results = all_results_sorted.groupby(which_parameters).agg(operations)
+specific_results = all_results_sorted.groupby(which_parameters,).agg(operations)
 specific_results = specific_results[which_values]
+specific_results.reset_index(inplace=True)
 specific_results.to_pickle(results_dir_path / (filename + '_specific_results.pkl'))
 specific_results.to_csv(results_dir_path / (filename + '_specific_results.csv'))

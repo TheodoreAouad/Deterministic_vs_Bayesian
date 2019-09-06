@@ -1,3 +1,10 @@
+"""
+This file converts the data that was saved with a GPU data-structure to a CPU data-structure.
+It must be opened with a cuda gpu available. It will convert all the data to CPU data-structures.
+To use it:
+-change the 'groups' parameter to decide which experiment data you want to convert
+-run the code in the console
+"""
 import os
 from os.path import join
 
