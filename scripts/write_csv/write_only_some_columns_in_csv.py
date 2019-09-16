@@ -29,12 +29,13 @@ extra_info = args.extra_info
 
 if type(which_parameters) == str:
     with open(which_parameters, 'r') as f:
-        which_parameters = f.read().splitlines()
+        which_parameters_raw = f.read().splitlines()
+        which_parameters = which_parameters_raw.copy()
 
 if type(which_values) == str:
     with open(which_values, 'r') as f:
-        which_values = f.read().splitlines()
-which_values = set(which_values)-set(which_parameters)
+        which_values_raw = f.read().splitlines()
+which_values = set(which_values_raw)-set(which_parameters_raw)
 
 filename = polyaxon_type + exp_nb + extra_info
 all_results = pd.read_pickle(results_dir_path / (filename + '.pkl'))
@@ -52,5 +53,6 @@ which_values.add('experiment')
 specific_results = all_results_sorted.groupby(which_parameters,).agg(operations)
 specific_results = specific_results[which_values]
 specific_results.reset_index(inplace=True)
+specific_results = specific_results.reindex(which_parameters_raw + which_values_raw, axis=1)
 specific_results.to_pickle(results_dir_path / (filename + '_specific_results.pkl'))
 specific_results.to_csv(results_dir_path / (filename + '_specific_results.csv'))

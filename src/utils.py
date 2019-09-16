@@ -105,10 +105,11 @@ def get_interesting_result(result):
 
     try:
         interesting_result = result.copy()
-        interesting_result['val accuracy'] = interesting_result['val accuracy'].apply(
-            lambda x: torch.tensor(x).max().item()
-        )
-        interesting_result = interesting_result.rename(columns={'val accuracy': 'val accuracy max'})
+        if 'val accuracy' in result.keys():
+            interesting_result['val accuracy'] = interesting_result['val accuracy'].apply(
+                lambda x: torch.tensor(x).max().item()
+            )
+            interesting_result = interesting_result.rename(columns={'val accuracy': 'val accuracy max'})
         uncertainty_keys = [key for key in result.keys() if 'uncertainty' in key]
         for key in uncertainty_keys:
             if type(result[key].iloc[0]) == str:
@@ -358,7 +359,7 @@ def get_exact_batch_size(size_of_batch, total_nb_sample):
     return min(divisors, key=lambda x: abs(x - size_of_batch))
 
 
-def plot_density_on_ax(ax, uncs, labels, **kwargs):
+def plot_density_on_ax(ax, uncs, labels, hist=False, **kwargs):
     """
     Plots density uncertainty on the given ax using kde smoothing.
     Args:
@@ -369,7 +370,8 @@ def plot_density_on_ax(ax, uncs, labels, **kwargs):
 
     """
     for unc, label in zip(uncs, labels):
-        sns.distplot(unc, hist=False, kde_kws={"shade": True}, label=label, ax=ax, **kwargs)
+        sns.distplot(unc, hist=hist, kde_kws={"shade": True}, label=label, ax=ax, **kwargs)
+        ax.set_xlim(left=0)
 
 
 def get_fig_size(ax):

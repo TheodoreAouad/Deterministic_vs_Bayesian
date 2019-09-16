@@ -20,7 +20,6 @@ results = load_from_file(f'results/raw_results/group{group_nb}_specific_results.
 loss_types = set(results['loss_type'].values)
 uncs = ['vr', 'pe', 'mi']
 
-
 for unc in uncs:
     fig = plt.figure(figsize=figsize)
     fig.suptitle(unc)
@@ -28,7 +27,8 @@ for unc in uncs:
     ax2 = fig.add_subplot(312)
     ax3 = fig.add_subplot(313)
 
-    results_of_unc = results.filter(items=['loss_type', f'eval accuracy {unc}', f'eval coverage {unc}', 'risk'])
+    results_of_unc = results.filter(items=['loss_type', f'eval accuracy {unc}', f'eval coverage {unc}',
+                                           'risk', f'threshold {unc}'])
     for loss_type in loss_types:
         results_of_loss = results[results['loss_type'] == loss_type]
         xs1 = results_of_loss[f'eval coverage {unc}'].values
@@ -38,7 +38,7 @@ for unc in uncs:
         ys2 = results_of_loss['risk'].values
 
         xs3 = results_of_loss['risk'].values
-        ys3 = results_of_loss[f'eval accuracy {unc}'].values
+        ys3 = -results_of_loss[f'threshold {unc}'].values
 
         ax1.scatter(xs1, ys1, label=loss_type)
         ax1.set_xlabel('coverage')
@@ -50,7 +50,7 @@ for unc in uncs:
 
         ax3.plot(xs3[xs3.argsort()], ys3[xs3.argsort()], linestyle='dashed', marker='o', label=loss_type)
         ax3.set_xlabel('risk')
-        ax3.set_ylabel('accuracy')
+        ax3.set_ylabel('theta')
 
     ax1.legend()
     ax2.legend()

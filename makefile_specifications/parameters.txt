@@ -1,6 +1,7 @@
+type_of_unseen
 loss_type
 batch_size
 stds_prior
 rho
 number of tests
-risk
+

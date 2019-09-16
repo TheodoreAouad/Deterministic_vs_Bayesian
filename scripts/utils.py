@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from torchvision import transforms as transforms
 from tqdm import tqdm
 
-from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10
+from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10, get_random
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.evals import eval_bayesian, eval_random
 
@@ -15,7 +15,7 @@ from src.uncertainty_measures import get_predictions_from_multiple_tests, get_al
 from src.utils import get_exact_batch_size, get_file_and_dir_path_in_dir, load_from_file, plot_density_on_ax
 
 
-# TODO: refactor this function into modular functions
+# TODO: refa hist=True,ctor this function into modular functions
 def compute_figures(
         arguments,
         all_outputs_seen,
@@ -272,6 +272,7 @@ def reshape_for_not_shuffled(tensors_to_shuffle, total_nb_of_data, real_size_of_
     return tensors_reshaped
 
 
+# TODO: factorize the density computations
 def compute_density_train_seen_unseen(arguments, all_outputs_train, all_outputs_seen, all_outputs_unseen, show_fig,
                                       save_fig, save_path=None, figsize=(8, 10), **kwargs):
     """
@@ -297,7 +298,8 @@ def compute_density_train_seen_unseen(arguments, all_outputs_train, all_outputs_
 
     """
     fig = plt.figure(figsize=figsize)
-    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen unseen \n{arguments}', wrap=True)
+    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen unseen \n{arguments}',
+                 wrap=True)
     if 'rho' in arguments.keys():
 
         vr_train, pe_train, mi_train = get_all_uncertainty_measures(all_outputs_train)
@@ -337,7 +339,7 @@ def compute_density_train_seen_unseen(arguments, all_outputs_train, all_outputs_
 
     for unc, ax in axs.items():
         ax.set_title(unc)
-        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
     if save_fig:
@@ -414,7 +416,7 @@ def compute_density_train_seen(arguments, all_outputs_train, all_outputs_seen, s
 
     for unc, ax in axs.items():
         ax.set_title(unc)
-        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
     if save_fig:
@@ -453,7 +455,8 @@ def compute_density_correct_false(arguments, all_outputs, true_labels, show_fig,
 
     """
     fig = plt.figure(figsize=figsize)
-    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - correct false \n{arguments}', wrap=True)
+    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - correct false \n{arguments}',
+                 wrap=True)
     preds = get_predictions_from_multiple_tests(all_outputs).float()
     correct_preds = (true_labels == preds)
     all_outputs_correct = all_outputs[:, correct_preds == 1, :]
@@ -495,7 +498,7 @@ def compute_density_correct_false(arguments, all_outputs, true_labels, show_fig,
 
     for unc, ax in axs.items():
         ax.set_title(unc)
-        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
     if save_fig:
@@ -535,7 +538,9 @@ def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_
 
     """
     fig = plt.figure(figsize=figsize)
-    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen correct false\n{arguments}', wrap=True)
+    plt.suptitle(
+        f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen correct false\n{arguments}',
+        wrap=True)
     preds_train = get_predictions_from_multiple_tests(all_outputs_train).float()
     correct_preds_train = (true_labels_train == preds_train)
     all_outputs_train_correct = all_outputs_train[:, correct_preds_train == 1, :]
@@ -553,19 +558,40 @@ def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_
         vr_seen_correct, pe_seen_correct, mi_seen_correct = get_all_uncertainty_measures(all_outputs_seen_correct)
         vr_seen_false, pe_seen_false, mi_seen_false = get_all_uncertainty_measures(all_outputs_seen_false)
 
+        if arguments['loss_type'] == 'bbb' or arguments['loss_type'] == 'uniform':
+            axs = {
+                'VR - correct': fig.add_subplot(321),
+                'VR - false': fig.add_subplot(322),
+                'PE - correct': fig.add_subplot(323),
+                'PE - false': fig.add_subplot(324),
+                'MI - correct': fig.add_subplot(325),
+                'MI - false': fig.add_subplot(326),
+            }
 
-        uncs = {
-            'VR': (vr_train_correct, vr_train_false, vr_seen_correct, vr_seen_false,),
-            'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false,),
-            'MI': (mi_train_correct, mi_train_false, mi_seen_correct, mi_seen_false,),
-        }
-        label = ('train correct', 'train false', 'seen correct', 'seen false',)
+            uncs = {
+                'VR - correct': (vr_train_correct, vr_seen_correct),
+                'PE - correct': (pe_train_correct, pe_seen_correct),
+                'MI - correct': (mi_train_correct, mi_seen_correct),
+                'VR - false': (vr_train_false, vr_seen_false,),
+                'PE - false': (pe_train_false, pe_seen_false),
+                'MI - false': (mi_train_false, mi_seen_false,),
+            }
 
-        axs = {
-            'VR': fig.add_subplot(311),
-            'PE': fig.add_subplot(312),
-            'MI': fig.add_subplot(313),
-        }
+            label = ('train', 'seen')
+
+        else:
+            uncs = {
+                'VR': (vr_train_correct, vr_train_false, vr_seen_correct, vr_seen_false,),
+                'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false,),
+                'MI': (mi_train_correct, mi_train_false, mi_seen_correct, mi_seen_false,),
+            }
+            label = ('train correct', 'train false', 'seen correct', 'seen false',)
+
+            axs = {
+                'VR': fig.add_subplot(311),
+                'PE': fig.add_subplot(312),
+                'MI': fig.add_subplot(313),
+            }
 
         plt.legend()
 
@@ -574,7 +600,6 @@ def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_
         us_train_false, pe_train_false = get_all_uncertainty_measures_not_bayesian(all_outputs_train_false)
         us_seen_correct, pe_seen_correct = get_all_uncertainty_measures_not_bayesian(all_outputs_seen_correct)
         us_seen_false, pe_seen_false = get_all_uncertainty_measures_not_bayesian(all_outputs_seen_false)
-
 
         uncs = {
             'US': (us_train_correct, us_train_false, us_seen_correct, us_seen_false),
@@ -589,7 +614,7 @@ def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_
 
     for unc, ax in axs.items():
         ax.set_title(unc)
-        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
     if save_fig:
@@ -602,9 +627,10 @@ def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_
         plt.show()
         print('Figure shown.')
 
+
 def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train, true_labels_train, all_outputs_seen,
-                                             true_labels_seen, all_outputs_unseen, show_fig,
-                                             save_fig, save_path=None, figsize=(8, 10), **kwargs):
+                                                    true_labels_seen, all_outputs_unseen, show_fig,
+                                                    save_fig, save_path=None, figsize=(8, 10), **kwargs):
     """
     Compute and show the density distribution of uncertainties.
     Args:
@@ -628,7 +654,9 @@ def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train
 
     """
     fig = plt.figure(figsize=figsize)
-    plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen correct false\n{arguments}', wrap=True)
+    plt.suptitle(
+        f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen correct false\n{arguments}',
+        wrap=True)
     preds_train = get_predictions_from_multiple_tests(all_outputs_train).float()
     correct_preds_train = (true_labels_train == preds_train)
     all_outputs_train_correct = all_outputs_train[:, correct_preds_train == 1, :]
@@ -646,7 +674,6 @@ def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train
         vr_seen_correct, pe_seen_correct, mi_seen_correct = get_all_uncertainty_measures(all_outputs_seen_correct)
         vr_seen_false, pe_seen_false, mi_seen_false = get_all_uncertainty_measures(all_outputs_seen_false)
         vr_unseen, pe_unseen, mi_unseen = get_all_uncertainty_measures(all_outputs_unseen)
-
 
         uncs = {
             'VR': (vr_train_correct, vr_train_false, vr_seen_correct, vr_seen_false, vr_unseen),
@@ -670,7 +697,6 @@ def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train
         us_seen_false, pe_seen_false = get_all_uncertainty_measures_not_bayesian(all_outputs_seen_false)
         us_unseen, pe_unseen = get_all_uncertainty_measures_not_bayesian(all_outputs_unseen)
 
-
         uncs = {
             'US': (us_train_correct, us_train_false, us_seen_correct, us_seen_false, us_unseen),
             'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false, pe_unseen),
@@ -684,7 +710,7 @@ def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train
 
     for unc, ax in axs.items():
         ax.set_title(unc)
-        plot_density_on_ax(ax, uncs[unc], label, **kwargs)
+        plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
     if save_fig:
@@ -712,15 +738,24 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
         torch.Tensor, torch.Tensor: size (nb of tests, size of testset, nb of classes), size (nb of tests)
     """
     type_of_unseen = arguments['type_of_unseen']
+    if arguments['trainset'] == 'mnist':
+        get_trainset = get_mnist
+    elif arguments['trainset'] == 'cifar10':
+        get_trainset = get_cifar10
+    else:
+        assert False, 'trainset not recognized'
     if type_of_unseen == 'unseen_classes':
-        _, _, evalloader_seen = get_mnist(train_labels=(), eval_labels=range(arguments['split_labels']), batch_size=128,
+        _, _, evalloader_seen = get_trainset(train_labels=(), eval_labels=range(arguments['split_labels']), batch_size=128,
                                           split_val=0, shuffle=False)
     else:
-        _, _, evalloader_seen = get_mnist(train_labels=(), split_val=0, batch_size=128, shuffle=False)
+        _, _, evalloader_seen = get_trainset(train_labels=(), split_val=0, batch_size=128, shuffle=False)
     shuffle_eval = torch.randperm(len(evalloader_seen.dataset))
     evalloader_seen.dataset.data = evalloader_seen.dataset.data[shuffle_eval]
     evalloader_seen.dataset.targets = evalloader_seen.dataset.targets[shuffle_eval]
-    true_labels_seen = evalloader_seen.dataset.targets.float()
+    if type(evalloader_seen.dataset.targets) == torch.Tensor:
+        true_labels_seen = evalloader_seen.dataset.targets.float()
+    else:
+        true_labels_seen = evalloader_seen.dataset.targets.astype(float)
     if verbose:
         print('Evaluation on seen ...')
     _, all_eval_outputs = eval_bayesian(bay_net_trained, evalloader_seen,
@@ -729,6 +764,37 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
     if verbose:
         print('Finished evaluation on seen.')
     return all_eval_outputs, true_labels_seen
+
+# TODO: put this function in primary_results_bayesian.py
+def get_evalloader_unseen(arguments):
+    type_of_unseen = arguments['type_of_unseen']
+    if arguments['trainset'] == 'mnist':
+        get_trainset = get_mnist
+        dim_input = 28
+        dim_channels = 1
+    elif arguments['trainset'] == 'cifar10':
+        get_trainset = get_cifar10
+        dim_input = 32
+        dim_channels = 3
+    if type_of_unseen == 'random':
+        _, _, evalloader_unseen = get_random(number_of_channels=dim_channels, img_dim=dim_input, number_of_classes=10)
+    if type_of_unseen == 'unseen_classes':
+        split_labels = arguments['split_labels']
+        _, _, evalloader_unseen = get_trainset(train_labels=(), eval_labels=range(split_labels, 10, ), )
+    if type_of_unseen == 'unseen_dataset':
+        unseen_evalset = arguments['unseen_evalset']
+        transform = transforms.Compose([
+            transforms.Grayscale(num_output_channels=dim_channels),
+            transforms.Resize(dim_input),
+            transforms.ToTensor(),
+        ])
+        if unseen_evalset == 'cifar10':
+            _, _, evalloader_unseen = get_cifar10(transform=transform)
+        if unseen_evalset == 'mnist':
+            _, _, evalloader_unseen = get_mnist(transform=transform)
+        if unseen_evalset == 'omniglot':
+            _, _, evalloader_unseen = get_omniglot(transform=transform, download=False)
+    return evalloader_unseen
 
 
 def get_unseen_outputs(bay_net_trained, arguments, nb_of_random=None, device='cpu', verbose=True, ):
@@ -745,43 +811,14 @@ def get_unseen_outputs(bay_net_trained, arguments, nb_of_random=None, device='cp
     Returns:
         torch.Tensor: size (nb of tests, size of testset, nb of classes)
     """
-    global evalloader_unseen
-    type_of_unseen = arguments['type_of_unseen']
-    if type_of_unseen == 'random':
-        assert nb_of_random is not None, 'Give a number of random samples'
-        if verbose:
-            print('Evaluation on random ...')
-        output_random, _ = eval_random(bay_net_trained, batch_size=nb_of_random, img_channels=1, img_dim=28,
-                                       number_of_tests=arguments.get('number_of_tests', 1), verbose=True, device=device)
-        if verbose:
-            print('Finished evaluation on random.')
-        return output_random
-    if type_of_unseen == 'unseen_classes':
-        _, _, evalloader_unseen = get_mnist(train_labels=(), eval_labels=range(arguments['split_labels'], 10),
-                                            batch_size=128, split_val=0)
-    elif type_of_unseen == 'unseen_dataset':
-        dataset = arguments['dataset']
-        transform = transforms.Compose([
-            transforms.Resize(28),
-            transforms.ToTensor()
-        ])
-        if dataset == "omniglot":
-            evalloader_unseen = get_omniglot(transform=transform, batch_size=128, download=False)
-        elif dataset == "cifar10":
-            transform = transforms.Compose([
-                transforms.Grayscale(),
-                transform
-            ])
-            _, evalloader_unseen = get_cifar10(transform=transform, batch_size=128)
-    else:
-        raise TypeError('Unrecognized type_of_unseen. Is either "random", "unseen_classes", "unseen_dataset"')
+    evalloader_unseen = get_evalloader_unseen(arguments)
     if verbose:
-        print('Evaluation on', type_of_unseen, '...')
+        print('Evaluation on',  arguments['type_of_unseen'], '...')
     _, all_unseen_outputs = eval_bayesian(bay_net_trained, evalloader_unseen,
                                           number_of_tests=arguments.get('number_of_tests', 1), device=device,
                                           verbose=verbose, )
     if verbose:
-        print(f'Finished evaluation on {type_of_unseen}.')
+        print(f'Finished evaluation on {arguments["type_of_unseen"]}.')
     return all_unseen_outputs
 
 
@@ -812,12 +849,21 @@ def get_trained_model_and_args_and_groupnb(exp_nb, exp_path='polyaxon_results/gr
     arguments['exp_nb'] = exp_nb
     final_weights = torch.load(dirpath / 'final_weights.pt', map_location='cpu')
     std_prior = arguments.get('std_prior', 0)
-    bay_net_trained = GaussianClassifier(
-        rho=arguments.get('rho', 'determinist'),
-        stds_prior=(std_prior, std_prior),
-        number_of_classes=10,
-        dim_input=28,
-    )
+    if arguments.get('trainset', 'mnist') == 'cifar10':
+        bay_net_trained = GaussianClassifier(
+            rho=arguments.get('rho', 'determinist'),
+            stds_prior=(std_prior, std_prior),
+            number_of_classes=10,
+            dim_input=32,
+            dim_channels=3,
+        )
+    else:
+        bay_net_trained = GaussianClassifier(
+            rho=arguments.get('rho', 'determinist'),
+            stds_prior=(std_prior, std_prior),
+            number_of_classes=10,
+            dim_input=28,
+        )
     bay_net_trained.load_state_dict(final_weights)
 
     return bay_net_trained, arguments, group_nb
@@ -896,16 +942,23 @@ def get_train_outputs(bay_net_trained, arguments, device='cpu', verbose=True):
         torch.Tensor: size (nb of tests, size of trainset, nb of classes)
     """
     type_of_unseen = arguments['type_of_unseen']
+    if arguments['trainset'] == 'mnist':
+        get_trainset = get_mnist
+    elif arguments['trainset'] == 'cifar10':
+        get_trainset = get_cifar10
     if type_of_unseen == 'unseen_classes':
-        trainloader, _, _ = get_mnist(train_labels=range(arguments['split_labels']), eval_labels=(), split_val=0,
+        trainloader, _, _ = get_trainset(train_labels=range(arguments['split_labels']), eval_labels=(), split_val=0,
                                       batch_size=128, shuffle=False)
     else:
-        trainloader, _, _ = get_mnist(eval_labels=(), split_val=0, batch_size=128, shuffle=False)
+        trainloader, _, _ = get_trainset(eval_labels=(), split_val=0, batch_size=128, shuffle=False)
 
     shuffle_train = torch.randperm(len(trainloader.dataset))
     trainloader.dataset.data = trainloader.dataset.data[shuffle_train]
     trainloader.dataset.targets = trainloader.dataset.targets[shuffle_train]
-    true_labels_train = trainloader.dataset.targets.float()
+    if type(trainloader.dataset.targets) == torch.Tensor:
+        true_labels_train = trainloader.dataset.targets.float()
+    else:
+        true_labels_train = trainloader.dataset.targets.astype(float)
     print('Evaluation on train ...')
     _, all_outputs_train = eval_bayesian(bay_net_trained, trainloader, arguments.get('number_of_tests', 1),
                                          device=device, verbose=verbose)

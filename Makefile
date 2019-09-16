@@ -16,6 +16,9 @@ write-specific-results-csv-random-test:
 write-specific-results-csv-unseen-test:
 	python scripts/write_csv/write_only_some_columns_in_csv.py --which_parameters 'makefile_specifications/parameters.txt' --which_values 'makefile_specifications/values_for_unseen_testset.txt' --exp_nb $(GROUP_NB)
 
+write-specific-results-csv:
+	python scripts/write_csv/write_only_some_columns_in_csv.py --which_parameters 'makefile_specifications/parameters.txt' --which_values 'makefile_specifications/values.txt' --exp_nb $(GROUP_NB)
+
 test:
 	python -m pytest src/
 
