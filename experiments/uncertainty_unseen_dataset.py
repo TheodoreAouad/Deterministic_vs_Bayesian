@@ -18,19 +18,19 @@ from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--dataset", help="which dataset to test the model", choices=["cifar10", "omniglot"], type=str,
-                    default="omniglot")
-parser.add_argument("--rho", help="variable symbolizing the variance. std = log(1+exp(rho))",
+parser.add_argument('--dataset', help='which dataset to test the model', choices=['cifar10', 'omniglot'], type=str,
+                    default='omniglot')
+parser.add_argument('--rho', help='variable symbolizing the variance. std = log(1+exp(rho))',
                     type=float, default=-5)
-parser.add_argument("--epoch", help="number of times we train the model on the same data",
+parser.add_argument('--epoch', help='number of times we train the model on the same data',
                     type=int, default=3)
-parser.add_argument("--batch_size", help="number of batches to split the data into",
+parser.add_argument('--batch_size', help='number of batches to split the data into',
                     type=int, default=32)
-parser.add_argument("--number_of_tests", help="number of evaluations to perform for each each image to check for "
-                                              "uncertainty", type=int, default=10)
-parser.add_argument("--loss_type", help="which loss to use", choices=["uniform", 'exp', "criterion"], type=str,
-                    default="uniform")
-parser.add_argument("--std_prior", help="the standard deviation of the prior", type=float, default=1)
+parser.add_argument('--number_of_tests', help='number of evaluations to perform for each each image to check for '
+                                              'uncertainty', type=int, default=10)
+parser.add_argument('--loss_type', help='which loss to use', choices=['uniform', 'exp', 'criterion'], type=str,
+                    default='uniform')
+parser.add_argument('--std_prior', help='the standard deviation of the prior', type=float, default=1)
 parser.add_argument('--split_train',help='the portion of training data we take', type=int)
 
 args = parser.parse_args()
@@ -48,18 +48,18 @@ split_train = args.split_train
 stds_prior = (std_prior, std_prior)
 
 if torch.cuda.is_available():
-    device = "cuda"
+    device = 'cuda'
 else:
-    device = "cpu"
+    device = 'cpu'
 device = torch.device(device)
 
 transform = transforms.Compose([
         transforms.Resize(28),
         transforms.ToTensor()
     ])
-if dataset == "omniglot":
+if dataset == 'omniglot':
     unseen_loader = get_omniglot(transform=transform, batch_size=batch_size, download=False)
-elif dataset == "cifar10":
+elif dataset == 'cifar10':
     transform = transforms.Compose([
         transforms.Grayscale(),
         transform
@@ -101,24 +101,24 @@ train_bayesian_modular(
     verbose=True,
 )
 
-print("Evaluation on MNIST ...")
+print('Evaluation on MNIST ...')
 seen_eval_acc, all_outputs_eval_seen = eval_bayesian(bay_net, evalloader, number_of_tests=number_of_tests,
                                                      device=device)
 seen_eval_vrs, seen_eval_pes, seen_eval_mis = get_all_uncertainty_measures(all_outputs_eval_seen)
-print("Finished evaluation on MNIST.")
+print('Finished evaluation on MNIST.')
 
-print(f"Evavuation on {dataset} ...")
+print(f'Evavuation on {dataset} ...')
 _, all_outputs_eval_unseen = eval_bayesian(bay_net, unseen_loader, number_of_tests=number_of_tests, device=device)
 unseen_eval_vrs, unseen_eval_pes, unseen_eval_mis = get_all_uncertainty_measures(all_outputs_eval_unseen)
-print("Finished evaluation on ", dataset)
+print('Finished evaluation on ', dataset)
 
-print(f"MNIST: {round(100*seen_eval_acc,2)} %, "
-      f"Variation-ratios:{seen_eval_vrs.mean()}, "
-      f"Predictive Entropy:{seen_eval_pes.mean()}, "
-      f"Mutual information:{seen_eval_mis.mean()}")
-print(f"{dataset}: Variation-ratios:{unseen_eval_vrs.mean()}, "
-      f"Predictive Entropy:{unseen_eval_pes.mean()}, ",
-      f"Mutual Information:{unseen_eval_mis.mean()}")
+print(f'MNIST: {round(100*seen_eval_acc,2)} %, '
+      f'Variation-ratios:{seen_eval_vrs.mean()}, '
+      f'Predictive Entropy:{seen_eval_pes.mean()}, '
+      f'Mutual information:{seen_eval_mis.mean()}')
+print(f'{dataset}: Variation-ratios:{unseen_eval_vrs.mean()}, '
+      f'Predictive Entropy:{unseen_eval_pes.mean()}, ',
+      f'Mutual Information:{unseen_eval_mis.mean()}')
 res = pd.DataFrame.from_dict({
     'loss_type': [loss_type],
     'dataset': [dataset],
@@ -141,13 +141,13 @@ res = pd.DataFrame.from_dict({
     'val vr': [observables.logs['val_uncertainty_vr']],
     'val predictive entropy': [observables.logs['val_uncertainty_pe']],
     'val mi': [observables.logs['val_uncertainty_mi']],
-    "eval accuracy": [seen_eval_acc],
-    "seen uncertainty vrs": [seen_eval_vrs],
-    "seen uncertainty pes": [seen_eval_pes],
-    "seen uncertainty mis": [seen_eval_mis],
-    "unseen uncertainty vrs": [unseen_eval_vrs],
-    "unseen uncertainty pes": [unseen_eval_pes],
-    "unseen uncertainty mis": [unseen_eval_mis],
+    'eval accuracy': [seen_eval_acc],
+    'seen uncertainty vrs': [seen_eval_vrs],
+    'seen uncertainty pes': [seen_eval_pes],
+    'seen uncertainty mis': [seen_eval_mis],
+    'unseen uncertainty vrs': [unseen_eval_vrs],
+    'unseen uncertainty pes': [unseen_eval_pes],
+    'unseen uncertainty mis': [unseen_eval_mis],
 })
 
 convert_df_to_cpu(res)
@@ -156,6 +156,6 @@ save_to_file(loss, './output/loss.pkl')
 save_to_file(observables, './output/TrainingLogs.pkl')
 torch.save(all_outputs_eval_unseen, './output/softmax_outputs_eval_unseen.pt')
 torch.save(all_outputs_eval_seen, './output/softmax_outputs_eval_seen.pt')
-# torch.save(res, "./output/results.pt")
+# torch.save(res, './output/results.pt')
 res.to_pickle('./output/results.pkl')
-torch.save(bay_net.state_dict(), "./output/final_weights.pt")
+torch.save(bay_net.state_dict(), './output/final_weights.pt')

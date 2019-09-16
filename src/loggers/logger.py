@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.utils import print_nicely_on_console
 
-
+# TODO: handle tensorboards when some elements of logs are none (e.g. when we have no validation set)
 class Logger:
     """
     This is a parent class to objects used to track information during training.

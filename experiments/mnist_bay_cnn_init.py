@@ -17,6 +17,7 @@ from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--trainset', help='dataset on which we train', choices=['mnist','cifar10'], type=str)
 parser.add_argument('--rho', help='variable symbolizing the variance. std = log(1+exp(rho))',
                     type=float, default=-5)
 parser.add_argument('--epoch', help='number of times we train the model on the same data',
@@ -50,6 +51,21 @@ device = torch.device(device)
 
 trainloader, valloader, evalloader = get_mnist(train_labels=range(10), eval_labels=range(10), split_train=split_train,
                                                batch_size=batch_size)
+
+if trainset == 'mnist':
+    trainloader, valloader, evalloader = get_mnist(train_labels=range(10), eval_labels=range(10),
+                                                   batch_size=batch_size)
+    dim_input = 28
+    dim_channels = 1
+if trainset == 'cifar10':
+    trainloader, evalloader = get_cifar10(batch_size=batch_size)
+    dim_input = 32
+    dim_channels = 3
+
+seed_model = set_and_print_random_seed()
+bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=dim_input, number_of_classes=10, dim_channels=dim_channels)
+bay_net.to(device)
+criterion = CrossEntropyLoss()
 
 seed_model = set_and_print_random_seed()
 bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)

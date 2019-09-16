@@ -17,9 +17,10 @@ from src.tasks.trains import train_bayesian_modular, uniform
 from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_all_uncertainty_measures, get_predictions_from_multiple_tests
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
-from src.dataset_manager.get_data import get_mnist
+from src.dataset_manager.get_data import get_mnist, get_cifar10
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--trainset', help='dataset on which we train', choices=['mnist','cifar10'], type=str)
 parser.add_argument('--rho', help='variable symbolizing the variance. std = log(1+exp(rho))',
                     type=float, default=-6)
 parser.add_argument('--epoch', help='number of times we train the model on the same data',
@@ -36,6 +37,7 @@ parser.add_argument('--delta', help='probability upper bound of error higher tha
 args = parser.parse_args()
 save_to_file(vars(args), './output/arguments.pkl')
 
+trainset = args.trainset
 rho = args.rho
 epoch = args.epoch
 batch_size = args.batch_size
@@ -44,7 +46,7 @@ loss_type = args.loss_type
 std_prior = args.std_prior
 stds_prior = (std_prior, std_prior)
 delta = args.delta
-risks = np.linspace(0.01, 0.3, 20)
+risks = np.linspace(0.01, 0.5, 50)
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -52,11 +54,18 @@ else:
     device = 'cpu'
 device = torch.device(device)
 
-trainloader, valloader, evalloader = get_mnist(train_labels=range(10), eval_labels=range(10),
-                                               batch_size=batch_size)
+if trainset == 'mnist':
+    trainloader, valloader, evalloader = get_mnist(train_labels=range(10), eval_labels=range(10),
+                                                   batch_size=batch_size)
+    dim_input = 28
+    dim_channels = 1
+if trainset == 'cifar10':
+    trainloader, evalloader = get_cifar10(batch_size=batch_size)
+    dim_input = 32
+    dim_channels = 3
 
 seed_model = set_and_print_random_seed()
-bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=28, number_of_classes=10)
+bay_net = GaussianClassifier(rho=rho, stds_prior=stds_prior, dim_input=dim_input, number_of_classes=10, dim_channels=dim_channels)
 bay_net.to(device)
 criterion = CrossEntropyLoss()
 if loss_type == 'uniform':
@@ -81,13 +90,13 @@ train_bayesian_modular(
     number_of_tests=number_of_tests,
     number_of_epochs=epoch,
     trainloader=trainloader,
-    valloader=valloader,
-    output_dir_tensorboard='./output',
+    # valloader=valloader,
+    # output_dir_tensorboard='./output',
     device=device,
     verbose=True,
 )
 
-true_labels_train, all_outputs_train = eval_bayesian(
+true_train_labels, all_outputs_train = eval_bayesian(
     bay_net,
     trainloader,
     return_accuracy=False,
@@ -105,9 +114,8 @@ true_eval_labels, all_outputs_eval = eval_bayesian(
     device=device,
 )
 eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
-
 eval_preds = get_predictions_from_multiple_tests(all_outputs_eval)
-correct_preds = (eval_preds.float() == true_eval_labels.float()).float()
+eval_correct_preds = (eval_preds.float() == true_eval_labels.float()).float()
 
 eval_acc_vrs = []
 eval_acc_pes = []
@@ -115,38 +123,30 @@ eval_acc_mis = []
 eval_coverage_vrs = []
 eval_coverage_pes = []
 eval_coverage_mis = []
+thresholds_vr = []
+thresholds_pe = []
+thresholds_mi = []
 
 for risk in tqdm(risks):
     threshold_vr, threshold_pe, threshold_mi = get_selection_threshold_all_unc(
-        bay_net,
-        true_labels_train,
+        true_train_labels,
         all_outputs_train,
         risk,
         delta,
         (train_vr, train_pe, train_mi),
-        number_of_tests,
-        verbose=False,
-        device=device,
     )
-
-    eval_acc_vrs.append(correct_preds[-eval_vr >= threshold_vr].mean().item())
-    eval_acc_pes.append(correct_preds[-eval_pe >= threshold_pe].mean().item())
-    eval_acc_mis.append(correct_preds[-eval_mi >= threshold_mi].mean().item())
-    eval_coverage_vrs.append((correct_preds[-eval_vr >= threshold_vr].sum()/correct_preds.size(0)).item())
-    eval_coverage_pes.append((correct_preds[-eval_pe >= threshold_pe].sum()/correct_preds.size(0)).item())
-    eval_coverage_mis.append((correct_preds[-eval_mi >= threshold_mi].sum()/correct_preds.size(0)).item())
-
-print(f'Eval acc vr: {round(100 * eval_acc_vrs, 2)} %')
-print(f'Eval acc pe: {round(100 * eval_acc_pes, 2)} %')
-print(f'Eval acc mi: {round(100 * eval_acc_mis, 2)} %')
-print(f'Eval coverage vr: {round(100 * eval_coverage_vrs, 2)} %')
-print(f'Eval coverage pe: {round(100 * eval_coverage_pes, 2)} %')
-print(f'Eval coverage mi: {round(100 * eval_coverage_mis, 2)} %')
-print(f'Variation-Ratio:{eval_vr.mean()}')
-print(f'Predictive Entropy:{eval_pe.mean()}')
-print(f'Mutual Information:{eval_mi.mean()}')
+    eval_acc_vrs.append(eval_correct_preds[-eval_vr >= threshold_vr].mean().item())
+    eval_acc_pes.append(eval_correct_preds[-eval_pe >= threshold_pe].mean().item())
+    eval_acc_mis.append(eval_correct_preds[-eval_mi >= threshold_mi].mean().item())
+    eval_coverage_vrs.append((eval_correct_preds[-eval_vr >= threshold_vr].sum()/eval_correct_preds.size(0)).item())
+    eval_coverage_pes.append((eval_correct_preds[-eval_pe >= threshold_pe].sum()/eval_correct_preds.size(0)).item())
+    eval_coverage_mis.append((eval_correct_preds[-eval_mi >= threshold_mi].sum()/eval_correct_preds.size(0)).item())
+    thresholds_vr.append(threshold_vr)
+    thresholds_pe.append(threshold_pe)
+    thresholds_mi.append(threshold_mi)
 
 res = pd.DataFrame.from_dict({
+    'trainset': [trainset],
     'loss_type': [loss_type],
     'number of epochs': [epoch],
     'batch_size': [batch_size],
@@ -163,11 +163,11 @@ res = pd.DataFrame.from_dict({
     'train loss llh': [loss.logs.get('likelihood', -1)],
     'train loss vp': [loss.logs.get('variational_posterior', -1)],
     'train loss pr': [loss.logs.get('prior', -1)],
-    'val accuracy': [observables.logs['val_accuracy']],
-    'val vr': [observables.logs['val_uncertainty_vr']],
-    'val pe': [observables.logs['val_uncertainty_pe']],
-    'val mi': [observables.logs['val_uncertainty_mi']],
-    'risk': [risk],
+    # 'val accuracy': [observables.logs['val_accuracy']],
+    # 'val vr': [observables.logs['val_uncertainty_vr']],
+    # 'val pe': [observables.logs['val_uncertainty_pe']],
+    # 'val mi': [observables.logs['val_uncertainty_mi']],
+    'risk': [risks],
     'delta': [delta],
     'eval accuracy vr': [eval_acc_vrs],
     'eval accuracy pe': [eval_acc_pes],
@@ -178,9 +178,9 @@ res = pd.DataFrame.from_dict({
     'seen uncertainty vr': [eval_vr],
     'seen uncertainty pe': [eval_pe],
     'seen uncertainty mi': [eval_mi],
-    'threshold vr': [threshold_vr],
-    'threshold pe': [threshold_pe],
-    'threshold mi': [threshold_mi],
+    'threshold vr': [thresholds_vr],
+    'threshold pe': [thresholds_pe],
+    'threshold mi': [thresholds_mi],
     'true labels': [true_eval_labels],
     'eval preds': [eval_preds],
 })

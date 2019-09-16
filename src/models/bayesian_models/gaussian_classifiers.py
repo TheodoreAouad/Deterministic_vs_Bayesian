@@ -14,7 +14,7 @@ class GaussianClassifier(nn.Module):
     """
 
     def __init__(self, rho=-5, mus_prior=(0, 0), stds_prior=None,
-                 number_of_classes=10, dim_input=28):
+                 number_of_classes=10, dim_input=28, dim_channels=1,):
         """
 
         Args:
@@ -41,6 +41,7 @@ class GaussianClassifier(nn.Module):
 
         self.device = "cpu"
         self.dim_input = dim_input
+        self.dim_channels = dim_channels
         self.number_of_classes = number_of_classes
 
         if not self.determinist:
@@ -55,7 +56,7 @@ class GaussianClassifier(nn.Module):
             self.std_prior_init = std_prior
             self.std_bias_prior_init = std_bias_prior
 
-        self.gaussian_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)
+        self.gaussian_conv1 = GaussianCNN(rho, self.dim_channels, 16, 3, padding=1)
         self.bn1 = nn.BatchNorm2d(16)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.gaussian_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)

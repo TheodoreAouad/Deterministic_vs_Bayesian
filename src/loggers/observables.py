@@ -19,7 +19,7 @@ class AccuracyAndUncertainty(Observables):
     Logger to store accuracies and uncertainties
     """
 
-    def __init__(self):
+    def __init__(self, save_weights_path='./output'):
         super(AccuracyAndUncertainty, self).__init__()
         self.logs = {
             'train_accuracy_on_batch': None,
@@ -40,6 +40,7 @@ class AccuracyAndUncertainty(Observables):
         self.max_train_accuracy_on_epoch = 0
         self.epoch_with_max_train_accuracy = 0
         self.validation_logging = False
+        self.save_weights_path = save_weights_path
 
     def compute_train_on_batch(self, outputs, labels):
         """
