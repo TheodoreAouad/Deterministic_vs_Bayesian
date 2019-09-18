@@ -3,8 +3,9 @@ import os
 import torch
 import torchvision
 import torchvision.transforms as transforms
+from torchvision import transforms as transforms
 
-from src.dataset_manager.datasets_creator import MNISTSpecificLabels
+from src.dataset_manager.datasets_creator import MNISTSpecificLabels, CIFAR10SpecificLabels
 
 transform = transforms.ToTensor()
 
@@ -23,9 +24,16 @@ class EmptyLoader:
         pass
 
 
-def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10), split_train=(0, 1), split_val=0.2,
-              transform=transform,
-              batch_size=16, shuffle=True):
+def get_mnist(
+        root=download_path,
+        train_labels=range(10),
+        eval_labels=range(10),
+        split_train=(0, 1),
+        split_val=0.2,
+        transform=transform,
+        batch_size=16,
+        shuffle=True,
+):
     """
 
     Args:
@@ -67,7 +75,18 @@ def get_mnist(root=download_path, train_labels=range(10), eval_labels=range(10),
     return trainloader, valloader, evalloader
 
 
-def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False):
+def get_cifar10(
+        root=None,
+        train_labels=range(10),
+        eval_labels=range(10),
+        split_train=(0, 1),
+        split_val=0.2,
+        transform=transform,
+        batch_size=16,
+        shuffle=True,
+        download=False,
+        **kwargs,
+):
     """
 
     Args:
@@ -80,21 +99,48 @@ def get_cifar10(transform=transform, batch_size=16, shuffle=True, download=False
         torch.utils.data.dataloader.DataLoader: loader of evaluation data
 
     """
+    global download_path
+    if root is None:
+        root = download_path
+    print(root)
+    #
+    # trainset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=True, transform=transform, download=download)
+    # trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
+    #
+    # testset = CIFAR10SpecificLabels(root=root, labels=eval_labels, train=False, transform=transform, download=download)
+    # evalloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
 
-    absolute_path = os.getcwd()
-    download_path = os.path.join(absolute_path, 'data')
-    print(download_path)
+    print(root)
+    trainloader, valloader, evalloader = EmptyLoader(), EmptyLoader(), EmptyLoader()
+    if len(train_labels) > 0:
+        trainset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=True, split=split_train,
+                                       transform=transform,
+                                       download=download)
+        trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
-    trainset = torchvision.datasets.CIFAR10(root=download_path, train=True, transform=transform, download=download)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
+        if split_val > 0:
+            valset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=False, split=(0, split_val),
+                                         transform=transform, download=download)
+            valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=shuffle)
 
-    testset = torchvision.datasets.CIFAR10(root=download_path, train=False, transform=transform, download=download)
-    evalloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
+    if len(eval_labels) > 0:
+        evalset = CIFAR10SpecificLabels(root=root, labels=eval_labels, train=False, split=(split_val, 2),
+                                      transform=transform, download=download)
+        evalloader = torch.utils.data.DataLoader(evalset, batch_size=batch_size, shuffle=shuffle)
 
-    return trainloader, evalloader
+    return trainloader, valloader, evalloader
+
+    # return trainloader, evalloader
 
 
-def get_omniglot(root=download_path, transform=transform, batch_size=16, shuffle=True, download=True):
+def get_omniglot(
+        root=download_path,
+        transform=transform,
+        batch_size=16,
+        shuffle=True,
+        download=True,
+        **kwargs,
+):
     """
 
     Args:
@@ -113,3 +159,64 @@ def get_omniglot(root=download_path, transform=transform, batch_size=16, shuffle
     omniglot_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
     return omniglot_loader
+
+
+def get_random(
+        batch_size=100,
+        number_of_batches=10,
+        number_of_channels=1,
+        img_dim=28,
+        number_of_classes=10,
+        **kwargs,
+):
+    random_loader_train = RandomLoader(
+        number_of_batches=number_of_batches,
+        batch_size=batch_size,
+        number_of_channels=number_of_channels,
+        img_dim = img_dim,
+        number_of_classes=number_of_classes,
+    )
+
+    random_loader_val = RandomLoader(
+        number_of_batches=number_of_batches,
+        batch_size=batch_size,
+        number_of_channels=number_of_channels,
+        img_dim = img_dim,
+        number_of_classes=number_of_classes,
+    )
+
+    random_loader_eval = RandomLoader(
+        number_of_batches=number_of_batches,
+        batch_size=batch_size,
+        number_of_channels=number_of_channels,
+        img_dim = img_dim,
+        number_of_classes=number_of_classes,
+    )
+
+    return random_loader_train, random_loader_val, random_loader_eval
+
+
+class RandomLoader:
+
+    def __init__(
+            self,
+            number_of_batches=2,
+            batch_size=2,
+            number_of_channels=1,
+            img_dim=28,
+            number_of_classes=10,
+    ):
+        self.batch_size = batch_size
+        self.number_of_batches = number_of_batches
+        self.number_of_classes = number_of_classes
+        self.dataset = torch.randn((number_of_batches, batch_size, number_of_channels, img_dim, img_dim))
+        self.labels = torch.randint(0, number_of_classes, (number_of_batches, batch_size))
+
+    def __getitem__(self, idx):
+        return (self.dataset[idx]), self.labels[idx]
+
+    def __len__(self):
+        return self.number_of_batches
+
+
+

@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from src.utils import print_nicely_on_console
 
-
+# TODO: handle tensorboards when some elements of logs are none (e.g. when we have no validation set)
 class Logger:
     """
     This is a parent class to objects used to track information during training.
@@ -85,6 +85,14 @@ class Logger:
             self.writer[key] = SummaryWriter(log_dir=self.output_dir_tensorboard / key)
 
     def write_tensorboard(self, **kwargs):
+        """
+
+        Args:
+            **kwargs (dict): tell on which tensorboard to write each key.
+
+        Returns:
+
+        """
         if self.output_dir_tensorboard is None:
             return
 

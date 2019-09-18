@@ -1,7 +1,14 @@
+"""
+This file computes the graph of accuracy (y) against uncertainty (x). It is used to get a figure across multiple
+experiments.
+To use:
+- change the 'to change' parameters
+- run the file in console
+"""
+
 import pathlib
 from os.path import join
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -20,7 +27,6 @@ info_supp = '_few_shot'
 nb_of_exps = len(group_nbs)
 save_path = pathlib.Path(f'results/correlations_figures/few_shot')
 save_path.mkdir(parents=True, exist_ok=True)
-
 
 
 def get_all_path_exps(group_nbs, result_dir):
@@ -77,6 +83,7 @@ useful_arguments = {key: value for (key, value) in arguments.items() if key not 
     'loss_type',
 ]}
 
+# TODO: factorize the plotting using object API of matplotlib
 for exp_type in ['random', 'unseen_classes', 'unseen_dataset']:
     results_of_type = results[results['exp_type'] == exp_type]
     if len(results_of_type) == 0:

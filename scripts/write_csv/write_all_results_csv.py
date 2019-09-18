@@ -17,7 +17,7 @@ parser.add_argument('--group_nb', help='number of the group experiment if polyax
 parser.add_argument('--exp_nb', help='number of the experiment if polyaxon_type is experiments',
                     type=str)
 parser.add_argument('--which_file', help='which file to get from the folder of the output of the experiments.',
-                    type=str, default='argumen')
+                    type=str, default='results.pkl')
 parser.add_argument('--type_of_test', help='how is the test set compared to the training set',
                     choices=['random', 'unseen_classes', 'unseen_dataset'], type=str)
 parser.add_argument('--extra_info', help='extra info to write on the name of the csv.', type=str,

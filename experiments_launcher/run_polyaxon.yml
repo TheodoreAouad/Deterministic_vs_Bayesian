@@ -13,7 +13,9 @@ environment:
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8
   build_steps:
-    - pip install --no-cache-dir -r base_requirements.txt
+    - pip uninstall -y tensorflow-gpu
+    - pip uninstall -y tensorboard
+    - pip install --no-cache-dir -r requirements.txt
   env_vars:
     - ['LC_ALL', 'C.UTF-8']
     - ['PYTHONPATH', '$PYTHONPATH:/code']
@@ -24,5 +26,6 @@ run:
     - ln -s /data/theodorea/data ./data
     # Allow to access the mounted output_folder as if it was in ./output
     - ln -s $POLYAXON_RUN_OUTPUTS_PATH ./output
+    - ln -s $POLYAXON_RUN_OUTPUTS_PATH ./results
     # Run the pipeline defined in the pipelines folder
-    - python src/experiments/sandbox_experiments.py
+    - python scripts/get_correlation_figures_per_exp.py

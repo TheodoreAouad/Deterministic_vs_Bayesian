@@ -2,8 +2,10 @@ import csv
 import os
 import pickle
 
+import seaborn as sns
 import torch
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 def set_and_print_random_seed(random_seed=None, show=False, save=False, checkpoint_dir='./'):
@@ -101,18 +103,23 @@ def get_interesting_result(result):
 
         return interesting_result
 
-    interesting_result = result.copy()
-    interesting_result['val accuracy'] = interesting_result['val accuracy'].apply(
-        lambda x: torch.tensor(x).max().item()
-    )
-    interesting_result = interesting_result.rename(columns={'val accuracy': 'val accuracy max'})
-    uncertainty_keys = [key for key in result.keys() if 'uncertainty' in key]
-    for key in uncertainty_keys:
-        if type(result[key].iloc[0]) == str:
-            print(result[key], key)
-        interesting_result[key + "-mean"] = result[key].apply(lambda x: x.mean().item())
-        interesting_result[key + "-std"] = result[key].apply(lambda x: x.std().item())
-        interesting_result = interesting_result.drop(key, 1)
+    try:
+        interesting_result = result.copy()
+        if 'val accuracy' in result.keys():
+            interesting_result['val accuracy'] = interesting_result['val accuracy'].apply(
+                lambda x: torch.tensor(x).max().item()
+            )
+            interesting_result = interesting_result.rename(columns={'val accuracy': 'val accuracy max'})
+        uncertainty_keys = [key for key in result.keys() if 'uncertainty' in key]
+        for key in uncertainty_keys:
+            if type(result[key].iloc[0]) == str:
+                print(result[key], key)
+            interesting_result[key + "-mean"] = result[key].apply(lambda x: x.mean().item())
+            interesting_result[key + "-std"] = result[key].apply(lambda x: x.std().item())
+            interesting_result = interesting_result.drop(key, 1)
+    except KeyError as e:
+        print(result['experiment'])
+        raise(e)
 
     return interesting_result
 
@@ -251,7 +258,8 @@ def convert_tensor_to_float(df):
     for key in list(df.columns):
         if type(df[key].iloc[0]) == torch.Tensor:
             try:
-                df[key] = df[key].astype(float)
+                # df[key] = df[key].astype(float)
+                df[key] = df[key].apply(lambda x: x.detach().numpy() if type(x) == torch.Tensor else x)
             except Exception as e:
                 print(key, df[key])
                 raise e
@@ -268,6 +276,24 @@ def convert_df_to_cpu(df):
             df[key] = df[key].apply(lambda x: x.to('cpu'))
 
 
+def split_multiple_sep(s, separators):
+    """
+    Splits a string according to multiple separators.
+    Args:
+        s (str): string to split
+        separators (list): list of strings, each string is a separator.
+
+    Returns:
+        list: list of string. separated list
+    """
+    res = [s]
+    for sep in separators:
+        temp = []
+        for substr in res:
+            temp += substr.split(sep)
+        res = temp.copy()
+    return res
+
 def get_unc_key(keys, approximate_key):
     """
     This function gives the right key for the given approximated key. This function is used because of the
@@ -283,9 +309,10 @@ def get_unc_key(keys, approximate_key):
 
     vrs_possible_writings = {'vr', 'vrs', 'variation-ratio', 'variation-ratios', 'variation ratio',
                              'variation-ratios'}
-    pes_possible_writings = {'pe', 'pes', 'predictive_entropies', 'predicitve_entropy', 'predictive entropy',
+    pes_possible_writings = {'pe', 'pes', 'predictive_entropies', 'predictive_entropy', 'predictive entropy',
                              'predictive entropies'}
     mis_possible_writings = {'mi', 'mis', 'mutual information'}
+    us_possible_writings = {'us', 'uncertainty softmax', 'uncertainty_softmax', 'uncertainty-softmax'}
     nb_of_data_possible_writings = {'nb_of_data', 'split_train', 'nb of data'}
 
     if 'unseen' in approximate_key or 'random' in approximate_key:
@@ -301,7 +328,8 @@ def get_unc_key(keys, approximate_key):
 
     if is_uncertainty:
         found_the_uncertainty = False
-        all_possible_writings = [vrs_possible_writings, pes_possible_writings, mis_possible_writings]
+        all_possible_writings = [vrs_possible_writings, pes_possible_writings, mis_possible_writings,
+                                 us_possible_writings]
         for possible_writings in all_possible_writings:
             for possible_writing in possible_writings:
                 if possible_writing in approximate_key:
@@ -310,8 +338,62 @@ def get_unc_key(keys, approximate_key):
         if not found_the_uncertainty:
             assert False, 'Uncertainty not valid'
 
+    all_keys = []
     for key in keys:
         is_correct_unc = sum([this_writing in key for this_writing in this_is_the_keys])
-        is_correct_seen_or_unseen = sum([this_seen in key for this_seen in seen_or_unseen]) if is_uncertainty else True
+        is_correct_seen_or_unseen = sum([this_seen in split_multiple_sep(key, [' ', '-', '_'])
+                                         for this_seen in seen_or_unseen]) if is_uncertainty else True
         if is_correct_seen_or_unseen and is_correct_unc:
-            return key
+            all_keys.append(key)
+    if len(all_keys) == 1:
+        return all_keys[0]
+    return all_keys
+
+
+def get_divisors(n):
+    """
+    Get the divisors of an integer.
+    Args:
+        n (int): number we want to get the divisors of
+
+    Returns:
+        list: list of divisors of n
+    """
+    res = []
+    for k in range(1, int(n//2)):
+        if n % k == 0:
+            res.append(k)
+    return res
+
+
+def get_exact_batch_size(size_of_batch, total_nb_sample):
+    """
+    Does the computation of the exact size of batch (cf func compute_figures) depending on an approximate size
+    Args:
+        size_of_batch (int): the size of batch we would like optimally
+        total_nb_sample (int): the number of images we want to divide into batches
+
+    Returns:
+        int: the size of batch we can divide the number of samples into
+    """
+    divisors = get_divisors(total_nb_sample)
+    return min(divisors, key=lambda x: abs(x - size_of_batch))
+
+
+def plot_density_on_ax(ax, uncs, labels, hist=False, **kwargs):
+    """
+    Plots density uncertainty on the given ax using kde smoothing.
+    Args:
+        ax (matplotlib.axes._subplots.AxesSubplot): ax on which to plot the density
+        uncs (tuple): tuple of arrays of the uncertainties. The number of elements is the number of uncertainties.
+        labels (tuple): tuple of string. Each element is the label of the corresponding element of 'uncs'.
+        **kwargs: kwargs to change the distplot.
+
+    """
+    for unc, label in zip(uncs, labels):
+        sns.distplot(unc, hist=hist, kde_kws={"shade": True}, label=label, ax=ax, **kwargs)
+        ax.set_xlim(left=0)
+
+
+def get_fig_size(ax):
+    return ax.figure.get_size_inches()*ax.figure.dpi

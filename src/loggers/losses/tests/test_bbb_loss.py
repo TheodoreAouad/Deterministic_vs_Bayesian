@@ -5,7 +5,7 @@ import torch.optim as optim
 from src.tasks.trains import uniform, get_loss
 from src.loggers.losses.bbb_loss import BBBLoss
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
-from src.tasks.tests.test_trains import RandomTrainloader
+from src.dataset_manager.get_data import RandomLoader
 from src.utils import set_and_print_random_seed
 
 
@@ -14,7 +14,7 @@ class TestBBBLoss:
     @staticmethod
     def test_identity_of_direct_losses():
         device='cpu'
-        randomloader = RandomTrainloader()
+        randomloader = RandomLoader()
 
         bay_net = GaussianClassifier(-3, number_of_classes=10)
         bay_net.to(device)
@@ -45,7 +45,7 @@ class TestBBBLoss:
     @staticmethod
     def test_identity_of_optimizer_step():
         device = 'cpu'
-        randomloader = RandomTrainloader()
+        randomloader = RandomLoader()
 
         get_train_data = iter(randomloader)
         inputs, labels = next(get_train_data)

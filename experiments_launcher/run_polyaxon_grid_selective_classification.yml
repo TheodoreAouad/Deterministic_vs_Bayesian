@@ -16,13 +16,31 @@ hptuning:
 
   matrix:
     experiment_file:
-      values: ["experiments/det_mnist_cnn_init.py"]
+      values: ["experiments/basic_selective_classification.py"]
+
+    trainset:
+      values: ['cifar10']
+
+    rho:
+      values: [-6, -5, -4, -3, -2]
 
     epoch:
-      values: [10]
+      values: [20]
 
     batch_size:
-      values: [128]
+      values: [32, 64, 128]
+
+    number_of_tests:
+      values: [20]
+
+    loss_type:
+      values: ["exp", "uniform", "criterion"]
+
+    std_prior:
+      values: [1e-1]
+
+    delta:
+      values: [0.01]
 
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8
@@ -43,4 +61,11 @@ run:
     # Save experiment script
     - cp {{ experiment_file }} ./output
     # Run the pipeline defined in the pipelines folder
-    - python {{ experiment_file }} --epoch {{ epoch }} --batch_size {{ batch_size }}
+    - python {{ experiment_file }} --trainset {{ trainset }} --rho {{ rho }} --number_of_tests {{ number_of_tests }} --epoch {{ epoch }} --batch_size {{ batch_size }} --loss_type {{ loss_type }} --std_prior {{ std_prior }} --delta {{ delta }}
+
+
+
+
+
+
+
