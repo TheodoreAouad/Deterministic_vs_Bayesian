@@ -22,7 +22,7 @@ from src.risk_control import bound_animate
 from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_predictions_from_multiple_tests, \
     get_all_uncertainty_measures
-from src.utils import convert_tensor_to_float, plot_density_on_ax
+from src.utils import convert_tensor_to_float, plot_density_on_ax, save_to_file
 
 ###### TO CHANGE ######################################################
 
@@ -78,8 +78,10 @@ else:
 
 save_csv_path = pathlib.Path(save_csv_path)
 if not os.path.exists(save_csv_path / 'results_train.csv'):
-    results_train = pd.DataFrame(columns=['exp', 'unc', 'threshold', 'risk', 'acc', 'coverage', 'time', 'number_of_tests'])
-    results_eval = pd.DataFrame(columns=['exp', 'unc', 'threshold', 'risk', 'acc', 'coverage', 'time', 'number_of_tests'])
+    results_train = pd.DataFrame(
+        columns=['exp', 'unc', 'threshold', 'risk', 'acc', 'coverage', 'time', 'number_of_tests'])
+    results_eval = pd.DataFrame(
+        columns=['exp', 'unc', 'threshold', 'risk', 'acc', 'coverage', 'time', 'number_of_tests'])
     if save_csv:
         save_csv_path.mkdir(exist_ok=True, parents=True)
         results_train.to_csv(save_csv_path / 'results_train.csv')
@@ -99,7 +101,7 @@ def save_animation(unc, correct_preds, risks, bounds, coverages, thetas, figsize
     """
     This function saves the animation of the threshold finding.
     Args:
-
+        unc (array-like): size (size_of_batch): the uncertainty for each sample
         correct_preds (array-like): size (size_of_batch): array with 1 if the prediction is correct, 0 if false
         risks (array-like): size (nb of iterations in bound_animate): the evolution of risks across iterations
         bounds (array-like): size (nb of iterations in bound_animate): the evolution of bounds across iterations
@@ -127,7 +129,7 @@ def save_animation(unc, correct_preds, risks, bounds, coverages, thetas, figsize
         plot_density_on_ax(ax, [unc_correct, unc_false], hist=True, labels=['correct', 'false'])
         ax.annotate(f'Risk: {round(100 * risks[i], 2)}% \n'
                     f'Bound: {round(100 * bounds[i], 2)}% \n'
-                    f'R*: {100*rstar}% \n'
+                    f'R*: {100 * rstar}% \n'
                     f'Coverage {round(100 * coverages[i], 2)}%',
                     xy=(0.6, 0.6),
                     xycoords='axes fraction')
@@ -191,11 +193,13 @@ if do_computation:
             for idx_risk, rstar in enumerate(tqdm(rstars)):
                 for unc_train, unc_eval, unc_name in zip(uncs_train, uncs_eval, ['vr', 'pe', 'mi']):
                     start = time.time()
-                    thetas, bounds, risks, coverages = bound_animate(rstar, delta, -unc_train, residuals, verbose=verbose,
+                    thetas, bounds, risks, coverages = bound_animate(rstar, delta, -unc_train, residuals,
+                                                                     verbose=verbose,
                                                                      max_iter=10,
                                                                      precision=1e-5, )
                     threshold = thetas[-1]
-                    acc_train = correct_preds_train[-unc_train > threshold].mean()  # .sum() / correct_preds_train.size(0)
+                    acc_train = correct_preds_train[
+                        -unc_train > threshold].mean()  # .sum() / correct_preds_train.size(0)
                     coverage_train = (-unc_train >= threshold).sum().float() / unc_train.size(0)
                     new_res_train = pd.DataFrame.from_dict({
                         'exp': [exp_nb],
@@ -234,13 +238,13 @@ if do_computation:
                         save_animation_path.mkdir(exist_ok=True, parents=True)
                         save_animation_path = save_animation_path / f'{exp_nb}_{unc_name}_{idx_risk}_' \
                             f'finding_threshold.gif'
-                        save_animation(unc_train, correct_preds_train, risks, bounds, coverages, thetas, figsize, save_animation_path)
+                        save_animation(unc_train, correct_preds_train, risks, bounds, coverages, thetas, figsize,
+                                       save_animation_path)
 
                 if save_csv:
                     results_train.to_csv(save_csv_path / 'results_train.csv')
                     results_eval.to_csv(save_csv_path / 'results_eval.csv')
         print(f'Time since start: {time.time() - global_start}')
-
 
 # theta = rc.get_selection_threshold(
 #     bay_net,
@@ -254,8 +258,21 @@ if do_computation:
 # )
 
 
-results_train = pd.read_csv(save_csv_path / 'results_train.csv', )
-def plot_acc_cov(number_of_tests_to_print, exp_nb, results, figsize=figsize,):
+results_train = pd.read_csv(save_csv_path / 'results_train.csv', index_col=False)
+
+
+def plot_acc_cov(number_of_tests_to_print, exp_nb, results, figsize=figsize, ):
+    """
+    Plots the accuracy / coverage function given the number of tests, the number of the experiment
+    Args:
+        number_of_tests_to_print (list): list of the number of tests we want to plot
+        exp_nb (int || str): number of the experiment
+        results (pandas.core.frame.DataFrame): dataframe containing the accuracy and coverage
+        figsize (tuple): size of the figure
+
+    Returns:
+        matplotlib.figure.Figure: the figure with the plot inside
+    """
     fig = plt.figure(figsize=figsize)
     arguments = get_args(exp_nb, path)
     fig.suptitle(f'Acc-Coverage, w.r.t. nb of tests and uncertainty measure\n'
@@ -307,10 +324,11 @@ if show_fig or save_fig:
             save_fig_path = pathlib.Path(save_fig_path)
             save_fig_path.mkdir(exist_ok=True, parents=True)
             fig.savefig(save_fig_path / f'{exp_nb}-acc-coverage-train.png')
+            save_to_file(fig, save_fig_path / f'{exp_nb}-acc-coverage-train.pkl')
         if show_fig:
             fig.show()
 
-results_eval = pd.read_csv(save_csv_path / 'results_eval.csv', )
+results_eval = pd.read_csv(save_csv_path / 'results_eval.csv')
 if show_fig or save_fig:
     for exp_nb in exp_nbs:
         fig = plot_acc_cov(number_of_tests_to_print, exp_nb, results_eval, figsize=figsize)
@@ -318,13 +336,14 @@ if show_fig or save_fig:
             save_fig_path = pathlib.Path(save_fig_path)
             save_fig_path.mkdir(exist_ok=True, parents=True)
             fig.savefig(save_fig_path / f'{exp_nb}-acc-coverage-eval.png')
+            save_to_file(fig, save_fig_path / f'{exp_nb}-acc-coverage-eval.pkl')
         if show_fig:
             fig.show()
 
 
 def f(x):
     """
-    This function transforms the string of tensors x into a string of floats.
+    Transforms the string of tensors x into a string of floats.
     Args:
         x (str): the string with the word 'tensor' we want to see disappear.
 
@@ -338,3 +357,7 @@ def f(x):
             return x
     else:
         return x
+
+
+
+

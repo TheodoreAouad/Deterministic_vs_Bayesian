@@ -12,12 +12,15 @@ Comparison, first image only.
               pe:  1.0730306739099891e-19)
               mi:  2.0144309172705817e-19)
 
-"""
 
+# Tester loi du chi2
+"""
+import argparse
 from time import time
 
+import pandas as pd
 import torch
-from scipy.stats import ttest_ind
+from scipy.stats import ttest_ind, chisquare
 import numpy as np
 from torch import nn
 import torch.optim as optim
@@ -32,10 +35,19 @@ from src.tasks.evals import eval_bayesian
 from src.tasks.trains import train_bayesian_modular
 from src.uncertainty_measures import get_all_uncertainty_measures
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--nb_of_runs', help='nb of runs for stat test', type=int)
+parser.add_argument('--nb_of_epochs', help='nb of epochs for training', type=int)
+parser.add_argument('--nb_of_tests', help='nb of tests for evaluation', type=int)
+parser.add_argument('--rho', help='variance for bbb', type=float)
+
+args = parser.parse_args()
+
 ##### TO CHANGE ######
-nb_of_runs = 10
-nb_of_epochs = 3
-nb_of_tests = 5
+nb_of_runs = args.nb_of_runs
+nb_of_epochs = args.nb_of_epochs
+nb_of_tests = args.nb_of_tests
+rho = args.rho
 ######################
 
 if torch.cuda.is_available():
@@ -47,6 +59,7 @@ print(device)
 
 trainloader, valloader, evalloader = get_mnist(batch_size=32)
 criterion = nn.CrossEntropyLoss()
+
 
 def train_bayesian_modular_with_one_different(
         model,
@@ -149,7 +162,7 @@ def train_bayesian_modular_with_one_different(
 
 
 def do_train_ce(verbose=True):
-    bay_net = GaussianClassifier(-6, number_of_classes=10)
+    bay_net = GaussianClassifier(rho, number_of_classes=10)
     bay_net.to(device)
     criterion = nn.CrossEntropyLoss()
     loss_bbb = BaseLoss(criterion)
@@ -166,7 +179,8 @@ def do_train_ce(verbose=True):
         verbose=verbose,
     )
 
-    return eval_bayesian(bay_net, evalloader, nb_of_tests, device, verbose=verbose)
+    return eval_bayesian(bay_net, evalloader, nb_of_tests, device=device, verbose=verbose)
+
 
 def do_train_dirac_batch_same_size(verbose=True):
     def dirac(cur_batch, nb_of_batch):
@@ -174,7 +188,8 @@ def do_train_dirac_batch_same_size(verbose=True):
             return 1
         else:
             return 0
-    bay_net = GaussianClassifier(-6, number_of_classes=10)
+
+    bay_net = GaussianClassifier(rho, number_of_classes=10)
     bay_net.to(device)
     loss_bbb = BBBLoss(bay_net, criterion, dirac)
     optimizer = optim.Adam(bay_net.parameters())
@@ -190,7 +205,8 @@ def do_train_dirac_batch_same_size(verbose=True):
         verbose=verbose,
     )
 
-    return eval_bayesian(bay_net, evalloader, nb_of_tests, device, verbose=verbose)
+    return eval_bayesian(bay_net, evalloader, nb_of_tests, device=device, verbose=verbose)
+
 
 def do_train_dirac_one_image(verbose=True):
     def dirac(cur_batch, nb_of_batch):
@@ -198,7 +214,8 @@ def do_train_dirac_one_image(verbose=True):
             return 1
         else:
             return 0
-    bay_net = GaussianClassifier(-6, number_of_classes=10)
+
+    bay_net = GaussianClassifier(rho, number_of_classes=10)
     bay_net.to(device)
     loss_bbb = BBBLoss(bay_net, criterion, dirac)
     optimizer = optim.Adam(bay_net.parameters())
@@ -214,29 +231,43 @@ def do_train_dirac_one_image(verbose=True):
         verbose=verbose,
     )
 
-    return eval_bayesian(bay_net, evalloader, nb_of_tests, device, verbose=verbose)
+    return eval_bayesian(bay_net, evalloader, nb_of_tests, device=device, verbose=verbose)
 
 
-def main():
+verbose = False
+accs1 = np.zeros(nb_of_runs)
+accs2 = np.zeros(nb_of_runs)
+uncs1 = np.zeros((nb_of_runs, 3,))
+uncs2 = np.zeros((nb_of_runs, 3,))
 
-    verbose = False
-    accs1 = np.zeros(nb_of_runs)
-    accs2 = np.zeros(nb_of_runs)
-    uncs1 = np.zeros((nb_of_runs, 3,))
-    uncs2 = np.zeros((nb_of_runs, 3,))
+for i in tqdm(range(nb_of_runs)):
+    eval_acc1, eval_output1 = do_train_dirac_one_image(verbose)
+    eval_acc2, eval_output2 = do_train_ce(verbose)
+    accs1[i] = eval_acc1
+    accs2[i] = eval_acc2
+    uncs1[i] = np.array([unc.mean() for unc in get_all_uncertainty_measures(eval_output1)])
+    uncs2[i] = np.array([unc.mean() for unc in get_all_uncertainty_measures(eval_output2)])
 
-    for i in tqdm(range(nb_of_runs)):
-        eval_acc1, eval_output1 = do_train_dirac_one_image(verbose)
-        eval_acc2, eval_output2 = do_train_ce(verbose)
-        accs1[i] = eval_acc1
-        accs2[i] = eval_acc2
-        uncs1[i] = np.array([unc.mean() for unc in get_all_uncertainty_measures(eval_output1)])
-        uncs2[i] = np.array([unc.mean() for unc in get_all_uncertainty_measures(eval_output2)])
-
-    # Do T test
-    print(ttest_ind(accs1, accs2))
+# Do T test
+pvalues = pd.DataFrame(columns=['acc'] + [f'unc_{i}' for i in range(uncs1.shape[1])], index=['ttest', 'chisquare'])
+for name, stat_test in zip(['ttest', 'chisquare'], [ttest_ind, chisquare]):
+    pvalues.loc[name, 'acc'] = stat_test(accs1, accs2).pvalue
     for i in range(3):
         print(ttest_ind(uncs1[:, i], uncs2[:, i]))
+        pvalues.loc[name, f'unc_{i}'] = stat_test(uncs1[:, i], uncs2[:, i]).pvalue
 
-if __name__ == '__main__':
-    main()
+accs = pd.DataFrame.from_dict({
+    'accs1': accs1,
+    'accs2': accs2,
+})
+
+uncs = pd.concat((
+    pd.DataFrame(columns=['vr1', 'pe1', 'mi1'], data=uncs1), pd.DataFrame(columns=['vr2', 'pe2', 'mi2'], data=uncs2)
+    ),
+    axis=1)
+accs_and_uncs = pd.concat((accs, uncs), axis=1)
+
+pvalues.to_csv('./output/pvalues.csv')
+pvalues.to_pickle('./output/pvalues.pkl')
+accs_and_uncs.to_csv('./output/accs_and_uncs.csv')
+accs_and_uncs.to_pickle('./output/accs_and_uncs.pkl')
