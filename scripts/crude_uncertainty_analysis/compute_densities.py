@@ -3,19 +3,18 @@ This script is used to create the figures of accuracies against uncertainty. Thi
 experiment. It cannot be used to create a figure across multiple experiments.
 To use it, change the arguments in the TO CHANGE box.
 """
+import os
 import pathlib
 from time import time
 
 import numpy as np
 import torch
 
-from scripts.utils import compute_density_train_seen_unseen, get_seen_outputs_and_labels, \
-    get_unseen_outputs, \
-    get_trained_model_and_args_and_groupnb, get_train_outputs, compute_density_train_seen, \
-    compute_density_correct_false, compute_density_train_seen_correct_false
+from scripts.utils import get_trained_model_and_args_and_groupnb
 
 from importlib import reload
 import scripts.utils as utils
+from src.utils import save_to_file
 
 reload(utils)
 
@@ -24,7 +23,7 @@ reload(utils)
 #            '3840', '3842', '3851', '3861', '3864']
 # exp_nbs = ['3842', ]  # '3851', '3861', '3864']
 # exp_nbs = ['4792', '4789', '4795']
-exp_nbs = ['4789', ]
+exp_nbs = ['3832',]
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000
@@ -32,18 +31,18 @@ nb_of_random = 5000
 do_computation = True
 save_outputs = True
 
-do_train_seen_unseen = True
-do_train_correct_false = True
-do_seen_correct_false = True
-do_train_seen = True
-do_train_seen_correct_false = True
+do_train_seen_unseen = False
+do_train_correct_false = False
+do_seen_correct_false = False
+do_train_seen = False
+do_train_seen_correct_false = False
 do_train_seen_unseen_correct_false = True
 
 figsize = (12, 12)
-show_fig = False
-save_fig = True
+show_fig = True
+save_fig = False
 do_eval_mnist = True
-save_path = 'results/uncertainty_density/cifar10'
+save_path = 'results/uncertainty_density/'
 
 GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
 CPUPATH = 'polyaxon_results/groups'
@@ -80,7 +79,7 @@ for exp_nb in exp_nbs:
     bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp_nb, exp_path=path)
 
     try:
-        if do_computation:
+        if do_computation and not os.path.exists(f'temp/density/{exp_nb}_all_outputs_train.pt'):
 
             all_outputs_seen, true_labels_seen = utils.get_seen_outputs_and_labels(
                 bay_net_trained,
@@ -122,7 +121,7 @@ for exp_nb in exp_nbs:
             print('Do train unseen seen ...')
             save_path_hists = get_save_path(save_path, 'train_seen_unseen', arguments, group_nb, exp_nb)
 
-            utils.compute_density_train_seen_unseen(
+            fig1 = utils.compute_density_train_seen_unseen(
                 arguments=arguments,
                 all_outputs_train=all_outputs_train,
                 all_outputs_seen=all_outputs_seen,
@@ -132,13 +131,22 @@ for exp_nb in exp_nbs:
                 save_path=save_path_hists,
                 figsize=figsize,
             )
+            if save_fig:
+                print('Saving figure...')
+                fig1.savefig(save_path_hists)
+                save_to_file(fig1, save_path_hists.replace('png', 'pkl'))
+                print('Figure saved.')
+            if show_fig:
+                print('Showing figures...')
+                fig1.show()
+                print('Figure shown.')
             print('Done')
 
         if do_train_correct_false:
             print('Do train correct false...')
             save_path_hists = get_save_path(save_path, 'train_correct_false', arguments, group_nb, exp_nb)
 
-            utils.compute_density_correct_false(
+            fig2 = utils.compute_density_correct_false(
                 arguments=arguments,
                 all_outputs=all_outputs_train,
                 true_labels=true_labels_train,
@@ -147,13 +155,24 @@ for exp_nb in exp_nbs:
                 save_path=save_path_hists,
                 figsize=figsize,
             )
+
+            if save_fig:
+                assert save_path is not None
+                print('Saving figure...')
+                fig2.savefig(save_path_hists)
+                save_to_file(fig2, save_path_hists.replace('png', 'pkl'))
+                print('Figure saved.')
+            if show_fig:
+                print('Showing figures...')
+                fig2.show()
+                print('Figure shown.')
             print('Done')
 
         if do_seen_correct_false:
             print('Do seen correct false...')
             save_path_hists = get_save_path(save_path, 'eval_correct_false', arguments, group_nb, exp_nb)
 
-            utils.compute_density_correct_false(
+            fig3 = utils.compute_density_correct_false(
                 arguments=arguments,
                 all_outputs=all_outputs_seen,
                 true_labels=true_labels_seen,
@@ -162,13 +181,24 @@ for exp_nb in exp_nbs:
                 save_path=save_path_hists,
                 figsize=figsize,
             )
+
+            if save_fig:
+                print('Saving figure...')
+                fig3.savefig(save_path_hists)
+                save_to_file(fig3, save_path_hists.replace('png', 'pkl'))
+                print('Figure saved.')
+            if show_fig:
+                print('Showing figures...')
+                fig3.show()
+                print('Figure shown.')
+
             print('Done')
 
         if do_train_seen:
             print('Do train seen ...')
             save_path_hists = get_save_path(save_path, 'train_eval', arguments, group_nb, exp_nb)
 
-            utils.compute_density_train_seen(
+            fig4 = utils.compute_density_train_seen(
                 arguments=arguments,
                 all_outputs_train=all_outputs_train,
                 all_outputs_seen=all_outputs_seen,
@@ -177,13 +207,23 @@ for exp_nb in exp_nbs:
                 save_path=save_path_hists,
                 figsize=figsize,
             )
+
+            if save_fig:
+                print('Saving figure...')
+                fig4.savefig(save_path_hists)
+                save_to_file(fig4, save_path_hists.replace('png', 'pkl'))
+                print('Figure saved.')
+            if show_fig:
+                print('Showing figures...')
+                fig4.show()
+                print('Figure shown.')
             print('Done')
 
         if do_train_seen_correct_false:
             print('Do train seen correct false ...')
             save_path_hists = get_save_path(save_path, 'train_eval_correct_false', arguments, group_nb, exp_nb)
 
-            utils.compute_density_train_seen_correct_false(
+            fig5 = utils.compute_density_train_seen_correct_false(
                 arguments=arguments,
                 all_outputs_train=all_outputs_train,
                 true_labels_train=true_labels_train,
@@ -194,13 +234,22 @@ for exp_nb in exp_nbs:
                 save_path=save_path_hists,
                 figsize=figsize,
             )
-            print('Done')
+
+            if save_fig:
+                print('Saving figure...')
+                fig5.savefig(save_path_hists)
+                save_to_file(fig5, save_path_hists.replace('png', 'pkl'))
+                print('Figure saved.')
+            if show_fig:
+                print('Showing figures...')
+                fig5.show()
+                print('Figure shown.')
 
         if do_train_seen_unseen_correct_false:
             print('Do train seen unseen correct false ...')
             save_path_hists = get_save_path(save_path, 'train_eval_unseen_correct_false', arguments, group_nb, exp_nb)
 
-            utils.compute_density_train_seen_unseen_correct_false(
+            fig6 = utils.compute_density_train_seen_unseen_correct_false(
                 arguments=arguments,
                 all_outputs_train=all_outputs_train,
                 true_labels_train=true_labels_train,
@@ -212,6 +261,17 @@ for exp_nb in exp_nbs:
                 save_path=save_path_hists,
                 figsize=figsize,
             )
+
+            if save_fig:
+                print('Saving figure...')
+                fig6.savefig(save_path_hists)
+                save_to_file(fig6, save_path_hists.replace('png', 'pkl'))
+                print('Figure saved.')
+            if show_fig:
+                print('Showing figures...')
+                fig6.show()
+                print('Figure shown.')
+
             print('Done')
 
     except np.linalg.LinAlgError:
