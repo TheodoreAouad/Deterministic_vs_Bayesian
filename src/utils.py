@@ -276,6 +276,24 @@ def convert_df_to_cpu(df):
             df[key] = df[key].apply(lambda x: x.to('cpu'))
 
 
+def split_multiple_sep(s, separators):
+    """
+    Splits a string according to multiple separators.
+    Args:
+        s (str): string to split
+        separators (list): list of strings, each string is a separator.
+
+    Returns:
+        list: list of string. separated list
+    """
+    res = [s]
+    for sep in separators:
+        temp = []
+        for substr in res:
+            temp += substr.split(sep)
+        res = temp.copy()
+    return res
+
 def get_unc_key(keys, approximate_key):
     """
     This function gives the right key for the given approximated key. This function is used because of the
@@ -291,9 +309,10 @@ def get_unc_key(keys, approximate_key):
 
     vrs_possible_writings = {'vr', 'vrs', 'variation-ratio', 'variation-ratios', 'variation ratio',
                              'variation-ratios'}
-    pes_possible_writings = {'pe', 'pes', 'predictive_entropies', 'predicitve_entropy', 'predictive entropy',
+    pes_possible_writings = {'pe', 'pes', 'predictive_entropies', 'predictive_entropy', 'predictive entropy',
                              'predictive entropies'}
     mis_possible_writings = {'mi', 'mis', 'mutual information'}
+    us_possible_writings = {'us', 'uncertainty softmax', 'uncertainty_softmax', 'uncertainty-softmax'}
     nb_of_data_possible_writings = {'nb_of_data', 'split_train', 'nb of data'}
 
     if 'unseen' in approximate_key or 'random' in approximate_key:
@@ -309,7 +328,8 @@ def get_unc_key(keys, approximate_key):
 
     if is_uncertainty:
         found_the_uncertainty = False
-        all_possible_writings = [vrs_possible_writings, pes_possible_writings, mis_possible_writings]
+        all_possible_writings = [vrs_possible_writings, pes_possible_writings, mis_possible_writings,
+                                 us_possible_writings]
         for possible_writings in all_possible_writings:
             for possible_writing in possible_writings:
                 if possible_writing in approximate_key:
@@ -321,7 +341,8 @@ def get_unc_key(keys, approximate_key):
     all_keys = []
     for key in keys:
         is_correct_unc = sum([this_writing in key for this_writing in this_is_the_keys])
-        is_correct_seen_or_unseen = sum([this_seen in key for this_seen in seen_or_unseen]) if is_uncertainty else True
+        is_correct_seen_or_unseen = sum([this_seen in split_multiple_sep(key, [' ', '-', '_'])
+                                         for this_seen in seen_or_unseen]) if is_uncertainty else True
         if is_correct_seen_or_unseen and is_correct_unc:
             all_keys.append(key)
     if len(all_keys) == 1:
