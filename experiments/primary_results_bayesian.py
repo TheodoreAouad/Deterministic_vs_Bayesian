@@ -13,7 +13,7 @@ from src.loggers.observables import AccuracyAndUncertainty
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.trains import train_bayesian_modular, uniform
 from src.tasks.evals import eval_bayesian
-from src.uncertainty_measures import get_all_uncertainty_measures
+from src.uncertainty_measures import get_all_uncertainty_measures, get_all_uncertainty_measures_not_bayesian
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist, get_cifar10, get_random, get_omniglot
 
@@ -30,6 +30,8 @@ parser.add_argument('--unseen_evalset', help='unseen dataset to test uncertainty
                     choices=['mnist', 'cifar10', 'omniglot'], type=str)
 parser.add_argument('--split_labels', help='up to which label the training goes',
                     type=int, default=10)
+parser.add_argument('--determinist', help='put this variable if you want the model to be determinist'
+                    , action='store_true')
 parser.add_argument('--rho', help='variable symbolizing the variance. std = log(1+exp(rho))',
                     type=float, default=-5)
 parser.add_argument('--epoch', help='number of times we train the model on the same data',
@@ -60,7 +62,12 @@ std_prior = args.std_prior
 split_train = args.split_train
 stds_prior = (std_prior, std_prior)
 
+if args.determinist:
+    rho = 'determinist'
+    number_of_tests = 1
+
 res = pd.DataFrame()
+
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -161,20 +168,10 @@ train_bayesian_modular(
 
 # Evaluation on seen test set
 eval_acc, all_outputs_eval = eval_bayesian(bay_net, evalloader_seen, number_of_tests=number_of_tests, device=device, )
-eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
 
 # Evaluation on unseen test set
 _, all_outputs_unseen = eval_bayesian(bay_net, evalloader_unseen, number_of_tests=number_of_tests, device=device)
-unseen_vr, unseen_pe, unseen_mi = get_all_uncertainty_measures(all_outputs_unseen)
 
-print(f'Eval acc: {round(100 * eval_acc, 2)} %, '
-      f'Variation-Ratio:{eval_vr.mean()}, '
-      f'Predictive Entropy:{eval_pe.mean()}, '
-      f'Mutual Information:{eval_mi.mean()}')
-print(f'Unseen: '
-      f'Variation-Ratio:{unseen_vr.mean()}, '
-      f'Predictive Entropy:{unseen_pe.mean()}, '
-      f'Mutual Information:{unseen_mi.mean()}')
 res = pd.concat((res, pd.DataFrame.from_dict({
     'type_of_unseen': [type_of_unseen],
     'loss_type': [loss_type],
@@ -185,7 +182,6 @@ res = pd.concat((res, pd.DataFrame.from_dict({
     'seed_model': [seed_model],
     'stds_prior': [std_prior],
     'rho': [rho],
-    'sigma initial': [log(1 + exp(rho))],
     'train accuracy': [observables.logs['train_accuracy_on_epoch']],
     'train max acc': [observables.max_train_accuracy_on_epoch],
     'train max acc epoch': [observables.epoch_with_max_train_accuracy],
@@ -198,13 +194,43 @@ res = pd.concat((res, pd.DataFrame.from_dict({
     'val pe': [observables.logs['val_uncertainty_pe']],
     'val mi': [observables.logs['val_uncertainty_mi']],
     'eval accuracy': [eval_acc],
-    'seen uncertainty vr': [eval_vr],
-    'seen uncertainty pe': [eval_pe],
-    'seen uncertainty mi': [eval_mi],
-    'unseen uncertainty vr': [unseen_vr],
-    'unseen uncertainty pe': [unseen_pe],
-    'unseen uncertainty mi': [unseen_mi],
 })), axis=1)
+
+if args.determinist:
+    eval_us, eval_pe = get_all_uncertainty_measures_not_bayesian(all_outputs_eval)
+    unseen_us, unseen_pe = get_all_uncertainty_measures_not_bayesian(all_outputs_unseen)
+    print(f'Eval acc: {round(100 * eval_acc, 2)} %, '
+          f'Uncertainty Softmax:{eval_us.mean()}, '
+          f'Predictive Entropy:{eval_pe.mean()}, ')
+    print(f'Unseen: '
+          f'Uncertainty Softmax:{unseen_us.mean()}, '
+          f'Predictive Entropy:{unseen_pe.mean()}, ')
+    res = pd.concat((res, pd.DataFrame.from_dict({
+        'seen uncertainty us': [eval_us],
+        'seen uncertainty pe': [eval_pe],
+        'unseen uncertainty us': [unseen_us],
+        'unseen uncertainty pe': [unseen_pe],
+    })), axis=1)
+else:
+    eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
+    unseen_vr, unseen_pe, unseen_mi = get_all_uncertainty_measures(all_outputs_unseen)
+    print(f'Eval acc: {round(100 * eval_acc, 2)} %, '
+          f'Variation-Ratio:{eval_vr.mean()}, '
+          f'Predictive Entropy:{eval_pe.mean()}, '
+          f'Mutual Information:{eval_mi.mean()}')
+    print(f'Unseen: '
+          f'Variation-Ratio:{unseen_vr.mean()}, '
+          f'Predictive Entropy:{unseen_pe.mean()}, '
+          f'Mutual Information:{unseen_mi.mean()}')
+    res = pd.concat((res, pd.DataFrame.from_dict({
+        'sigma initial': [log(1 + exp(rho))],
+        'seen uncertainty vr': [eval_vr],
+        'seen uncertainty pe': [eval_pe],
+        'seen uncertainty mi': [eval_mi],
+        'unseen uncertainty vr': [unseen_vr],
+        'unseen uncertainty pe': [unseen_pe],
+        'unseen uncertainty mi': [unseen_mi],
+    })), axis=1)
 
 convert_df_to_cpu(res)
 
