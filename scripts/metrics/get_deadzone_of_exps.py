@@ -30,13 +30,14 @@ GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
 #            ]
 exp_nbs = [4789]
 n = 100
-exp_path = CPUPATH
 nb_of_repeats = 2
+number_of_tests = 10
+save_path = f'results/deadzones/'
+
 verbose = True
 nb_of_random = 5000
 do_recompute_outputs = True
 save_csv = True
-save_path = f'results/deadzones/{n}'
 #################################
 
 if not do_recompute_outputs:
@@ -44,8 +45,10 @@ if not do_recompute_outputs:
 
 if torch.cuda.is_available():
     device = "cuda"
+    exp_path = GPUPATH
 else:
     device = "cpu"
+    exp_path = CPUPATH
 device = torch.device(device)
 print(device)
 save_path = pathlib.Path(save_path)
@@ -68,6 +71,8 @@ for repeat_idx in range(nb_of_repeats):
             global arguments
             bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp_nb, exp_path=exp_path)
             bay_net_trained.to(device)
+
+            arguments['number_of_tests'] = number_of_tests
 
             all_eval_outputs, _ = get_seen_outputs_and_labels(
                 bay_net_trained,

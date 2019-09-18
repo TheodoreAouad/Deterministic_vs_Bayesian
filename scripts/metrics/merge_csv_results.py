@@ -9,8 +9,7 @@ from src.utils import load_from_file
 ####### TO CHANGE #########
 
 trainset = 'cifar10'
-dz_nb = 100
-path_to_dz = f'results/deadzones/{dz_nb}/recomputed/{trainset}/deadzones.pkl'
+path_to_dz = f'results/deadzones/recomputed/{trainset}/deadzones.pkl'
 path_to_auc = f'results/risk_coverage/{trainset}/aucs_eval.pkl'
 path_to_acc = f'results/eval_acc/all_eval_accs.pkl'
 save_path = f'results/all_results/{trainset}'

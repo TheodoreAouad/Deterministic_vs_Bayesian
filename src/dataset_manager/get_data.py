@@ -162,7 +162,7 @@ def get_omniglot(
 
 
 def get_random(
-        batch_size=16,
+        batch_size=100,
         number_of_batches=10,
         number_of_channels=1,
         img_dim=28,

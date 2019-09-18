@@ -65,7 +65,8 @@ class CIFAR10SpecificLabels(CIFAR10):
         super(CIFAR10SpecificLabels, self).__init__(root=root, train=train, transform=transform,
                                                     target_transform=target_transform, download=download)
         labels_to_keep = torch.from_numpy(np.isin(self.targets, labels))
-        self.data, self.targets = self.data[labels_to_keep], np.array(self.targets)[labels_to_keep]
+        self.data, self.targets = (self.data[labels_to_keep],
+                                   torch.tensor(np.array(self.targets)[labels_to_keep]))
         data_size = self.data.shape[0]
         random_shuffle = torch.randperm(data_size)
         self.data, self.targets = self.data[random_shuffle], self.targets[random_shuffle]

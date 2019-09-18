@@ -9,6 +9,7 @@ from scripts.utils import get_args, get_res_args_groupnb
 
 path_to_results = 'results/risk_coverage/cifar10'
 local_path = 'polyaxon_results/groups'
+nb_of_runs = 10
 
 #########################
 
@@ -49,33 +50,34 @@ def compute_auc(results, nb_of_tests, exp_nb, unc_name):
 
 path_to_results = pathlib.Path(path_to_results)
 
-for type in ['eval', 'train']:
+for _ in nb_of_runs:
+    for type in ['eval', 'train']:
 
-    results = pd.read_csv(path_to_results / f'results_{type}.csv')
+        results = pd.read_csv(path_to_results / f'results_{type}.csv')
 
-    exps = results.exp.unique()
-    uncs = results.unc.unique()
-    number_of_testss = results.number_of_tests.unique()
+        exps = results.exp.unique()
+        uncs = results.unc.unique()
+        number_of_testss = results.number_of_tests.unique()
 
-    aucs = pd.DataFrame()
-    for exp_nb in exps:
-        _, arguments, group_nb = get_res_args_groupnb(exp_nb, path)
-        for unc in uncs:
-            for number_of_tests in number_of_testss:
-                current_aucs = compute_auc(results, number_of_tests, exp_nb, unc)
-                for cur_auc in current_aucs:
-                    aucs = aucs.append(pd.DataFrame.from_dict({
-                        'exp_nb': [exp_nb],
-                        'group_nb': [group_nb],
-                        'trainset': [arguments.get('trainset', 'mnist')],
-                        'rho': [arguments['rho']],
-                        'std_prior': [arguments['std_prior']],
-                        'loss_type': [arguments['loss_type']],
-                        'unc_name': [unc],
-                        'number_of_tests': [number_of_tests],
-                        'auc': [cur_auc],
-                    }))
+        aucs = pd.DataFrame()
+        for exp_nb in exps:
+            _, arguments, group_nb = get_res_args_groupnb(exp_nb, path)
+            for unc in uncs:
+                for number_of_tests in number_of_testss:
+                    current_aucs = compute_auc(results, number_of_tests, exp_nb, unc)
+                    for cur_auc in current_aucs:
+                        aucs = aucs.append(pd.DataFrame.from_dict({
+                            'exp_nb': [exp_nb],
+                            'group_nb': [group_nb],
+                            'trainset': [arguments.get('trainset', 'mnist')],
+                            'rho': [arguments['rho']],
+                            'std_prior': [arguments['std_prior']],
+                            'loss_type': [arguments['loss_type']],
+                            'unc_name': [unc],
+                            'number_of_tests': [number_of_tests],
+                            'auc': [cur_auc],
+                        }))
 
-    aucs.exp_nb = aucs.exp_nb.astype('int')
-    aucs.to_csv(path_to_results / f'aucs_{type}.csv')
-    aucs.to_pickle(path_to_results / f'aucs_{type}.pkl')
+        aucs.exp_nb = aucs.exp_nb.astype('int')
+        aucs.to_csv(path_to_results / f'aucs_{type}.csv')
+        aucs.to_pickle(path_to_results / f'aucs_{type}.pkl')
