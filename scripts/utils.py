@@ -342,15 +342,7 @@ def compute_density_train_seen_unseen(arguments, all_outputs_train, all_outputs_
         plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
-    if save_fig:
-        assert save_path is not None
-        print('Saving figure...')
-        plt.savefig(save_path)
-        print('Figure saved.')
-    if show_fig:
-        print('Showing figures...')
-        plt.show()
-        print('Figure shown.')
+    return fig
 
 
 def compute_density_train_seen(arguments, all_outputs_train, all_outputs_seen, show_fig,
@@ -419,15 +411,7 @@ def compute_density_train_seen(arguments, all_outputs_train, all_outputs_seen, s
         plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
-    if save_fig:
-        assert save_path is not None
-        print('Saving figure...')
-        plt.savefig(save_path)
-        print('Figure saved.')
-    if show_fig:
-        print('Showing figures...')
-        plt.show()
-        print('Figure shown.')
+    return fig
 
 
 def compute_density_correct_false(arguments, all_outputs, true_labels, show_fig,
@@ -501,15 +485,7 @@ def compute_density_correct_false(arguments, all_outputs, true_labels, show_fig,
         plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
-    if save_fig:
-        assert save_path is not None
-        print('Saving figure...')
-        plt.savefig(save_path)
-        print('Figure saved.')
-    if show_fig:
-        print('Showing figures...')
-        plt.show()
-        print('Figure shown.')
+    return fig
 
 
 def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_labels_train, all_outputs_seen,
@@ -617,15 +593,8 @@ def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_
         plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
         ax.legend()
 
-    if save_fig:
-        assert save_path is not None
-        print('Saving figure...')
-        plt.savefig(save_path)
-        print('Figure saved.')
-    if show_fig:
-        print('Showing figures...')
-        plt.show()
-        print('Figure shown.')
+    return fig
+
 
 
 def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train, true_labels_train, all_outputs_seen,
@@ -679,13 +648,29 @@ def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train
             'VR': (vr_train_correct, vr_train_false, vr_seen_correct, vr_seen_false, vr_unseen),
             'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false, pe_unseen),
             'MI': (mi_train_correct, mi_train_false, mi_seen_correct, mi_seen_false, mi_unseen),
+            'VR - correct': (vr_train_correct, vr_seen_correct),
+            'PE - correct': (pe_train_correct, pe_seen_correct),
+            'MI - correct': (mi_train_correct, mi_seen_correct),
+            'VR - false': [vr_unseen, vr_train_false, vr_seen_false],
+            'PE - false': [pe_unseen, pe_train_false, pe_seen_false],
+            'MI - false': [mi_unseen, mi_train_false, mi_seen_false],
         }
-        label = ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',)
+        label = {
+            'VR': ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',),
+            'PE': ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',),
+            'MI': ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',),
+            'VR - correct': ('train correct', 'seen correct',),
+            'PE - correct': ('train correct', 'seen correct',),
+            'MI - correct': ('train correct', 'seen correct',),
+            'VR - false': ('unseen', 'train false', 'seen false'),
+            'PE - false': ('unseen', 'train false', 'seen false'),
+            'MI - false': ('unseen', 'train false', 'seen false'),
+        }
 
         axs = {
-            'VR': fig.add_subplot(311),
-            'PE': fig.add_subplot(312),
-            'MI': fig.add_subplot(313),
+            'VR': fig.add_subplot(331), 'VR - correct': fig.add_subplot(332), 'VR - false': fig.add_subplot(333),
+            'PE': fig.add_subplot(334), 'PE - correct': fig.add_subplot(335), 'PE - false': fig.add_subplot(336),
+            'MI': fig.add_subplot(337), 'MI - correct': fig.add_subplot(338), 'MI - false': fig.add_subplot(339),
         }
 
         plt.legend()
@@ -700,28 +685,31 @@ def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train
         uncs = {
             'US': (us_train_correct, us_train_false, us_seen_correct, us_seen_false, us_unseen),
             'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false, pe_unseen),
+            'US - correct': (us_train_correct, us_seen_correct, ),
+            'PE - correct': (pe_train_correct, pe_seen_correct, ),
+            'US - false': [us_unseen, us_train_false, us_seen_false],
+            'PE - false': [pe_unseen, pe_train_false, pe_seen_false],
         }
-        label = ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',)
+        label = {
+            'US': ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',),
+            'PE': ('train correct', 'train false', 'seen correct', 'seen false', 'unseen',),
+            'US - correct': ('train correct', 'seen correct',),
+            'PE - correct': ('train correct', 'seen correct',),
+            'US - false': ('unseen', 'train false', 'seen false'),
+            'PE - false': ('unseen', 'train false', 'seen false'),
+        }
 
         axs = {
-            'US': fig.add_subplot(211),
-            'PE': fig.add_subplot(212),
+            'US': fig.add_subplot(231), 'US - correct': fig.add_subplot(232), 'US - false': fig.add_subplot(233),
+            'PE': fig.add_subplot(234), 'PE - correct': fig.add_subplot(235), 'PE - false': fig.add_subplot(236),
         }
 
     for unc, ax in axs.items():
         ax.set_title(unc)
-        plot_density_on_ax(ax, uncs[unc], hist=True, labels=label, **kwargs)
+        plot_density_on_ax(ax, uncs[unc], hist=True, labels=label[unc], **kwargs)
         ax.legend()
 
-    if save_fig:
-        assert save_path is not None
-        print('Saving figure...')
-        plt.savefig(save_path)
-        print('Figure saved.')
-    if show_fig:
-        print('Showing figures...')
-        plt.show()
-        print('Figure shown.')
+    return fig
 
 
 def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbose=True, ):
@@ -738,9 +726,10 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
         torch.Tensor, torch.Tensor: size (nb of tests, size of testset, nb of classes), size (nb of tests)
     """
     type_of_unseen = arguments['type_of_unseen']
-    if arguments['trainset'] == 'mnist':
+    trainset = arguments.get('trainset', 'mnist')
+    if trainset == 'mnist':
         get_trainset = get_mnist
-    elif arguments['trainset'] == 'cifar10':
+    elif trainset == 'cifar10':
         get_trainset = get_cifar10
     else:
         assert False, 'trainset not recognized'
@@ -766,23 +755,25 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
     return all_eval_outputs, true_labels_seen
 
 # TODO: put this function in primary_results_bayesian.py
-def get_evalloader_unseen(arguments):
+def get_evalloader_unseen(arguments, nb_of_batchs=10):
     type_of_unseen = arguments['type_of_unseen']
-    if arguments['trainset'] == 'mnist':
+    trainset = arguments.get('trainset', 'mnist')
+    if trainset == 'mnist':
         get_trainset = get_mnist
         dim_input = 28
         dim_channels = 1
-    elif arguments['trainset'] == 'cifar10':
+    elif trainset == 'cifar10':
         get_trainset = get_cifar10
         dim_input = 32
         dim_channels = 3
     if type_of_unseen == 'random':
-        _, _, evalloader_unseen = get_random(number_of_channels=dim_channels, img_dim=dim_input, number_of_classes=10)
+        _, _, evalloader_unseen = get_random(number_of_channels=dim_channels, number_of_batches=nb_of_batchs,
+                                             img_dim=dim_input, number_of_classes=10)
     if type_of_unseen == 'unseen_classes':
         split_labels = arguments['split_labels']
         _, _, evalloader_unseen = get_trainset(train_labels=(), eval_labels=range(split_labels, 10, ), )
     if type_of_unseen == 'unseen_dataset':
-        unseen_evalset = arguments['unseen_evalset']
+        unseen_evalset = arguments.get('unseen_evalset', 'cifar10')
         transform = transforms.Compose([
             transforms.Grayscale(num_output_channels=dim_channels),
             transforms.Resize(dim_input),
@@ -811,7 +802,7 @@ def get_unseen_outputs(bay_net_trained, arguments, nb_of_random=None, device='cp
     Returns:
         torch.Tensor: size (nb of tests, size of testset, nb of classes)
     """
-    evalloader_unseen = get_evalloader_unseen(arguments)
+    evalloader_unseen = get_evalloader_unseen(arguments, nb_of_batchs = nb_of_random//100)
     if verbose:
         print('Evaluation on',  arguments['type_of_unseen'], '...')
     _, all_unseen_outputs = eval_bayesian(bay_net_trained, evalloader_unseen,
@@ -942,9 +933,10 @@ def get_train_outputs(bay_net_trained, arguments, device='cpu', verbose=True):
         torch.Tensor: size (nb of tests, size of trainset, nb of classes)
     """
     type_of_unseen = arguments['type_of_unseen']
-    if arguments['trainset'] == 'mnist':
+    trainset = arguments.get('trainset', 'mnist')
+    if trainset == 'mnist':
         get_trainset = get_mnist
-    elif arguments['trainset'] == 'cifar10':
+    elif trainset == 'cifar10':
         get_trainset = get_cifar10
     if type_of_unseen == 'unseen_classes':
         trainloader, _, _ = get_trainset(train_labels=range(arguments['split_labels']), eval_labels=(), split_val=0,
