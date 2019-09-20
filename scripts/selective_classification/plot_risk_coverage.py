@@ -10,15 +10,15 @@ from src.utils import save_to_file
 
 ######## TO CHANGE ###############
 
-exp_nbs = ['4795']
-number_of_tests_to_print = [10, 20]
+exp_nbs = ['14617', '14746', '14681', '14627', '14748', '14689', '14633', '14754', '14695']
+number_of_tests_to_print = [10]
 
-show_fig = True
+show_fig = False
 save_fig = True
 figsize = (10, 6)
 
-save_csv_path = 'results/risk_coverage/cifar10'
-save_fig_path = 'results/risk_coverage/cifar10'
+save_csv_path = 'results/risk_coverage/'
+save_fig_path = 'results/risk_coverage/'
 GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
 CPUPATH = 'polyaxon_results/groups'
 ###################################
@@ -101,6 +101,7 @@ def plot_acc_cov(number_of_tests_to_print, exp_nb, results, figsize=figsize, ):
 if show_fig or save_fig:
     for exp_nb in exp_nbs:
         fig = plot_acc_cov(number_of_tests_to_print, exp_nb, results_train, figsize=figsize)
+        fig.suptitle('Accuracy - Coverage: Trainset')
         if save_fig:
             save_fig_path = pathlib.Path(save_fig_path)
             save_fig_path.mkdir(exist_ok=True, parents=True)
@@ -113,6 +114,7 @@ results_eval = pd.read_csv(save_csv_path / 'results_eval.csv')
 if show_fig or save_fig:
     for exp_nb in exp_nbs:
         fig = plot_acc_cov(number_of_tests_to_print, exp_nb, results_eval, figsize=figsize)
+        fig.suptitle('Accuracy - Coverage: Testset')
         if save_fig:
             save_fig_path = pathlib.Path(save_fig_path)
             save_fig_path.mkdir(exist_ok=True, parents=True)

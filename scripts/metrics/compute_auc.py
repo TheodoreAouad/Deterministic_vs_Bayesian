@@ -5,15 +5,14 @@ import sklearn.metrics as metrics
 
 
 ###### TO CHANGE ########
-from scripts.utils import get_args, get_res_args_groupnb
+from scripts.utils import get_res_args_groupnb
 
 path_to_results = 'results/risk_coverage/cifar10'
 local_path = 'polyaxon_results/groups'
-nb_of_runs = 10
 
 #########################
 
-path = local_path
+path_to_exps = local_path
 
 def compute_auc(results, nb_of_tests, exp_nb, unc_name):
     """
@@ -35,6 +34,8 @@ def compute_auc(results, nb_of_tests, exp_nb, unc_name):
         .query(f'unc=="{unc_name}"')
     )
 
+    result_of_interest.loc[result_of_interest['coverage'] == 0, 'acc'] = 1
+
     grouped = result_of_interest.groupby('risk')
 
     nb_of_risks = grouped.coverage.size().iloc[0]
@@ -48,9 +49,39 @@ def compute_auc(results, nb_of_tests, exp_nb, unc_name):
 
     return all_aucs
 
-path_to_results = pathlib.Path(path_to_results)
 
-for _ in nb_of_runs:
+def split_df_columns(df, indexs):
+    """
+    Groups by indexs and separates the results into multiple dataframes.
+    Ex:
+    A = pd.DataFrame.from_dict({
+            'Index1': [1, 1],
+            'Index2': [1, 2],
+            })
+    split_df_columns(A) = [pd.DataFrame.from_dict({'Index1': [1], 'Index2': [1]}),
+                           pd.DataFrame.from_dict({'Index1': [1], 'Index2': [2]})]
+    Args:
+        df (pandas.core.frame.DataFrame): dataframe we want to split
+        indexs (list): list of indexes to group by
+
+    Returns:
+        list of pandas.core.frame.DataFrame
+    """
+    pass
+
+
+def main(path_to_exps=path_to_exps, path_to_results=path_to_results, **kwargs):
+    """
+    Writes the AUC of the risk-coverage figures in the path_to_results/results_train.csv,
+    path_to_results/results_eval.csv.
+    Args:
+        path_to_exps (str): path to the experiments groups.
+        path_to_results (str): path to the results of the risk-coverage
+        nb_of_runs (int): number of runs to have confidence interval
+
+    """
+    path_to_results = pathlib.Path(path_to_results)
+
     for type in ['eval', 'train']:
 
         results = pd.read_csv(path_to_results / f'results_{type}.csv')
@@ -61,7 +92,7 @@ for _ in nb_of_runs:
 
         aucs = pd.DataFrame()
         for exp_nb in exps:
-            _, arguments, group_nb = get_res_args_groupnb(exp_nb, path)
+            _, arguments, group_nb = get_res_args_groupnb(exp_nb, path_to_exps)
             for unc in uncs:
                 for number_of_tests in number_of_testss:
                     current_aucs = compute_auc(results, number_of_tests, exp_nb, unc)
@@ -72,6 +103,7 @@ for _ in nb_of_runs:
                             'trainset': [arguments.get('trainset', 'mnist')],
                             'rho': [arguments['rho']],
                             'std_prior': [arguments['std_prior']],
+                            'epoch': [arguments['epoch']],
                             'loss_type': [arguments['loss_type']],
                             'unc_name': [unc],
                             'number_of_tests': [number_of_tests],
@@ -81,3 +113,7 @@ for _ in nb_of_runs:
         aucs.exp_nb = aucs.exp_nb.astype('int')
         aucs.to_csv(path_to_results / f'aucs_{type}.csv')
         aucs.to_pickle(path_to_results / f'aucs_{type}.pkl')
+
+
+if __name__ == '__main__':
+    main()

@@ -6,6 +6,7 @@ import pandas as pd
 import torch
 import torch.optim as optim
 from torch.nn import CrossEntropyLoss
+from torchvision.transforms import transforms
 from tqdm import tqdm
 
 from src.loggers.losses.base_loss import BaseLoss
@@ -17,53 +18,54 @@ from src.tasks.trains import train_bayesian_modular, uniform
 from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_all_uncertainty_measures, get_predictions_from_multiple_tests
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
-from src.dataset_manager.get_data import get_mnist, get_cifar10, get_random
+from src.dataset_manager.get_data import get_mnist, get_cifar10, get_random, get_omniglot
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--save_loss', help='whether to save the evolution of the loss during training. '
-                                        'Note: the tensorboard is not affected.', type=bool)
-parser.add_argument('--save_observables', help='whether to save the evolution of the observables during training. '
-                                               'Note: the tensorboard is not affected.', type=bool)
-parser.add_argument('--save_outputs', help='whether to save the soft max outputs', type=bool)
-parser.add_argument('--type_of_unseen', help='configuration set for unseen dataset.',
-                    choices=['random', 'unseen_classes', 'unseen_dataset', ], type=str)
-parser.add_argument('--trainset', help='dataset on which we train', choices=['mnist', 'cifar10'], type=str)
-parser.add_argument('--unseen_evalset', help='unseen dataset to test uncertainty',
-                    choices=['mnist', 'cifar10', 'omniglot'], type=str)
-parser.add_argument('--split_labels', help='up to which label the training goes',
-                    type=int, default=10)
-parser.add_argument('--rho', help='variable symbolizing the variance. std = log(1+exp(rho))',
-                    type=float, default=-6)
-parser.add_argument('--epoch', help='number of times we train the model on the same data',
-                    type=int, default=30)
-parser.add_argument('--batch_size', help='number of batches to split the data into',
-                    type=int, default=32)
-parser.add_argument('--number_of_tests', help='number of evaluations to perform for each each image to check for '
-                                              'uncertainty', type=int, default=20)
-parser.add_argument('--loss_type', help='which loss to use', choices=['exp', 'uniform', 'criterion'], type=str,
-                    default='uniform')
-parser.add_argument('--std_prior', help='the standard deviation of the prior', type=float, default=0.1)
-parser.add_argument('--delta', help='probability upper bound of error higher that risk', type=float)
-parser.add_argument('--ratio_unseen', help='ratio of the evaluation data that is unseen in train', type=float)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--save_loss', help='whether to save the evolution of the loss during training. '
+                                            'Note: the tensorboard is not affected.', type=bool)
+    parser.add_argument('--save_observables', help='whether to save the evolution of the observables during training. '
+                                                   'Note: the tensorboard is not affected.', type=bool)
+    parser.add_argument('--save_outputs', help='whether to save the soft max outputs', type=bool)
+    parser.add_argument('--type_of_unseen', help='configuration set for unseen dataset.',
+                        choices=['random', 'unseen_classes', 'unseen_dataset', ], type=str)
+    parser.add_argument('--trainset', help='dataset on which we train', choices=['mnist', 'cifar10'], type=str)
+    parser.add_argument('--unseen_evalset', help='unseen dataset to test uncertainty',
+                        choices=['mnist', 'cifar10', 'omniglot'], type=str)
+    parser.add_argument('--split_labels', help='up to which label the training goes',
+                        type=int, default=10)
+    parser.add_argument('--rho', help='variable symbolizing the variance. std = log(1+exp(rho))',
+                        type=float, default=-6)
+    parser.add_argument('--epoch', help='number of times we train the model on the same data',
+                        type=int, default=30)
+    parser.add_argument('--batch_size', help='number of batches to split the data into',
+                        type=int, default=32)
+    parser.add_argument('--number_of_tests', help='number of evaluations to perform for each each image to check for '
+                                                  'uncertainty', type=int, default=20)
+    parser.add_argument('--loss_type', help='which loss to use', choices=['exp', 'uniform', 'criterion'], type=str,
+                        default='uniform')
+    parser.add_argument('--std_prior', help='the standard deviation of the prior', type=float, default=0.1)
+    parser.add_argument('--delta', help='probability upper bound of error higher that risk', type=float)
+    parser.add_argument('--ratio_unseen', help='ratio of the evaluation data that is unseen in train', type=float)
 
-args = parser.parse_args()
-save_to_file(vars(args), './output/arguments.pkl')
+    args = parser.parse_args()
+    save_to_file(vars(args), './output/arguments.pkl')
 
-trainset = args.trainset
-unseen_evalset = args.unseen_evalset
-type_of_unseen = args.type_of_unseen
-split_labels = args.split_labels
-rho = args.rho
-epoch = args.epoch
-batch_size = args.batch_size
-number_of_tests = args.number_of_tests
-loss_type = args.loss_type
-std_prior = args.std_prior
-stds_prior = (std_prior, std_prior)
-delta = args.delta
-ratio_unseen = args.ratio_unseen
-risks = np.linspace(0.2, 0.5, 50)
-res = pd.DataFrame()
+    trainset = args.trainset
+    unseen_evalset = args.unseen_evalset
+    type_of_unseen = args.type_of_unseen
+    split_labels = args.split_labels
+    rho = args.rho
+    epoch = args.epoch
+    batch_size = args.batch_size
+    number_of_tests = args.number_of_tests
+    loss_type = args.loss_type
+    std_prior = args.std_prior
+    stds_prior = (std_prior, std_prior)
+    delta = args.delta
+    ratio_unseen = args.ratio_unseen
+    risks = np.linspace(0.2, 0.5, 50)
+    res = pd.DataFrame()
 
 if torch.cuda.is_available():
     device = 'cuda'
@@ -228,7 +230,7 @@ res = pd.DataFrame.from_dict({
     'loss_type': [loss_type],
     'number of epochs': [epoch],
     'batch_size': [batch_size],
-    'split_train': [len(trainloader.dataset)],
+    'split_train': [len(trainloader_seen.dataset)],
     'number of tests': [number_of_tests],
     'seed_model': [seed_model],
     'stds_prior': [std_prior],
