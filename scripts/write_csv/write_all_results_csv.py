@@ -32,7 +32,7 @@ which_file = args.which_file
 type_of_test = args.type_of_test
 extra_info = args.extra_info
 
-filename = pathlib.Path("results/raw_results/")
+filename = pathlib.Path("results/raw_results/all_columns")
 filename.mkdir(parents=True, exist_ok=True)
 if group_nb is not None:
     _, all_dirs = get_file_and_dir_path_in_dir(os.path.join(polyaxon_results_path, polyaxon_type, group_nb), which_file)

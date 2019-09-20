@@ -596,7 +596,6 @@ def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_
     return fig
 
 
-
 def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train, true_labels_train, all_outputs_seen,
                                                     true_labels_seen, all_outputs_unseen, show_fig,
                                                     save_fig, save_path=None, figsize=(8, 10), **kwargs):
@@ -685,8 +684,8 @@ def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train
         uncs = {
             'US': (us_train_correct, us_train_false, us_seen_correct, us_seen_false, us_unseen),
             'PE': (pe_train_correct, pe_train_false, pe_seen_correct, pe_seen_false, pe_unseen),
-            'US - correct': (us_train_correct, us_seen_correct, ),
-            'PE - correct': (pe_train_correct, pe_seen_correct, ),
+            'US - correct': (us_train_correct, us_seen_correct,),
+            'PE - correct': (pe_train_correct, pe_seen_correct,),
             'US - false': [us_unseen, us_train_false, us_seen_false],
             'PE - false': [pe_unseen, pe_train_false, pe_seen_false],
         }
@@ -734,8 +733,9 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
     else:
         assert False, 'trainset not recognized'
     if type_of_unseen == 'unseen_classes':
-        _, _, evalloader_seen = get_trainset(train_labels=(), eval_labels=range(arguments['split_labels']), batch_size=128,
-                                          split_val=0, shuffle=False)
+        _, _, evalloader_seen = get_trainset(train_labels=(), eval_labels=range(arguments['split_labels']),
+                                             batch_size=128,
+                                             split_val=0, shuffle=False)
     else:
         _, _, evalloader_seen = get_trainset(train_labels=(), split_val=0, batch_size=128, shuffle=False)
     shuffle_eval = torch.randperm(len(evalloader_seen.dataset))
@@ -753,6 +753,7 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
     if verbose:
         print('Finished evaluation on seen.')
     return all_eval_outputs, true_labels_seen
+
 
 # TODO: put this function in primary_results_bayesian.py
 def get_evalloader_unseen(arguments, nb_of_batchs=10):
@@ -802,9 +803,9 @@ def get_unseen_outputs(bay_net_trained, arguments, nb_of_random=None, device='cp
     Returns:
         torch.Tensor: size (nb of tests, size of testset, nb of classes)
     """
-    evalloader_unseen = get_evalloader_unseen(arguments, nb_of_batchs = nb_of_random//100)
+    evalloader_unseen = get_evalloader_unseen(arguments, nb_of_batchs=nb_of_random // 100)
     if verbose:
-        print('Evaluation on',  arguments['type_of_unseen'], '...')
+        print('Evaluation on', arguments['type_of_unseen'], '...')
     _, all_unseen_outputs = eval_bayesian(bay_net_trained, evalloader_unseen,
                                           number_of_tests=arguments.get('number_of_tests', 1), device=device,
                                           verbose=verbose, )
@@ -829,7 +830,10 @@ def get_trained_model_and_args_and_groupnb(exp_nb, exp_path='polyaxon_results/gr
     group_nb = dirpath.split('/')[-2]
     dirpath = pathlib.Path(dirpath)
     arguments = load_from_file(dirpath / 'arguments.pkl')
-    if 'split_labels' in arguments.keys():
+    is_determinist = arguments.get('determinist', False) or (arguments.get('rho', 'determinist') == 'determinist')
+    if 'type_of_unseen' in arguments.keys():
+        type_of_unseen = arguments['type_of_unseen']
+    elif 'split_labels' in arguments.keys():
         type_of_unseen = 'unseen_classes'
     elif 'dataset' in arguments.keys():
         type_of_unseen = 'unseen_dataset'
@@ -842,7 +846,7 @@ def get_trained_model_and_args_and_groupnb(exp_nb, exp_path='polyaxon_results/gr
     std_prior = arguments.get('std_prior', 0)
     if arguments.get('trainset', 'mnist') == 'cifar10':
         bay_net_trained = GaussianClassifier(
-            rho=arguments.get('rho', 'determinist'),
+            rho='determinist' if is_determinist else arguments.get('rho', 'determinist'),
             stds_prior=(std_prior, std_prior),
             number_of_classes=10,
             dim_input=32,
@@ -850,7 +854,7 @@ def get_trained_model_and_args_and_groupnb(exp_nb, exp_path='polyaxon_results/gr
         )
     else:
         bay_net_trained = GaussianClassifier(
-            rho=arguments.get('rho', 'determinist'),
+            rho='determinist' if is_determinist else arguments.get('rho', 'determinist'),
             stds_prior=(std_prior, std_prior),
             number_of_classes=10,
             dim_input=28,
@@ -876,7 +880,9 @@ def get_res_args_groupnb(exp_nb, exp_path='polyaxon_results/groups'):
     dirpath = pathlib.Path(dirpath)
     arguments = load_from_file(dirpath / 'arguments.pkl')
     results = load_from_file(dirpath / 'results.pkl')
-    if 'split_labels' in arguments.keys():
+    if 'type_of_unseen' in arguments.keys():
+        type_of_unseen = arguments['type_of_unseen']
+    elif 'split_labels' in arguments.keys():
         type_of_unseen = 'unseen_classes'
     elif 'dataset' in arguments.keys():
         type_of_unseen = 'unseen_dataset'
@@ -906,7 +912,9 @@ def get_args(exp_nb, exp_path='polyaxon_results/groups'):
     group_nb = dirpath.split('/')[-2]
     dirpath = pathlib.Path(dirpath)
     arguments = load_from_file(dirpath / 'arguments.pkl')
-    if 'split_labels' in arguments.keys():
+    if 'type_of_unseen' in arguments.keys():
+        type_of_unseen = arguments['type_of_unseen']
+    elif 'split_labels' in arguments.keys():
         type_of_unseen = 'unseen_classes'
     elif 'dataset' in arguments.keys():
         type_of_unseen = 'unseen_dataset'
@@ -940,7 +948,7 @@ def get_train_outputs(bay_net_trained, arguments, device='cpu', verbose=True):
         get_trainset = get_cifar10
     if type_of_unseen == 'unseen_classes':
         trainloader, _, _ = get_trainset(train_labels=range(arguments['split_labels']), eval_labels=(), split_val=0,
-                                      batch_size=128, shuffle=False)
+                                         batch_size=128, shuffle=False)
     else:
         trainloader, _, _ = get_trainset(eval_labels=(), split_val=0, batch_size=128, shuffle=False)
 
@@ -956,3 +964,21 @@ def get_train_outputs(bay_net_trained, arguments, device='cpu', verbose=True):
                                          device=device, verbose=verbose)
     print('Finished evaluation on train.')
     return all_outputs_train, true_labels_train
+
+
+def f(x):
+    """
+    Transforms the string of tensors x into a string of floats.
+    Args:
+        x (str): the string with the word 'tensor' we want to see disappear.
+
+    Returns:
+        str: all 'tensor' strings are gone.
+    """
+    if type(x) == str:
+        if 'tensor' in x:
+            return float(x.replace('tensor', '').replace('(', '').replace(')', ''))
+        else:
+            return x
+    else:
+        return x

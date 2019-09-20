@@ -15,12 +15,12 @@ from scripts.utils import compute_figures, compute_density_train_seen_unseen, ge
 # exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3832', '3834', '3839',
 #            '3840', '3842', '3851', '3861', '3864']
 
-exp_nbs = ['3713', '3832']
+exp_nbs = ['14619', ]
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000
-show_fig = True
-save_fig = False
+show_fig = False
+save_fig = True
 do_eval_mnist = True
 
 

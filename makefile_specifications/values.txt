@@ -1,8 +1,8 @@
 train max acc
 eval accuracy
-seen uncertainty mi-mean
-unseen uncertainty mi-mean
-seen uncertainty pe-mean
-unseen uncertainty pe-mean
 seen uncertainty vr-mean
 unseen uncertainty vr-mean
+seen uncertainty pe-mean
+unseen uncertainty pe-mean
+seen uncertainty mi-mean
+unseen uncertainty mi-mean
