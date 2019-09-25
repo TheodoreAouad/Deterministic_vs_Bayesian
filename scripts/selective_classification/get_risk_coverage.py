@@ -26,8 +26,8 @@ from src.utils import convert_tensor_to_float, plot_density_on_ax
 
 ###### TO CHANGE ######################################################
 
-# exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3842', '3851', '3861', '3864']
-exp_nbs = ['19815']
+# these_exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3842', '3851', '3861', '3864']
+these_exp_nbs = ['19815']
 number_of_tests = 10
 nb_of_runs = 1
 # rstars = [0.13076923]
@@ -38,7 +38,7 @@ delta = 0.01
 recompute_outputs = True
 verbose = False
 
-save_csv = False
+save_csv = True
 do_save_animation = False
 figsize = (10, 6)
 
@@ -142,7 +142,7 @@ def main(
 
     """
     if exp_nbs is None:
-        exp_nbs = exp_nbs
+        exp_nbs = these_exp_nbs
     save_csv_path = pathlib.Path(path_to_results)
     save_fig_path = pathlib.Path(path_to_results)
 
