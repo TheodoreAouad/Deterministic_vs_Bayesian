@@ -59,7 +59,10 @@ batch_size = args.batch_size
 number_of_tests = args.number_of_tests
 loss_type = args.loss_type
 std_prior = args.std_prior
-split_train = args.split_train
+if type_of_unseen == 'unseen_classes':
+    split_train = args.split_train
+else:
+    split_train = 10
 stds_prior = (std_prior, std_prior)
 
 if args.determinist:

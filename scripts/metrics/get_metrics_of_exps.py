@@ -26,7 +26,6 @@ rstars = np.linspace(0.1, 0.5, 50)
 # rstars = [0.3, 0.2]
 delta = 0.01
 
-trainset = 'cifar10'
 path_to_dz = f'results/deadzones/'
 path_to_auc = f'results/risk_coverage/'
 path_to_acc = f'results/eval_acc/'
