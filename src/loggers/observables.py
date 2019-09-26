@@ -1,4 +1,5 @@
 from src.loggers.logger import Logger
+from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_all_uncertainty_measures
 
 
@@ -10,7 +11,7 @@ class Observables(Logger):
     def compute_train_on_epoch(self, model, trainloader, device):
         raise NotImplementedError
 
-    def compute_val(self, val_accuracy, val_outputs):
+    def compute_val(self, model, valloader, device, **kwargs,):
         raise NotImplementedError
 
 
@@ -40,6 +41,8 @@ class AccuracyAndUncertainty(Observables):
         self.max_train_accuracy_on_epoch = 0
         self.epoch_with_max_train_accuracy = 0
         self.validation_logging = False
+        self.max_weights = None
+        self.max_val_acc = -1
         self.save_weights_path = save_weights_path
 
     def compute_train_on_batch(self, outputs, labels):
@@ -75,7 +78,7 @@ class AccuracyAndUncertainty(Observables):
             self.max_train_accuracy_on_epoch = self.logs['train_accuracy_on_epoch']
             self.epoch_with_max_train_accuracy = self.current_epoch
 
-    def compute_val(self, val_accuracy, val_outputs):
+    def compute_val(self, model, valloader, device, **kwargs):
         """
         Logs we want to keep on the validation set
         Args:
@@ -85,6 +88,13 @@ class AccuracyAndUncertainty(Observables):
         """
         if not self.validation_logging:
             self.validation_logging = True
+        assert 'number_of_tests' in kwargs.keys(), 'give number of tests for bayesian evaluation'
+        val_accuracy, val_outputs = eval_bayesian(model, valloader, number_of_tests=kwargs['number_of_tests'],
+                                             device=device, verbose=False)
+
+        if val_accuracy > self.max_val_acc:
+            self.max_val_acc = val_accuracy
+            self.max_weights = model.state_dict()
 
         self.logs['val_accuracy'] = val_accuracy
         (

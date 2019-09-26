@@ -757,6 +757,16 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
 
 # TODO: put this function in primary_results_bayesian.py
 def get_evalloader_unseen(arguments, nb_of_batchs=10):
+    """
+    Returns the unseen evalloader given the arguments.
+    Args:
+        arguments (dict): arguments given to the experiment
+        nb_of_batchs (int): used only if the unseen is random
+
+    Returns:
+        torch.utils.data.dataloader.DataLoader: dataloader of unseen dataset
+
+    """
     type_of_unseen = arguments['type_of_unseen']
     trainset = arguments.get('trainset', 'mnist')
     if trainset == 'mnist':

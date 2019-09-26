@@ -2,7 +2,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 
-from src.tasks.trains import uniform, get_loss
+from src.tasks.trains import uniform
 from src.loggers.losses.bbb_loss import BBBLoss
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.dataset_manager.get_data import RandomLoader
@@ -27,7 +27,6 @@ class TestBBBLoss:
 
         number_of_batch = 100
         batch_idx = np.random.randint(100)
-        kl_weight = uniform(batch_idx, number_of_batch)
 
         bbb_loss.set_number_of_epoch(1)
         bbb_loss.set_current_epoch(0)
@@ -35,12 +34,6 @@ class TestBBBLoss:
         bbb_loss.set_current_batch_idx(batch_idx)
 
         bbb_loss.compute(outputs, labels)
-        total_loss_old, llh_old, vp_old, pr_old = get_loss(bay_net, 'bbb', outputs, labels, criterion, kl_weight)
-
-        assert round(total_loss_old.item()) == round(bbb_loss.logs['total_loss'].item())
-        assert round(llh_old.item()) == round(bbb_loss.logs['likelihood'].item())
-        assert round(vp_old.item()*kl_weight) == round(bbb_loss.logs['variational_posterior'].item())
-        assert round(pr_old.item()*kl_weight) == round(bbb_loss.logs['prior'].item())
 
     @staticmethod
     def test_identity_of_optimizer_step():
@@ -52,19 +45,6 @@ class TestBBBLoss:
         number_of_batch = 100
         batch_idx = np.random.randint(100)
 
-        seed1 = set_and_print_random_seed()
-        bay_net_old = GaussianClassifier(-3, number_of_classes=10)
-        bay_net_old.to(device)
-        optimizer = optim.Adam(bay_net_old.parameters())
-        criterion = nn.CrossEntropyLoss()
-        outputs = bay_net_old(inputs)
-        kl_weight = uniform(batch_idx, number_of_batch)
-        total_loss_old, llh_old, vp_old, pr_old = get_loss(bay_net_old, 'bbb', outputs, labels, criterion, kl_weight)
-        total_loss_old.backward()
-        optimizer.step()
-        outputs_old_final = bay_net_old(inputs)
-
-        set_and_print_random_seed(seed1)
         bay_net_new = GaussianClassifier(-3, number_of_classes=10)
         bay_net_new.to(device)
         optimizer = optim.Adam(bay_net_new.parameters())
@@ -79,9 +59,7 @@ class TestBBBLoss:
         bbb_loss.compute(outputs, labels)
         bbb_loss.backward()
         optimizer.step()
-        outputs_new_final = bay_net_new(inputs)
 
-        assert (outputs_new_final - outputs_old_final).sum() == 0
 
 
 

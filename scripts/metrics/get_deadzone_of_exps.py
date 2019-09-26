@@ -113,6 +113,7 @@ def main(
                     deadzones = deadzones.append(pd.DataFrame.from_dict({
                         'group_nb': [group_nb],
                         'exp_nb': [exp_nb],
+                        'trainset': [arguments.get('trainset', 'mnist')],
                         'type_of_unseen': [arguments['type_of_unseen']],
                         'epoch': [arguments['epoch']],
                         'number_of_tests': [arguments['number_of_tests']],
@@ -157,6 +158,7 @@ def main(
                     deadzones = deadzones.append(pd.DataFrame.from_dict({
                         'deadzone_number': [n],
                         'group_nb': [group_nb],
+                        'trainset': [arguments.get('trainset', 'mnist')],
                         'exp_nb': [exp_nb],
                         'type_of_unseen': [arguments['type_of_unseen']],
                         'epoch': [arguments['epoch']],

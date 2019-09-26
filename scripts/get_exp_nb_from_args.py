@@ -6,7 +6,7 @@ from scripts.utils import get_args, get_res_args_groupnb, get_trained_model_and_
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
 group = 226
-rho = -5
+rho = -6
 
 type_of_unseen_list = ['random', 'unseen_classes', 'unseen_dataset']
 loss_type_list = ['exp', 'criterion', 'uniform']
@@ -27,6 +27,6 @@ for type_of_unseen in type_of_unseen_list:
             f'loss_type == "{loss_type}" & '
             f'batch_size == {batch_size} & '
             f'stds_prior == {stds_prior}'
-        ).experiment.iloc[0])
+        ).experiment.iloc[2])
 
 print(my_exps)

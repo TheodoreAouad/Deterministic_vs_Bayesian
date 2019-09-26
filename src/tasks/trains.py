@@ -14,11 +14,11 @@ def train_bayesian_modular(
         number_of_epochs,
         trainloader,
         valloader=None,
-        number_of_tests=10,
         output_dir_tensorboard=None,
         output_dir_results=None,
         device='cpu',
         verbose=False,
+        **kwargs,
 ):
     """
     Train Bayesian with modular arguments
@@ -30,11 +30,11 @@ def train_bayesian_modular(
         number_of_epochs (int): how long do we train our model
         trainloader (torch.utils.data.dataloader.DataLoader): dataloader of train set
         valloader (torch.utils.data.dataloader.DataLoader): dataloader of validation set
-        number_of_tests (int): number of tests to perform during validation evaluation
         output_dir_results (str): output directory in which to save the results (NOT IMPLEMENTED)
         output_dir_tensorboard (str): output directory in which to save the tensorboard
         device (torch.device || str): cpu or gpu
         verbose (Bool): print training steps or not
+        kwargs: number_of_tests (int): number of tests to perform during validation evaluation
     Returns
         NOT IMPLEMENTED YET
     """
@@ -68,9 +68,7 @@ def train_bayesian_modular(
 
             if batch_idx % interval == interval - 1:
                 if valloader is not None:
-                    val_acc, val_outputs = eval_bayesian(model, valloader, number_of_tests=number_of_tests,
-                                                         device=device, verbose=False)
-                    observables.compute_val(val_acc, val_outputs)
+                    observables.compute_val(model, valloader, device=device, **kwargs,)
 
                 if verbose:
                     print('======================================')

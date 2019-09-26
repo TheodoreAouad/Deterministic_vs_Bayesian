@@ -171,9 +171,9 @@ def main(
             if recompute_outputs:
 
                 split_labels = arguments.get('split_labels', 10)
-                if arguments['trainset'] == 'mnist':
+                if arguments.get('trainset', 'mnist') == 'mnist':
                     get_trainset = get_mnist
-                elif arguments['trainset'] == 'cifar10':
+                elif arguments.get('trainset', 'mnist') == 'cifar10':
                     get_trainset = get_cifar10
                 else:
                     assert False, 'trainset not recognized'
@@ -233,7 +233,7 @@ def main(
                         'coverage': [coverage_train],
                         'time': [time.time() - start],
                         'number_of_tests': [number_of_tests],
-                        'loss_type': [arguments['loss_type']],
+                        'loss_type': [arguments.get('loss_type', 'criterion')],
                     })
                     convert_tensor_to_float(new_res_train)
                     results_train = results_train.append(new_res_train, sort=True)
@@ -250,7 +250,7 @@ def main(
                         'coverage': [coverage_eval],
                         'time': [time.time() - start],
                         'number_of_tests': [number_of_tests],
-                        'loss_type': [arguments['loss_type']],
+                        'loss_type': [arguments.get('loss_type', 'criterion')],
                     })
                     convert_tensor_to_float(new_res_eval)
                     results_eval = results_eval.append(new_res_eval, sort=True)

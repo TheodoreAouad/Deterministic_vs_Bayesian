@@ -14,9 +14,15 @@ GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
 
 ###### TO CHANGE ########
 
-exp_nbs = [4789]
+exp_nbs = ['19989', '20008', '19973', '20001', '19987', '19980', '20006', '19974', '20007', '19975',
+           '19981', '19986', '19972', '20000', '20009', '19988', '20013', '19995', '19992', '19966',
+           '20014', '20022', '19968', '19969', '19967', '20015', '19993', '19994', '20012', '19979',
+           '19983', '20005', '19977', '19970', '20002', '19984', '19985', '19971', '20003', '20004',
+           '19976', '19982', '19978', '19991', '19965', '20017', '20010', '19996', '20019', '19998',
+           '20021', '19999', '20020', '20018', '19997', '20011', '19963', '19964', '20016', '19990',
+           ]
 nb_of_runs = 1
-nb_of_tests = 2
+nb_of_tests = 5
 save_output = True
 save_path = './results/eval_acc/'
 
@@ -34,7 +40,7 @@ def get_evalloader_seen(arguments):
         torch.utils.data.dataloader.DataLoader: dataloader of the test data on seen dataset
 
     """
-    trainset = arguments['trainset']
+    trainset = arguments.get('trainset', 'mnist')
     split_labels = arguments.get('split_labels', 10)
     if trainset == 'mnist':
         get_trainset = get_mnist
@@ -79,13 +85,14 @@ def main(
 
     for _ in range(nb_of_runs):
         for exp in exp_nbs:
+            print(f'Exp {exp}, computing accuracies...')
             bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp, path_to_exps)
             evalloader_seen = get_evalloader_seen(arguments)
 
             eval_acc, _ = eval_bayesian(
                 bay_net_trained,
                 evalloader_seen,
-                number_of_tests=nb_of_tests if arguments['rho'] != 'determinist' else 1,
+                number_of_tests=nb_of_tests if arguments.get('rho', 'determinist') != 'determinist' else 1,
                 return_accuracy=True,
                 device=device,
                 verbose=True,
@@ -95,11 +102,11 @@ def main(
                 'exp_nb': [exp],
                 'group_nb': [group_nb],
                 'split_labels': [arguments.get('split_labels', 10)],
-                'trainset': [arguments['trainset']],
-                'rho': [arguments['rho']],
-                'std_prior': [arguments['std_prior']],
+                'trainset': [arguments.get('trainset', 'mnist')],
+                'rho': [arguments.get('rho', 'determinist')],
+                'std_prior': [arguments.get('std_prior', -1)],
                 'epoch': [arguments['epoch']],
-                'loss_type': [arguments['loss_type']],
+                'loss_type': [arguments.get('loss_type', 'criterion')],
                 'number_of_tests': [nb_of_tests],
                 'eval_acc': eval_acc,
             }))

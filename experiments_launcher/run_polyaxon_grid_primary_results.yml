@@ -28,7 +28,7 @@ hptuning:
       values: [''] # If you wish to save outputs, type inside of the '': --save_outputs
 
     type_of_unseen:
-      values: ['random', 'unseen_classes', 'unseen_dataset']
+      values: ['random', 'unseen_classes']
 
     trainset:
       values: ['cifar10']
@@ -40,19 +40,19 @@ hptuning:
       values: [5]
 
     rho:
-      values: [-6., -6., -6., -6., -6., -6., -6., -6., -6., -6.,]
+      values: [-6]
 
     determinist:
       values: [''] # If you wish to do determinist training, type inside of the '': --determinist
 
     epoch:
-      values: [10, 20]
+      values: [15]
 
     batch_size:
       values: [32,]
 
     number_of_tests:
-      values: [10]
+      values: [5]
 
     loss_type:
       values: ["exp"]
@@ -61,7 +61,8 @@ hptuning:
       values: [1e-1]
 
     split_train:
-      values: [-1]
+      values: [1.0000e+01, 8.8889e+00, 7.7778e+00, 6.6667e+00, 5.5556e+00,
+               4.4445e+00, 3.3334e+00, 2.2223e+00, 1.1112e+00, 1.0000e-04]
 
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8

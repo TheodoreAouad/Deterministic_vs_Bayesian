@@ -89,7 +89,7 @@ def main(path_to_exps=path_to_exps, path_to_results=path_to_results, **kwargs):
         exps = results.exp.unique()
         uncs = results.unc.unique()
         number_of_testss = results.number_of_tests.unique()
-
+        i = 0
         aucs = pd.DataFrame()
         for exp_nb in exps:
             _, arguments, group_nb = get_res_args_groupnb(exp_nb, path_to_exps)
@@ -101,10 +101,10 @@ def main(path_to_exps=path_to_exps, path_to_results=path_to_results, **kwargs):
                             'exp_nb': [exp_nb],
                             'group_nb': [group_nb],
                             'trainset': [arguments.get('trainset', 'mnist')],
-                            'rho': [arguments['rho']],
-                            'std_prior': [arguments['std_prior']],
+                            'rho': [arguments.get('rho', 'determinist')],
+                            'std_prior': [arguments.get('std_prior', -1)],
                             'epoch': [arguments['epoch']],
-                            'loss_type': [arguments['loss_type']],
+                            'loss_type': [arguments.get('loss_type', 'criterion'),],
                             'unc_name': [unc],
                             'number_of_tests': [number_of_tests],
                             'auc': [cur_auc],

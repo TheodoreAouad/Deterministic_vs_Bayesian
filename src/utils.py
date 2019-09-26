@@ -397,3 +397,26 @@ def plot_density_on_ax(ax, uncs, labels, hist=False, **kwargs):
 
 def get_fig_size(ax):
     return ax.figure.get_size_inches()*ax.figure.dpi
+
+
+def aggregate_df(df, indexs):
+    """
+    Gives Mean and STD of df grouped by indexes
+    Args:
+        df (pandas.core.frame.DataFrame):
+        indexs (list): list of string of column names on which to group by
+
+    Returns:
+        pandas.core.frame.DataFrame: aggregated dataframe
+
+    """
+    grped = df.groupby(indexs)
+
+    def stringify(x):
+        return str(round(x, 4))
+
+    means = grped.agg('mean')
+    stds = grped.agg(lambda df: 1.96 * df.std() / len(df))
+    df_aggregated_show = means.applymap(stringify) + '+-' + stds.applymap(stringify)
+    df_aggregated_data = grped.agg(lambda df: [df.mean(), 1.96 * df.std() / len(df), len(df)])
+    return df_aggregated_show.reset_index(), df_aggregated_data.reset_index()
