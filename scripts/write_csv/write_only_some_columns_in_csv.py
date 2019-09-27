@@ -63,8 +63,8 @@ if specific_results.rho.iloc[0] == 'determinist':
 else:
     uncs = ['vr', 'pe', 'mi']
 for unc in uncs:
-    specific_results[f'{unc} unseen/seen'] = (specific_results[f'unseen uncertainty {unc}-mean'] /
-                                              specific_results[f'seen uncertainty {unc}-mean'])
+    specific_results[f'{unc}_unseen/seen'] = (specific_results[f'unseen_uncertainty_{unc}-mean'] /
+                                              specific_results[f'seen_uncertainty_{unc}-mean'])
 save_dir_path.mkdir(exist_ok=True, parents=True)
 specific_results.to_pickle(save_dir_path / (filename + '_specific_results.pkl'))
 specific_results.to_csv(save_dir_path / (filename + '_specific_results.csv'))

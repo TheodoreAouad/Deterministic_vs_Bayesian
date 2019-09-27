@@ -59,17 +59,17 @@ def get_mnist(
     if len(train_labels) > 0:
         trainset = MNISTSpecificLabels(root=root, labels=train_labels, train=True, split=split_train,
                                        transform=transform,
-                                       download=True)
+                                       download=True, shuffle_dataset=shuffle)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
         if split_val > 0:
             valset = MNISTSpecificLabels(root=root, labels=train_labels, train=False, split=(0, split_val),
-                                         transform=transform, download=True)
+                                         transform=transform, download=True, shuffle_dataset=shuffle)
             valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=shuffle)
 
     if len(eval_labels) > 0:
         evalset = MNISTSpecificLabels(root=root, labels=eval_labels, train=False, split=(split_val, 2),
-                                      transform=transform, download=True)
+                                      transform=transform, download=True, shuffle_dataset=shuffle)
         evalloader = torch.utils.data.DataLoader(evalset, batch_size=batch_size, shuffle=shuffle)
 
     return trainloader, valloader, evalloader
@@ -104,10 +104,10 @@ def get_cifar10(
         root = download_path
     print(root)
     #
-    # trainset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=True, transform=transform, download=download)
+    # trainset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=True, transform=transform, download=download, shuffle_d  ataset=shuffle)
     # trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
     #
-    # testset = CIFAR10SpecificLabels(root=root, labels=eval_labels, train=False, transform=transform, download=download)
+    # testset = CIFAR10SpecificLabels(root=root, labels=eval_labels, train=False, transform=transform, download=download, shuffle_dataset=shuffle)
     # evalloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
 
     print(root)
@@ -115,17 +115,17 @@ def get_cifar10(
     if len(train_labels) > 0:
         trainset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=True, split=split_train,
                                        transform=transform,
-                                       download=download)
+                                       download=download, shuffle_dataset=shuffle)
         trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
 
         if split_val > 0:
             valset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=False, split=(0, split_val),
-                                         transform=transform, download=download)
+                                         transform=transform, download=download, shuffle_dataset=shuffle)
             valloader = torch.utils.data.DataLoader(valset, batch_size=batch_size, shuffle=shuffle)
 
     if len(eval_labels) > 0:
         evalset = CIFAR10SpecificLabels(root=root, labels=eval_labels, train=False, split=(split_val, 2),
-                                      transform=transform, download=download)
+                                      transform=transform, download=download, shuffle_dataset=shuffle)
         evalloader = torch.utils.data.DataLoader(evalset, batch_size=batch_size, shuffle=shuffle)
 
     return trainloader, valloader, evalloader
@@ -155,7 +155,7 @@ def get_omniglot(
 
     """
 
-    dataset = torchvision.datasets.Omniglot(root=root, transform=transform, download=download)
+    dataset = torchvision.datasets.Omniglot(root=root, transform=transform, download=download,)
     omniglot_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
 
     return omniglot_loader
@@ -219,4 +219,20 @@ class RandomLoader:
         return self.number_of_batches
 
 
+class OneSampleLoader:
 
+    def __init__(self, sample, target, transform):
+        self.dataset = [(sample, target)]
+        self.sample = sample
+        self.target = target
+        self.transform = transform
+        self.num = 0
+
+    def __len__(self):
+        return 1
+
+    def __getitem__(self, item):
+        if self.num > 0:
+            raise StopIteration
+        self.num += 1
+        return self.transform(self.sample).unsqueeze(0), self.target.unsqueeze(0)

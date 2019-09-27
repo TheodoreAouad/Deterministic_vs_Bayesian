@@ -4,10 +4,9 @@ import pathlib
 import pandas as pd
 import torch
 
-from scripts.utils import get_trained_model_and_args_and_groupnb
-from src.dataset_manager.get_data import get_cifar10, get_mnist
+from scripts.utils import get_trained_model_and_args_and_groupnb, get_evalloader_seen
 from src.tasks.evals import eval_bayesian
-from src.utils import save_to_file, load_from_file
+from src.utils import load_from_file
 
 CPUPATH = 'polyaxon_results/groups'
 GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
@@ -29,25 +28,6 @@ save_path = './results/eval_acc/'
 #########################
 
 path_to_exps = CPUPATH
-
-def get_evalloader_seen(arguments):
-    """
-    Gets the evalloader for training set
-    Args:
-        arguments (dict): arguments given to the experiment. Contains all the info about trainset and split of classes.
-
-    Returns:
-        torch.utils.data.dataloader.DataLoader: dataloader of the test data on seen dataset
-
-    """
-    trainset = arguments.get('trainset', 'mnist')
-    split_labels = arguments.get('split_labels', 10)
-    if trainset == 'mnist':
-        get_trainset = get_mnist
-    elif trainset == 'cifar10':
-        get_trainset = get_cifar10
-    _, _, evalloader_seen = get_trainset(train_labels=(), eval_labels=range(split_labels), split_val=0)
-    return evalloader_seen
 
 
 def main(

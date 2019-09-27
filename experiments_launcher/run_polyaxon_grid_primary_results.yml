@@ -28,7 +28,7 @@ hptuning:
       values: [''] # If you wish to save outputs, type inside of the '': --save_outputs
 
     type_of_unseen:
-      values: ['random', 'unseen_classes']
+      values: ['unseen_dataset', 'unseen_classes']
 
     trainset:
       values: ['cifar10']
@@ -58,11 +58,13 @@ hptuning:
       values: ["exp"]
 
     std_prior:
-      values: [1e-1]
+      values: [0.001  , 0.00325, 0.0055 , 0.00775, 0.01,
+               0.02  , 0.0325, 0.055 , 0.0775, 0.1   ,
+               0.2  , 0.325, 0.55 , 0.775, 1.   ,
+               2.,  4.,  6.,  8., 10.]
 
     split_train:
-      values: [1.0000e+01, 8.8889e+00, 7.7778e+00, 6.6667e+00, 5.5556e+00,
-               4.4445e+00, 3.3334e+00, 2.2223e+00, 1.1112e+00, 1.0000e-04]
+      values: [10]
 
 build:
   image: sicara/leto-stack:tf1.13.0rc0-gpu-pipeline0.7.1-chani0.0.8

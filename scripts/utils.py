@@ -1,3 +1,4 @@
+import os
 import pathlib
 
 import numpy as np
@@ -12,7 +13,8 @@ from src.tasks.evals import eval_bayesian, eval_random
 
 from src.uncertainty_measures import get_predictions_from_multiple_tests, get_all_uncertainty_measures, \
     get_all_uncertainty_measures_not_bayesian
-from src.utils import get_exact_batch_size, get_file_and_dir_path_in_dir, load_from_file, plot_density_on_ax
+from src.utils import get_exact_batch_size, get_file_and_dir_path_in_dir, load_from_file, plot_density_on_ax, \
+    save_to_file
 
 
 # TODO: refa hist=True,ctor this function into modular functions
@@ -90,8 +92,9 @@ def compute_figures(
     labels_not_shuffled = (true_labels == -1).float().reshape(total_nb_of_data // real_size_of_batch,
                                                               real_size_of_batch).mean(1)
 
+    is_determinist = arguments.get('rho', 'determinist') or arguments.get('determinist', False)
     # get uncertainties
-    if 'rho' in arguments.keys():
+    if not is_determinist:
         vr_shuffled, pe_shuffled, mi_shuffled = get_all_uncertainty_measures(all_outputs_shuffled)
         vr, pe, mi = get_all_uncertainty_measures(all_outputs)
         vr_regrouped_shuffled, pe_regrouped_shuffled, mi_regrouped_shuffled = reshape_shuffled(
@@ -724,20 +727,21 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
     Returns:
         torch.Tensor, torch.Tensor: size (nb of tests, size of testset, nb of classes), size (nb of tests)
     """
-    type_of_unseen = arguments['type_of_unseen']
-    trainset = arguments.get('trainset', 'mnist')
-    if trainset == 'mnist':
-        get_trainset = get_mnist
-    elif trainset == 'cifar10':
-        get_trainset = get_cifar10
-    else:
-        assert False, 'trainset not recognized'
-    if type_of_unseen == 'unseen_classes':
-        _, _, evalloader_seen = get_trainset(train_labels=(), eval_labels=range(arguments['split_labels']),
-                                             batch_size=128,
-                                             split_val=0, shuffle=False)
-    else:
-        _, _, evalloader_seen = get_trainset(train_labels=(), split_val=0, batch_size=128, shuffle=False)
+    # type_of_unseen = arguments['type_of_unseen']
+    # trainset = arguments.get('trainset', 'mnist')
+    # if trainset == 'mnist':
+    #     get_trainset = get_mnist
+    # elif trainset == 'cifar10':
+    #     get_trainset = get_cifar10
+    # else:
+    #     assert False, 'trainset not recognized'
+    # if type_of_unseen == 'unseen_classes':
+    #     _, _, evalloader_seen = get_trainset(train_labels=(), eval_labels=range(arguments['split_labels']),
+    #                                          batch_size=128,
+    #                                          split_val=0, shuffle=False)
+    # else:
+    #     _, _, evalloader_seen = get_trainset(train_labels=(), split_val=0, batch_size=128, shuffle=False)
+    evalloader_seen = get_evalloader_seen(arguments)
     shuffle_eval = torch.randperm(len(evalloader_seen.dataset))
     evalloader_seen.dataset.data = evalloader_seen.dataset.data[shuffle_eval]
     evalloader_seen.dataset.targets = evalloader_seen.dataset.targets[shuffle_eval]
@@ -852,7 +856,10 @@ def get_trained_model_and_args_and_groupnb(exp_nb, exp_path='polyaxon_results/gr
     arguments['type_of_unseen'] = type_of_unseen
     arguments['group_nb'] = group_nb
     arguments['exp_nb'] = exp_nb
-    final_weights = torch.load(dirpath / 'final_weights.pt', map_location='cpu')
+    if os.path.exists(dirpath / 'best_weights.pt'):
+        best_weights = torch.load(dirpath / 'best_weights.pt', map_location='cpu')
+    else:
+        best_weights = torch.load(dirpath / 'final_weights.pt', map_location='cpu')
     std_prior = arguments.get('std_prior', 0)
     if arguments.get('trainset', 'mnist') == 'cifar10':
         bay_net_trained = GaussianClassifier(
@@ -869,7 +876,7 @@ def get_trained_model_and_args_and_groupnb(exp_nb, exp_path='polyaxon_results/gr
             number_of_classes=10,
             dim_input=28,
         )
-    bay_net_trained.load_state_dict(final_weights)
+    bay_net_trained.load_state_dict(best_weights)
 
     return bay_net_trained, arguments, group_nb
 
@@ -992,3 +999,23 @@ def f(x):
             return x
     else:
         return x
+
+
+def get_evalloader_seen(arguments, shuffle=True):
+    """
+    Gets the evalloader for training set
+    Args:
+        arguments (dict): arguments given to the experiment. Contains all the info about trainset and split of classes.
+
+    Returns:
+        torch.utils.data.dataloader.DataLoader: dataloader of the test data on seen dataset
+
+    """
+    trainset = arguments.get('trainset', 'mnist')
+    split_labels = arguments.get('split_labels', 10)
+    if trainset == 'mnist':
+        get_trainset = get_mnist
+    elif trainset == 'cifar10':
+        get_trainset = get_cifar10
+    _, _, evalloader_seen = get_trainset(train_labels=(), eval_labels=range(split_labels), split_val=0, shuffle=shuffle)
+    return evalloader_seen

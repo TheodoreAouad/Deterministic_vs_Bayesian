@@ -1,3 +1,4 @@
+import pathlib
 from math import log, exp
 import argparse
 
@@ -6,6 +7,7 @@ import torch
 import torch.optim as optim
 from torch.nn import CrossEntropyLoss
 import torchvision.transforms as transforms
+import numpy as np
 
 from src.loggers.losses.base_loss import BaseLoss
 from src.loggers.losses.bbb_loss import BBBLoss
@@ -51,34 +53,42 @@ arguments = vars(args)
 trainset = args.trainset
 unseen_evalset = args.unseen_evalset
 type_of_unseen = args.type_of_unseen
-split_labels = args.split_labels
-rho = args.rho
+if type_of_unseen == 'unseen_classes':
+    split_labels = args.split_labels
+else:
+    split_labels = 10
+    arguments['split_labels'] = 10
+# rho = args.rho
 epoch = args.epoch
 batch_size = args.batch_size
 number_of_tests = args.number_of_tests
 loss_type = args.loss_type
 std_prior = args.std_prior
-if type_of_unseen == 'unseen_classes':
-    split_train = args.split_train
-else:
-    split_train = 10
-    arguments['split_train'] = 10
 stds_prior = (std_prior, std_prior)
+split_train = args.split_train
 
-save_to_file(arguments, './output/arguments.pkl')
+rho = log(exp(std_prior) - 1)
+arguments['rho'] = rho
+
 
 if args.determinist:
     rho = 'determinist'
     number_of_tests = 1
+    arguments['number_of_tests'] = 1
 
 res = pd.DataFrame()
 
 
 if torch.cuda.is_available():
     device = 'cuda'
+    output_file = './output'
 else:
     device = 'cpu'
+    nb = np.random.randint(100000)
+    output_file = f'./output/{nb}'
+pathlib.Path(output_file).mkdir(exist_ok=True, parents=True)
 device = torch.device(device)
+print(output_file)
 
 def get_evalloader_unseen(arguments):
     type_of_unseen = arguments['type_of_unseen']
@@ -141,7 +151,10 @@ bay_net = GaussianClassifier(
 bay_net.to(device)
 # Defining loss
 criterion = CrossEntropyLoss()
-if loss_type == 'uniform':
+if args.determinist:
+    loss = BaseLoss(criterion)
+    loss_type = 'criterion'
+elif loss_type == 'uniform':
     step_function = uniform
     loss = BBBLoss(bay_net, criterion, step_function)
 elif loss_type == 'exp':
@@ -169,6 +182,8 @@ train_bayesian_modular(
     device=device,
     verbose=True,
 )
+
+bay_net.load_state_dict(observables.max_weights)
 
 # Evaluation on seen test set
 eval_acc, all_outputs_eval = eval_bayesian(bay_net, evalloader_seen, number_of_tests=number_of_tests, device=device, )
@@ -240,14 +255,16 @@ else:
 
 convert_df_to_cpu(res)
 
+save_to_file(arguments, f'{output_file}/arguments.pkl')
 if args.save_loss:
-    save_to_file(loss, './output/loss.pkl')
+    save_to_file(loss, f'{output_file}/loss.pkl')
 if args.save_observables:
-    save_to_file(observables, './output/TrainingLogs.pkl')
+    save_to_file(observables, f'{output_file}/TrainingLogs.pkl')
 if args.save_outputs:
-    torch.save(all_outputs_unseen, './output/unseen_outputs.pt')
-    torch.save(all_outputs_eval, './output/seen_outputs.pt')
-# torch.save(res, './output/results.pt')
-res.to_pickle('./output/results.pkl')
-torch.save(bay_net.state_dict(), './output/final_weights.pt')
-torch.save(observables.max_weights, './output/best_weights.pt')
+    torch.save(all_outputs_unseen, f'{output_file}/unseen_outputs.pt')
+    torch.save(all_outputs_eval, f'{output_file}/seen_outputs.pt')
+# torch.save(res, f'{output_file}/results.pt')
+res.to_pickle(f'{output_file}/results.pkl')
+torch.save(bay_net.state_dict(), f'{output_file}/final_weights.pt')
+torch.save(observables.max_weights, f'{output_file}/best_weights.pt')
+pd.DataFrame.from_dict(arguments).to_csv(f'{output_file}/arguments.csv')
