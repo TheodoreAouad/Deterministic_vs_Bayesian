@@ -125,17 +125,23 @@ reload_modules()
 exp_nbs = ['14621', '14744', '14683', '14625', '14750', '14685', '14631', '14756', '14690']
 
 # exp = '3713'
-exp = '14621'
+path_to_res = f'output/'
+exp = f'determinist_{trainset}' # DETERMINIST
+# exp = '14621' # BAYESIAN
+# path_to_res = 'polyaxon_results/groups'
 verbose = True
-number_of_tests = 20
-nb_of_imgs = 20
+number_of_tests = 1
+nb_of_imgs = 1
 
-bay_net_trained2, arguments2, _ = su.get_trained_model_and_args_and_groupnb(exp)
+bay_net_trained2, arguments2, _ = su.get_trained_model_and_args_and_groupnb(exp, path_to_res)
+is_determinist = arguments2.get('determinist', False) or arguments2.get('rho', 'determinist') == 'determinist'
+
 evalloader_seen = su.get_evalloader_seen(arguments2, shuffle=False)
 evalloader_unseen = su.get_evalloader_unseen(arguments2)
 
 for _ in range(nb_of_imgs):
     img_index_seen = np.random.randint(len(evalloader_seen))
+    img_index_seen = 532
     img_index_unseen = np.random.randint(len(evalloader_unseen))
 
     is_cifar = arguments2.get('trainset','mnist') == 'cifar10'
@@ -179,8 +185,6 @@ for _ in range(nb_of_imgs):
 
     prediction = sample_outputs_seen.mean(0).argmax()
 
-    vr_seen, pe_seen, mi_seen = um.get_all_uncertainty_measures(sample_outputs_seen.unsqueeze(1))
-    vr_unseen, pe_unseen, mi_unseen = um.get_all_uncertainty_measures(sample_outputs_unseen.unsqueeze(1))
 
     fig = plt.figure(figsize=(10, 10))
     ax1 = fig.add_subplot(211)
@@ -196,7 +200,13 @@ for _ in range(nb_of_imgs):
 
 
     ax3.scatter(labels, densities_seen, marker='_')
-    ax3.set_title(f'softmax output seen. VR: {round(vr_seen.item(), 4)}, PE: {round(pe_seen.item(), 4)}, MI: {round(mi_seen.item(), 4)}')
+    if is_determinist:
+        sr_seen, pe_seen = um.get_all_uncertainty_measures_not_bayesian(sample_outputs_seen.unsqueeze(1))
+        ax3.set_title(f'softmax output seen. SR: {round(sr_seen.item(), 4)}, PE: {round(pe_seen.item(), 4)}')
+    else:
+        vr_seen, pe_seen, mi_seen = um.get_all_uncertainty_measures(sample_outputs_seen.unsqueeze(1))
+        vr_unseen, pe_unseen, mi_unseen = um.get_all_uncertainty_measures(sample_outputs_unseen.unsqueeze(1))
+        ax3.set_title(f'softmax output seen. VR: {round(vr_seen.item(), 4)}, PE: {round(pe_seen.item(), 4)}, MI: {round(mi_seen.item(), 4)}')
     if is_cifar:
         ax1.set_title(f'True: {cifar_labels[target_seen]}. Prediction: {cifar_labels[prediction]}. Id: {img_index_seen}')
         ax3.set_xticks(range(10))
@@ -213,12 +223,12 @@ for _ in range(nb_of_imgs):
         ax4.set_xticklabels(cifar_labels)
         ax4.tick_params(axis='x', rotation=45)
 
-    # fig.show()
+    fig.show()
 
 
     save_path = 'results/images/softmax_output'
     save_path = pathlib.Path(save_path)
-    save_fig = True
+    save_fig = False
 
     if save_fig:
         save_path.mkdir(exist_ok=True, parents=True)

@@ -67,7 +67,7 @@ def uncertainty_softmax(data):
         torch.Tensor: size (batch_size). The variation-ratio uncertainty measure for each sample.
 
     """
-    data = data.squeeze()
+    data = data.squeeze(0)
     return 1 - data.max(1).values
 
 
