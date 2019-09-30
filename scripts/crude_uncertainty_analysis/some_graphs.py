@@ -1,4 +1,5 @@
 # %% Imports
+import pathlib
 from importlib import reload
 
 import pandas as pd
@@ -28,6 +29,11 @@ else:
     device = "cpu"
 device = torch.device(device)
 print(device)
+
+
+
+def get_ratio(df_det, unc_name):
+    return df_det[f'unseen_uncertainty_{unc_name}'].iloc[0].mean() / df_det[f'seen_uncertainty_{unc_name}'].iloc[0].mean()
 
 # %% Accuracy VS (rho / std_prior)
 
@@ -204,40 +210,8 @@ if is_cifar:
 
 fig.show()
 
-# %% Accuracy VS Uncertainty, histograms
-
-reload_modules()
-exp_nbs = ['14621', '14744', '14683', '14625', '14750', '14685', '14631', '14756', '14690']
-
-# exp = '3713'
-exp = '14621'
-verbose = True
-number_of_tests = 100
-
-bay_net_trained, arguments, _ = su.get_trained_model_and_args_and_groupnb(exp)
-evalloader_seen = su.get_evalloader_seen(arguments, shuffle=False)
-
-all_outputs, labels = su.get_seen_outputs_and_labels(bay_net_trained, arguments, device=device, verbose=True)
-
-vr, mi, pe = um.get_all_uncertainty_measures(all_outputs)
-preds = um.get_predictions_from_multiple_tests(all_outputs)
-
-df = (
-    pd.DataFrame()
-    .assign(true=labels)
-    .assign(preds=preds)
-    .assign(correct_pred= (df.true == df.preds))
-    .assign(vr=vr)
-    .assign(pe=pe)
-    .assign(mi=mi)
-)
-
-df.correct_pred.sum()/len(df) ## ACCURACY TRES LOW ?  PUOURQUOIII??
 
 # %% Accuracy vs rho, std prior 0.1
-
-def get_ratio(df_det, unc_name):
-    return df_det[f'unseen_uncertainty_{unc_name}'].iloc[0].mean() / df_det[f'seen_uncertainty_{unc_name}'].iloc[0].mean()
 
 group_nb = 278
 if group_nb == 279:
@@ -288,10 +262,10 @@ fig.savefig(f'results/{trainset}_accuracy_vs_rho.png')
 
 # %% Accuracy vs std_prior, rho -6
 
-group_nb = 283
-if group_nb == 282:
+group_nb = 290
+if group_nb == 291:
     trainset = 'cifar10'
-elif group_nb == 283:
+elif group_nb == 290:
     trainset = 'mnist'
 else:
     assert False, 'group not recognized'
@@ -305,7 +279,7 @@ det_us = get_ratio(df_det, 'us')
 det_pe = get_ratio(df_det, 'pe')
 
 df = pd.read_pickle(path_to_res)
-df_r = df[df.type_of_unseen == 'random']
+df_r = df[df.type_of_unseen == 'unseen_dataset']
 df_uc = df[df.type_of_unseen == 'unseen_classes']
 
 
@@ -332,4 +306,212 @@ ax2.set_xlabel('std_prior')
 ax2.set_ylabel('uncertainty ratio unseen/seen')
 
 fig.show()
-fig.savefig(f'results/{trainset}_accuracy_vs_stds_prior.png')
+# fig.savefig(f'results/{trainset}_accuracy_vs_stds_prior.png')
+
+# %% Accuracy VS Uncertainty. Compute all outputs.
+
+reload_modules()
+
+trainset = 'cifar10'
+exp_nbs = ['14621', '14744', '14683', '14625', '14750', '14685', '14631', '14756', '14690']
+
+
+# path_to_res = f'output/'
+# exp = f'determinist_{trainset}' # DETERMINIST
+exp = '14621' # BAYESIAN
+path_to_res = 'polyaxon_results/groups'
+
+# exp = '3713'
+verbose = True
+number_of_tests = 10
+
+bay_net_trained, arguments, _ = su.get_trained_model_and_args_and_groupnb(exp, path_to_res)
+evalloader_seen = su.get_evalloader_seen(arguments, shuffle=False)
+
+dont_show = ['save_loss', 'save_observables', 'save_outputs', 'type_of_unseen', 'unseen_evalset',
+             'split_labels', 'number_of_tests', 'split_train', 'exp_nb']
+
+is_determinist = arguments.get('determinist', False) or arguments.get('rho', 'determinist') == 'determinist'
+
+labels, all_outputs = e.eval_bayesian(
+    bay_net_trained,
+    evalloader_seen,
+    number_of_tests=number_of_tests,
+    return_accuracy=False,
+    verbose=True,
+)
+
+preds = um.get_predictions_from_multiple_tests(all_outputs)
+res = pd.DataFrame()
+if is_determinist:
+    us, pe = um.get_all_uncertainty_measures_not_bayesian(all_outputs)
+    res = (
+        res
+        .assign(true=labels)
+        .assign(preds=preds)
+        .assign(correct_pred=lambda df: (df.true == df.preds))
+        .assign(us=us)
+        .assign(pe=pe)
+    )
+else:
+    vr, mi, pe = um.get_all_uncertainty_measures(all_outputs)
+    res = (
+        res
+        .assign(true=labels)
+        .assign(preds=preds)
+        .assign(correct_pred=lambda df: (df.true == df.preds))
+        .assign(vr=vr)
+        .assign(pe=pe)
+        .assign(mi=mi)
+    )
+
+
+res_correct = res.loc[res.correct_pred == True]
+res_false = res.loc[res.correct_pred == False]
+print('Accuracy: ', res.correct_pred.mean())
+
+#%% Density graphs - determinist
+
+if is_determinist:
+    uncs_us = [res_correct.us, res_false.us]
+    uncs_pe = [res_correct.pe, res_false.pe]
+    all_uncs = [uncs_us, uncs_pe]
+    unc_names = ['us', 'pe']
+else:
+    uncs_vr = [res_correct.vr, res_false.vr]
+    uncs_pe = [res_correct.pe, res_false.pe]
+    uncs_mi = [res_correct.mi, res_false.mi]
+    all_uncs = [uncs_vr, uncs_pe, uncs_mi]
+    unc_names = ['vr', 'pe', 'mi']
+
+fig = plt.figure()
+
+
+ax1 = fig.add_subplot(211)
+ax1.set_title('Uncertainty Softmax')
+ax1.set_xlabel('Uncertainty value')
+ax1.set_ylabel('Density value')
+
+ax2 = fig.add_subplot(212)
+ax2.set_title('Predictive Entropy')
+ax2.set_xlabel('Uncertainty value')
+ax2.set_ylabel('Density value')
+
+unc_labels = ('true', 'false')
+
+u.plot_density_on_ax(ax1, uncs_us, unc_labels, hist=True,)
+ax1.legend()
+
+u.plot_density_on_ax(ax2, uncs_pe, unc_labels, hist=True,)
+ax2.legend()
+
+
+fig.show()
+res.correct_pred.sum()/len(res)
+
+# %% Density graph 2
+
+
+if is_determinist:
+    save_path = 'rapport/determinist_failure/'
+    save_path = pathlib.Path(save_path)
+    save_fig = False
+else:
+    save_path = 'rapport/bayesian_results/'
+
+if is_determinist:
+    unc_names = ['us', 'pe']
+else:
+    unc_names = ['vr', 'pe', 'mi']
+
+
+res.sample(frac=1)
+
+fig = plt.figure(figsize=(8,8))
+fig.suptitle(f'Uncertainty Repartition. Exp:{exp}\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
+             wrap=True)
+axs = {}
+for idx, unc_name in enumerate(unc_names):
+    to_plot_true = res_correct[unc_name]
+    to_plot_false = res_false[unc_name]
+    ax = fig.add_subplot(len(unc_names), 1, idx+1)
+    ax.set_title(unc_name)
+    ax.scatter(to_plot_true, np.ones_like(to_plot_true), marker='|')
+    ax.scatter(to_plot_false, np.zeros_like(to_plot_false), marker='|')
+    ax.set_xlabel(unc_name)
+    ax.set_yticks(range(2))
+    ax.set_yticklabels(['False', 'True'])
+    axs[unc_name] = ax
+
+fig.tight_layout()
+fig.show()
+
+if save_fig:
+    save_path.mkdir(exist_ok=True, parents=True)
+    fig.savefig(save_path/f'scatterplot_uncertainty_{exp}.png')
+    u.save_to_file(fig, save_path/f'scatterplot_uncertainty_{exp}.pkl')
+
+# %% Acc vs unc
+
+
+if is_determinist:
+    save_path = 'rapport/determinist_failure/'
+    save_path = pathlib.Path(save_path)
+    save_fig = False
+else:
+    save_path = 'rapport/bayesian_results/'
+
+nb_of_points = 10000
+size_of_points = 30
+
+interval = 20
+nb_of_ratios = nb_of_points // interval
+ratios = np.linspace(0, 1, nb_of_ratios)
+
+to_plot = pd.DataFrame(columns=[
+    'acc',
+    'unc',
+    'unc_name',
+    'ratio',
+    'size_of_points',
+])
+
+if is_determinist:
+    unc_names = ['us', 'pe']
+else:
+    unc_names = ['vr', 'pe', 'mi']
+
+for ratio in ratios:
+    nb_of_correct = int(ratio*size_of_points)
+    nb_of_false = size_of_points - nb_of_correct
+    current_points = (
+        res_correct.sample(frac=1)[:nb_of_correct]
+        .append(res_false.sample(frac=1)[:nb_of_false])
+    )
+    for unc_name in unc_names:
+        to_plot = to_plot.append(pd.DataFrame.from_dict({
+            'acc': [current_points.correct_pred.mean()],
+            'unc': [current_points[unc_name].mean()],
+            'unc_name': [unc_name],
+            'size_of_points': [size_of_points],
+        }), sort=True)
+
+fig = plt.figure()
+fig.suptitle(f'Accuracy VS Uncertainty, size:{size_of_points}. Exp:{exp}', y=1)
+axs = {}
+for idx, unc_name in enumerate(unc_names):
+    to_plot_unc = to_plot.loc[to_plot.unc_name == unc_name]
+    ax = fig.add_subplot(len(unc_names), 1, idx+1)
+    ax.set_title(unc_name)
+    ax.scatter(to_plot_unc.unc, to_plot_unc.acc)
+    ax.set_xlabel(unc_name)
+    ax.set_ylabel('acc')
+    axs[unc_name] = ax
+
+fig.show()
+
+if save_fig:
+    save_path.mkdir(exist_ok=True, parents=True)
+    fig.savefig(save_path/f'acc_unc_{exp}.png')
+    u.save_to_file(fig, save_path/f'acc_unc_{exp}.pkl')
+

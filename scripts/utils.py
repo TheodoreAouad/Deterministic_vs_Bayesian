@@ -751,7 +751,7 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
         true_labels_seen = evalloader_seen.dataset.targets.astype(float)
     if verbose:
         print('Evaluation on seen ...')
-    _, all_eval_outputs = eval_bayesian(bay_net_trained, evalloader_seen,
+    true_labels_seen, all_eval_outputs = eval_bayesian(bay_net_trained, evalloader_seen,
                                         number_of_tests=arguments.get('number_of_tests', 1), device=device,
                                         verbose=verbose)
     if verbose:

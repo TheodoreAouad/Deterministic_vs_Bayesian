@@ -19,7 +19,7 @@ hptuning:
       values: ["experiments/compare_dirac_ce.py"]
 
     rho:
-      values: [-6
+      values: [-6]
 
     nb_of_runs:
       values: [50]

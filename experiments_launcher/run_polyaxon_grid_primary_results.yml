@@ -40,7 +40,7 @@ hptuning:
       values: [10]
 
     rho:
-      values: [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
+      values: [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0]
 
     determinist:
       values: [''] # If you wish to do determinist training, type inside of the '': --determinist
