@@ -7,8 +7,9 @@ import numpy as np
 import torch
 from torchvision import transforms as transforms
 from PIL import Image
-
+import cv2
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 import scripts.utils as su
 import src.uncertainty_measures as um
@@ -126,89 +127,103 @@ exp_nbs = ['14621', '14744', '14683', '14625', '14750', '14685', '14631', '14756
 # exp = '3713'
 exp = '14621'
 verbose = True
-number_of_tests = 100
+number_of_tests = 20
+nb_of_imgs = 20
 
 bay_net_trained2, arguments2, _ = su.get_trained_model_and_args_and_groupnb(exp)
 evalloader_seen = su.get_evalloader_seen(arguments2, shuffle=False)
 evalloader_unseen = su.get_evalloader_unseen(arguments2)
 
-img_index_seen = np.random.randint(len(evalloader_seen))
-img_index_unseen = np.random.randint(len(evalloader_unseen))
+for _ in range(nb_of_imgs):
+    img_index_seen = np.random.randint(len(evalloader_seen))
+    img_index_unseen = np.random.randint(len(evalloader_unseen))
 
-is_cifar = arguments2.get('trainset','mnist') == 'cifar10'
+    is_cifar = arguments2.get('trainset','mnist') == 'cifar10'
 
-img_seen, target_seen = evalloader_seen.dataset.data[img_index_seen], evalloader_seen.dataset.targets[img_index_seen]
-if arguments2['type_of_unseen'] == 'random':
-    img_unseen = torch.randn_like(torch.tensor(img_seen).float()).numpy()
-    transform = transforms.ToTensor()
-else:
-    img_unseen = evalloader_unseen.dataset.data[img_index_unseen].numpy()
-    img_unseen = Image.fromarray(img_unseen)
+    img_seen, target_seen = evalloader_seen.dataset.data[img_index_seen], evalloader_seen.dataset.targets[img_index_seen]
+    if arguments2['type_of_unseen'] == 'random':
+        img_unseen = torch.randn_like(torch.tensor(img_seen).float()).numpy()
+        transform = transforms.ToTensor()
+    else:
+        img_unseen = evalloader_unseen.dataset.data[img_index_unseen].numpy()
+        img_unseen = Image.fromarray(img_unseen)
 
-    transform = transforms.Compose([
-        transforms.Grayscale(num_output_channels=bay_net_trained2.dim_channels),
-        transforms.Resize(bay_net_trained2.dim_input),
-        transforms.ToTensor(),
-    ])
+        transform = transforms.Compose([
+            transforms.Grayscale(num_output_channels=bay_net_trained2.dim_channels),
+            transforms.Resize(bay_net_trained2.dim_input),
+            transforms.ToTensor(),
+        ])
 
-inpt_seen = transforms.ToTensor()(img_seen)
-inpt_unseen = transform(img_unseen)
-def reshape_for_model(inpt):
-    if len(inpt.shape) == 3:
-        inpt = inpt.unsqueeze(0)
-    if len(inpt.shape) == 2:
-        inpt = inpt.unsqueeze(0).unsqueeze(0)
-    return inpt
-inpt_seen = reshape_for_model(inpt_seen)
-inpt_unseen = reshape_for_model(inpt_unseen)
+    inpt_seen = transforms.ToTensor()(img_seen)
+    inpt_unseen = transform(img_unseen)
+    def reshape_for_model(inpt):
+        if len(inpt.shape) == 3:
+            inpt = inpt.unsqueeze(0)
+        if len(inpt.shape) == 2:
+            inpt = inpt.unsqueeze(0).unsqueeze(0)
+        return inpt
+    inpt_seen = reshape_for_model(inpt_seen)
+    inpt_unseen = reshape_for_model(inpt_unseen)
 
-with torch.no_grad():
-    bay_net_trained2.eval()
-    sample_outputs_seen = torch.zeros((number_of_tests, 10)).to(device)
-    sample_outputs_unseen = torch.zeros((number_of_tests, 10)).to(device)
-    for test_idx in range(number_of_tests):
-        sample_outputs_seen[test_idx] = bay_net_trained2(inpt_seen)
-        sample_outputs_unseen[test_idx] = bay_net_trained2(inpt_unseen)
+    with torch.no_grad():
+        bay_net_trained2.eval()
+        sample_outputs_seen = torch.zeros((number_of_tests, 10)).to(device)
+        sample_outputs_unseen = torch.zeros((number_of_tests, 10)).to(device)
+        for test_idx in range(number_of_tests):
+            sample_outputs_seen[test_idx] = bay_net_trained2(inpt_seen)
+            sample_outputs_unseen[test_idx] = bay_net_trained2(inpt_unseen)
 
-    labels = np.kron(np.arange(10), np.ones((number_of_tests,1))).flatten()
-    densities_seen = sample_outputs_seen.numpy().flatten()
-    densities_unseen = sample_outputs_unseen.numpy().flatten()
+        labels = np.kron(np.arange(10), np.ones((number_of_tests,1))).flatten()
+        densities_seen = sample_outputs_seen.numpy().flatten()
+        densities_unseen = sample_outputs_unseen.numpy().flatten()
 
-prediction = sample_outputs_seen.mean(0).argmax()
+    prediction = sample_outputs_seen.mean(0).argmax()
 
-vr_seen, pe_seen, mi_seen = um.get_all_uncertainty_measures(sample_outputs_seen.unsqueeze(1))
-vr_unseen, pe_unseen, mi_unseen = um.get_all_uncertainty_measures(sample_outputs_unseen.unsqueeze(1))
+    vr_seen, pe_seen, mi_seen = um.get_all_uncertainty_measures(sample_outputs_seen.unsqueeze(1))
+    vr_unseen, pe_unseen, mi_unseen = um.get_all_uncertainty_measures(sample_outputs_unseen.unsqueeze(1))
 
-fig = plt.figure(figsize=(10, 10))
-ax1 = fig.add_subplot(221)
-ax3 = fig.add_subplot(223)
-ax2 = fig.add_subplot(222)
-ax4 = fig.add_subplot(224)
+    fig = plt.figure(figsize=(10, 10))
+    ax1 = fig.add_subplot(211)
+    ax3 = fig.add_subplot(223)
+    # ax2 = fig.add_subplot(222)
+    ax4 = fig.add_subplot(224)
 
-fig.suptitle(f'Exp {exp}, Nb tests {number_of_tests} ')
+    fig.suptitle(f'Exp {exp}, Nb tests {number_of_tests} ', x=0.16, y=0.8)
 
-ax1.imshow(img_seen)
-ax2.imshow(img_unseen)
+    ax1.imshow(img_seen)
+    # ax2.imshow(img_unseen)
+    sns.heatmap(sample_outputs_seen, ax=ax4)
 
-ax3.scatter(labels, densities_seen, marker='_')
-ax3.set_title(f'softmax output seen. VR: {round(vr_seen.item(), 4)}, PE: {round(pe_seen.item(), 4)}, MI: {round(mi_seen.item(), 4)}')
-if is_cifar:
-    ax1.set_title(f'True: {cifar_labels[target_seen]}. Prediction: {cifar_labels[prediction]}. Id: {img_index_seen}')
-    ax3.set_xticks(range(10))
-    ax3.set_xticklabels(cifar_labels)
-    ax3.tick_params(axis='x', rotation=45)
-else:
-    ax1.set_title(f'True: {target_seen}. Prediction: {prediction}. Id: {img_index_seen}')
 
-ax2.set_title(f'Id: {img_index_unseen}')
-ax4.scatter(labels, densities_unseen, marker='_')
-ax4.set_title(f'softmax output unseen. VR: {round(vr_unseen.item(), 4)}, PE: {round(pe_unseen.item(), 4)}, MI: {round(mi_unseen.item(), 4)}')
-if is_cifar:
-    ax4.set_xticks(range(10))
-    ax4.set_xticklabels(cifar_labels)
-    ax4.tick_params(axis='x', rotation=45)
+    ax3.scatter(labels, densities_seen, marker='_')
+    ax3.set_title(f'softmax output seen. VR: {round(vr_seen.item(), 4)}, PE: {round(pe_seen.item(), 4)}, MI: {round(mi_seen.item(), 4)}')
+    if is_cifar:
+        ax1.set_title(f'True: {cifar_labels[target_seen]}. Prediction: {cifar_labels[prediction]}. Id: {img_index_seen}')
+        ax3.set_xticks(range(10))
+        ax3.set_xticklabels(cifar_labels)
+        ax3.tick_params(axis='x', rotation=45)
+    else:
+        ax1.set_title(f'True: {target_seen}. Prediction: {prediction}. Id: {img_index_seen}')
 
-fig.show()
+    # ax2.set_title(f'Id: {img_index_unseen}')
+    # ax4.scatter(labels, densities_unseen, marker='_')
+    # ax4.set_title(f'softmax output unseen. VR: {round(vr_unseen.item(), 4)}, PE: {round(pe_unseen.item(), 4)}, MI: {round(mi_unseen.item(), 4)}')
+    if is_cifar:
+        ax4.set_xticks(range(10))
+        ax4.set_xticklabels(cifar_labels)
+        ax4.tick_params(axis='x', rotation=45)
+
+    # fig.show()
+
+
+    save_path = 'results/images/softmax_output'
+    save_path = pathlib.Path(save_path)
+    save_fig = True
+
+    if save_fig:
+        save_path.mkdir(exist_ok=True, parents=True)
+        fig.savefig(save_path/f'softmax_output_{exp}_{img_index_seen}.png')
+        u.save_to_file(fig, save_path/f'softmax_output_{exp}_{img_index_seen}.pkl')
 
 
 # %% Accuracy vs rho, std prior 0.1
@@ -308,7 +323,7 @@ ax2.set_ylabel('uncertainty ratio unseen/seen')
 fig.show()
 # fig.savefig(f'results/{trainset}_accuracy_vs_stds_prior.png')
 
-# %% Accuracy VS Uncertainty. Compute all outputs.
+# %% Compute all outputs.
 
 reload_modules()
 
@@ -316,8 +331,8 @@ trainset = 'cifar10'
 exp_nbs = ['14621', '14744', '14683', '14625', '14750', '14685', '14631', '14756', '14690']
 
 
-# path_to_res = f'output/'
-# exp = f'determinist_{trainset}' # DETERMINIST
+path_to_res = f'output/'
+exp = f'determinist_{trainset}' # DETERMINIST
 exp = '14621' # BAYESIAN
 path_to_res = 'polyaxon_results/groups'
 
@@ -333,6 +348,8 @@ dont_show = ['save_loss', 'save_observables', 'save_outputs', 'type_of_unseen', 
 
 is_determinist = arguments.get('determinist', False) or arguments.get('rho', 'determinist') == 'determinist'
 
+if is_determinist:
+    number_of_tests = 1
 labels, all_outputs = e.eval_bayesian(
     bay_net_trained,
     evalloader_seen,
@@ -344,13 +361,13 @@ labels, all_outputs = e.eval_bayesian(
 preds = um.get_predictions_from_multiple_tests(all_outputs)
 res = pd.DataFrame()
 if is_determinist:
-    us, pe = um.get_all_uncertainty_measures_not_bayesian(all_outputs)
+    sr, pe = um.get_all_uncertainty_measures_not_bayesian(all_outputs)
     res = (
         res
         .assign(true=labels)
         .assign(preds=preds)
         .assign(correct_pred=lambda df: (df.true == df.preds))
-        .assign(us=us)
+        .assign(sr=sr)
         .assign(pe=pe)
     )
 else:
@@ -373,10 +390,17 @@ print('Accuracy: ', res.correct_pred.mean())
 #%% Density graphs - determinist
 
 if is_determinist:
-    uncs_us = [res_correct.us, res_false.us]
+    save_path = 'rapport/determinist_failure/'
+else:
+    save_path = 'rapport/bayesian_results/'
+save_path = pathlib.Path(save_path)
+save_fig = False
+
+if is_determinist:
+    uncs_sr = [res_correct.sr, res_false.sr]
     uncs_pe = [res_correct.pe, res_false.pe]
-    all_uncs = [uncs_us, uncs_pe]
-    unc_names = ['us', 'pe']
+    all_uncs = [uncs_sr, uncs_pe]
+    unc_names = ['sr', 'pe']
 else:
     uncs_vr = [res_correct.vr, res_false.vr]
     uncs_pe = [res_correct.pe, res_false.pe]
@@ -384,52 +408,42 @@ else:
     all_uncs = [uncs_vr, uncs_pe, uncs_mi]
     unc_names = ['vr', 'pe', 'mi']
 
-fig = plt.figure()
-
-
-ax1 = fig.add_subplot(211)
-ax1.set_title('Uncertainty Softmax')
-ax1.set_xlabel('Uncertainty value')
-ax1.set_ylabel('Density value')
-
-ax2 = fig.add_subplot(212)
-ax2.set_title('Predictive Entropy')
-ax2.set_xlabel('Uncertainty value')
-ax2.set_ylabel('Density value')
-
 unc_labels = ('true', 'false')
-
-u.plot_density_on_ax(ax1, uncs_us, unc_labels, hist=True,)
-ax1.legend()
-
-u.plot_density_on_ax(ax2, uncs_pe, unc_labels, hist=True,)
-ax2.legend()
-
+fig = plt.figure()
+for idx, (unc_name, uncs) in enumerate(zip(unc_names, all_uncs)):
+    ax = fig.add_subplot(len(unc_names), 1, idx+1)
+    ax.set_title(unc_name)
+    ax.set_xlabel(unc_name)
+    ax.set_ylabel('density')
+    u.plot_density_on_ax(ax, uncs, unc_labels, hist=True,)
+    ax.legend()
 
 fig.show()
-res.correct_pred.sum()/len(res)
+
+if save_fig:
+    save_path.mkdir(exist_ok=True, parents=True)
+    fig.savefig(save_path/f'density_uncertainty_{exp}.png')
+    u.save_to_file(fig, save_path/f'density_uncertainty_{exp}.pkl')
 
 # %% Density graph 2
 
 
 if is_determinist:
     save_path = 'rapport/determinist_failure/'
-    save_path = pathlib.Path(save_path)
-    save_fig = False
 else:
     save_path = 'rapport/bayesian_results/'
+save_path = pathlib.Path(save_path)
+save_fig = False
 
 if is_determinist:
-    unc_names = ['us', 'pe']
+    unc_names = ['sr', 'pe']
 else:
     unc_names = ['vr', 'pe', 'mi']
 
 
 res.sample(frac=1)
 
-fig = plt.figure(figsize=(8,8))
-fig.suptitle(f'Uncertainty Repartition. Exp:{exp}\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
-             wrap=True)
+fig = plt.figure(figsize=(5, 4))
 axs = {}
 for idx, unc_name in enumerate(unc_names):
     to_plot_true = res_correct[unc_name]
@@ -443,23 +457,28 @@ for idx, unc_name in enumerate(unc_names):
     ax.set_yticklabels(['False', 'True'])
     axs[unc_name] = ax
 
-fig.tight_layout()
+fig.suptitle(f'Uncertainty Repartition. Exp:{exp}. T={number_of_tests}'
+             # f'\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
+             # wrap=True
+             )
 fig.show()
 
 if save_fig:
     save_path.mkdir(exist_ok=True, parents=True)
     fig.savefig(save_path/f'scatterplot_uncertainty_{exp}.png')
     u.save_to_file(fig, save_path/f'scatterplot_uncertainty_{exp}.pkl')
+    print(f'saved to f{save_path/f"scatterplot_uncertainty_{exp}.png"}')
 
 # %% Acc vs unc
 
 
 if is_determinist:
     save_path = 'rapport/determinist_failure/'
-    save_path = pathlib.Path(save_path)
-    save_fig = False
 else:
     save_path = 'rapport/bayesian_results/'
+
+save_path = pathlib.Path(save_path)
+save_fig = False
 
 nb_of_points = 10000
 size_of_points = 30
@@ -477,7 +496,7 @@ to_plot = pd.DataFrame(columns=[
 ])
 
 if is_determinist:
-    unc_names = ['us', 'pe']
+    unc_names = ['sr', 'pe']
 else:
     unc_names = ['vr', 'pe', 'mi']
 
@@ -496,8 +515,12 @@ for ratio in ratios:
             'size_of_points': [size_of_points],
         }), sort=True)
 
-fig = plt.figure()
-fig.suptitle(f'Accuracy VS Uncertainty, size:{size_of_points}. Exp:{exp}', y=1)
+fig = plt.figure(figsize=(9, 9))
+
+fig.suptitle(f'Uncertainty Repartition. Exp:{exp}. T={number_of_tests}'
+             # f'\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
+             # wrap=True
+             , y=1)
 axs = {}
 for idx, unc_name in enumerate(unc_names):
     to_plot_unc = to_plot.loc[to_plot.unc_name == unc_name]
@@ -514,4 +537,51 @@ if save_fig:
     save_path.mkdir(exist_ok=True, parents=True)
     fig.savefig(save_path/f'acc_unc_{exp}.png')
     u.save_to_file(fig, save_path/f'acc_unc_{exp}.pkl')
+    print(f'saved to f{save_path / f"acc_unc_{exp}.png"}')
 
+
+# %% Selective classification
+
+if is_determinist:
+    save_path = 'rapport/determinist_failure/'
+    unc_names = ['sr', 'pe']
+else:
+    save_path = 'rapport/bayesian_results/'
+    unc_names = ['vr', 'pe', 'mi']
+save_path = pathlib.Path(save_path)
+save_fig = False
+
+def oracle(x, acc):
+    return np.minimum(1, acc/np.maximum(x, 0.0001))
+
+coverage_array = np.arange(1, 1+len(res))/len(res)
+model_acc = res.correct_pred.mean()
+
+fig = plt.figure(figsize=(8, 4))
+ax = fig.add_subplot(111)
+ax.plot([0, 1], [model_acc, model_acc], label='lower_bound')
+ax.plot(coverage_array, oracle(coverage_array, model_acc), label='oracle')
+for idx, unc_name in enumerate(unc_names):
+    sorted_unc = res.sort_values(unc_name)
+    sorted_unc.loc[sorted_unc[unc_name] < 0, unc_name] = 0
+
+    sorted_unc = (
+        sorted_unc
+        .assign(cum_accs=lambda df: df.correct_pred.cumsum()/np.arange(1, len(sorted_unc)+1))
+    )
+
+    ax.plot(coverage_array, sorted_unc.cum_accs, label=unc_name)
+ax.set_xlabel('coverage')
+ax.set_ylabel('accuracy')
+ax.legend()
+
+fig.suptitle(f'Accuracy - Coverage. Exp:{exp}. T={number_of_tests}'
+             # f'\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
+             # wrap=True, va='baseline',
+             )
+fig.show()
+if save_fig:
+    save_path.mkdir(exist_ok=True, parents=True)
+    fig.savefig(save_path/f'acc_cov_{exp}.png')
+    u.save_to_file(fig, save_path/f'acc_cov_{exp}.pkl')
+    print(f'Saved to {save_path/f"acc_cov_{exp}.png"}')
