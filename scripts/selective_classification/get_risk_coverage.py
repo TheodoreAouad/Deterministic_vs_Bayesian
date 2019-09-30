@@ -11,94 +11,63 @@ import time
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import numpy as np
 import pandas as pd
 import torch
 from tqdm import tqdm
 
-from scripts.utils import get_trained_model_and_args_and_groupnb, get_args
+from scripts.utils import get_trained_model_and_args_and_groupnb
 from src.dataset_manager.get_data import get_mnist, get_cifar10
 from src.risk_control import bound_animate
 from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_predictions_from_multiple_tests, \
     get_all_uncertainty_measures
-from src.utils import convert_tensor_to_float, plot_density_on_ax, save_to_file
+from src.utils import convert_tensor_to_float, plot_density_on_ax
 
 ###### TO CHANGE ######################################################
 
-# exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3842', '3851', '3861', '3864']
-exp_nbs = ['4795']
-number_of_tests_list = [20]
-rstars = [0.13076923]
-# rstars = [0.05, 0.05897436, 0.06794872, 0.07692308, 0.08589744,
-#           0.09487179, 0.10384615, 0.11282051, 0.12179487, 0.13076923,
-#           0.13974359, 0.14871795, 0.15769231, 0.16666667, 0.17564103,
-#           0.18461538, 0.19358974, 0.2025641, 0.21153846, 0.22051282,
-#           0.22948718, 0.23846154, 0.2474359, 0.25641026, 0.26538462,
-#           0.27435897, 0.28333333, 0.29230769, 0.30128205, 0.31025641,
-#           0.31923077, 0.32820513, 0.33717949, 0.34615385, 0.35512821,
-#           0.36410256, 0.37307692, 0.38205128, 0.39102564, ]
-# rstars = [0.05, 0.05897436, 0.06794872, 0.07692308, 0.08589744,
-#           0.09487179, 0.10384615, 0.11282051, 0.12179487, 0.13076923,
-#           0.13974359, 0.14871795, 0.15769231, 0.16666667, 0.17564103,]
+# these_exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3842', '3851', '3861', '3864']
+these_exp_nbs = ['19815']
+number_of_tests = 10
+nb_of_runs = 1
+# rstars = [0.13076923]
+rstars = np.linspace(0.1, 0.5, 50)
 
 delta = 0.01
 
-do_computation = False
-recompute_outputs = False
+recompute_outputs = True
 verbose = False
 
 save_csv = True
-show_fig = True
-do_save_animation = True
-save_fig = True
+do_save_animation = False
 figsize = (10, 6)
 
-save_csv_path = 'results/risk_coverage/cifar10'
-save_fig_path = 'results/risk_coverage/cifar10'
+save_csv_path = 'results/risk_coverage/'
+save_fig_path = 'results/risk_coverage/'
 GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
 CPUPATH = 'polyaxon_results/groups'
 #######################################################################
 
-
-if torch.cuda.is_available():
-    device = "cuda"
-else:
-    device = "cpu"
-device = torch.device(device)
-print(device)
-
-if device == torch.device('cuda'):
-    path = GPUPATH
-elif device == torch.device('cpu'):
-    path = CPUPATH
-else:
-    assert False
-
-save_csv_path = pathlib.Path(save_csv_path)
-if not os.path.exists(save_csv_path / 'results_train.csv'):
-    results_train = pd.DataFrame(
-        columns=['exp', 'unc', 'threshold', 'risk', 'acc', 'coverage', 'time', 'number_of_tests'])
-    results_eval = pd.DataFrame(
-        columns=['exp', 'unc', 'threshold', 'risk', 'acc', 'coverage', 'time', 'number_of_tests'])
-    if save_csv:
-        save_csv_path.mkdir(exist_ok=True, parents=True)
-        results_train.to_csv(save_csv_path / 'results_train.csv')
-        results_eval.to_csv(save_csv_path / 'results_eval.csv')
-else:
-    results_train = pd.read_csv(save_csv_path / 'results_train.csv', )
-    results_train = results_train.filter(regex=r'^(?!Unnamed)')
-    results_train.to_csv(save_csv_path / 'results_train_backup.csv')
-    results_eval = pd.read_csv(save_csv_path / 'results_eval.csv', )
-    results_eval = results_eval.filter(regex=r'^(?!Unnamed)')
-    results_eval.to_csv(save_csv_path / 'results_eval_backup.csv')
-
-global_start = time.time()
+path_to_exps = CPUPATH
 
 
-def save_animation(unc, correct_preds, risks, bounds, coverages, thetas, figsize, save_path):
+def save_animation(
+        arguments,
+        rstar,
+        unc,
+        correct_preds,
+        risks,
+        bounds,
+        coverages,
+        thetas,
+        figsize,
+        save_path,
+):
     """
     This function saves the animation of the threshold finding.
     Args:
+        arguments (dict): arguments of the experiment
+        rstar (float): maximum acceptable risk
         unc (array-like): size (size_of_batch): the uncertainty for each sample
         correct_preds (array-like): size (size_of_batch): array with 1 if the prediction is correct, 0 if false
         risks (array-like): size (nb of iterations in bound_animate): the evolution of risks across iterations
@@ -139,17 +108,72 @@ def save_animation(unc, correct_preds, risks, bounds, coverages, thetas, figsize
     anim.save(save_path, writer='pillow', fps=4)
 
 
-if do_computation:
-    for exp_nb in exp_nbs:
-        print(exp_nb)
-        for number_of_tests in number_of_tests_list:
-            bay_net, arguments, _ = get_trained_model_and_args_and_groupnb(exp_nb, exp_path=path)
+def main(
+        exp_nbs=None,
+        path_to_exps=path_to_exps,
+        path_to_results=save_csv_path,
+        nb_of_runs=nb_of_runs,
+        number_of_tests=number_of_tests,
+        rstars=rstars,
+        delta=delta,
+        recompute_outputs=recompute_outputs,
+        verbose=verbose,
+        save_csv=save_csv,
+        do_save_animation=do_save_animation,
+        device='cpu',
+):
+    """
+    Performs selective classification given a trained network and testset. Computes different threshold depending on
+    different accepted risks.
+    Args:
+        exp_nbs (int || str): number of the experiment
+        path_to_exps (str): path to the experiment groups
+        path_to_results (str): path to save the results
+        nb_of_runs (int): number of times to perform the same operation to get a confidence interval
+        number_of_tests (int): number of inferences for each predictions
+        rstars (list): list of float of accepted risks
+        delta (float): probability of being higher than the upper bound
+        recompute_outputs (Bool): whether or not we compute the outputs of train / test set. Put False if it is already
+                                  computed and you don't want to loose time.
+        verbose (Bool): show or not progress bar
+        save_csv (Bool): save or not in csv
+        do_save_animation (Bool): save or not the animation of finding the threshold.
+        device (torch.device): gpu or cpu
+
+    """
+    if exp_nbs is None:
+        exp_nbs = these_exp_nbs
+    save_csv_path = pathlib.Path(path_to_results)
+    save_fig_path = pathlib.Path(path_to_results)
+
+    if not os.path.exists(save_csv_path / 'results_train.csv'):
+        results_train = pd.DataFrame(
+            columns=['exp', 'unc', 'threshold', 'risk', 'acc', 'coverage', 'time', 'number_of_tests'])
+        results_eval = pd.DataFrame(
+            columns=['exp', 'unc', 'threshold', 'risk', 'acc', 'coverage', 'time', 'number_of_tests'])
+        if save_csv:
+            save_csv_path.mkdir(exist_ok=True, parents=True)
+            results_train.to_csv(save_csv_path / 'results_train.csv')
+            results_eval.to_csv(save_csv_path / 'results_eval.csv')
+    else:
+        results_train = pd.read_csv(save_csv_path / 'results_train.csv', )
+        results_train = results_train.filter(regex=r'^(?!Unnamed)')
+        results_train.to_csv(save_csv_path / 'results_train_backup.csv')
+        results_eval = pd.read_csv(save_csv_path / 'results_eval.csv', )
+        results_eval = results_eval.filter(regex=r'^(?!Unnamed)')
+        results_eval.to_csv(save_csv_path / 'results_eval_backup.csv')
+
+    global_start = time.time()
+    for _ in range(nb_of_runs):
+        for exp_nb in exp_nbs:
+            print(exp_nb)
+            bay_net, arguments, _ = get_trained_model_and_args_and_groupnb(exp_nb, exp_path=path_to_exps)
             if recompute_outputs:
 
                 split_labels = arguments.get('split_labels', 10)
-                if arguments['trainset'] == 'mnist':
+                if arguments.get('trainset', 'mnist') == 'mnist':
                     get_trainset = get_mnist
-                elif arguments['trainset'] == 'cifar10':
+                elif arguments.get('trainset', 'mnist') == 'cifar10':
                     get_trainset = get_cifar10
                 else:
                     assert False, 'trainset not recognized'
@@ -209,7 +233,7 @@ if do_computation:
                         'coverage': [coverage_train],
                         'time': [time.time() - start],
                         'number_of_tests': [number_of_tests],
-                        'loss_type': [arguments['loss_type']],
+                        'loss_type': [arguments.get('loss_type', 'criterion')],
                     })
                     convert_tensor_to_float(new_res_train)
                     results_train = results_train.append(new_res_train, sort=True)
@@ -226,53 +250,37 @@ if do_computation:
                         'coverage': [coverage_eval],
                         'time': [time.time() - start],
                         'number_of_tests': [number_of_tests],
-                        'loss_type': [arguments['loss_type']],
+                        'loss_type': [arguments.get('loss_type', 'criterion')],
                     })
                     convert_tensor_to_float(new_res_eval)
                     results_eval = results_eval.append(new_res_eval, sort=True)
 
                     if do_save_animation:
-                        save_animation_path = pathlib.Path(save_fig_path + '/animation')
+                        save_animation_path = save_fig_path / 'animation'
                         save_animation_path.mkdir(exist_ok=True, parents=True)
                         save_animation_path = save_animation_path / f'{exp_nb}_{unc_name}_{idx_risk}_' \
                             f'finding_threshold.gif'
-                        save_animation(unc_train, correct_preds_train, risks, bounds, coverages, thetas, figsize,
+                        save_animation(arguments, rstar, unc_train, correct_preds_train, risks, bounds, coverages,
+                                       thetas, figsize,
                                        save_animation_path)
 
                 if save_csv:
                     results_train.to_csv(save_csv_path / 'results_train.csv')
                     results_eval.to_csv(save_csv_path / 'results_eval.csv')
-        print(f'Time since start: {time.time() - global_start}')
-
-# theta = rc.get_selection_threshold(
-#     bay_net,
-#     trainloader,
-#     rstar,
-#     delta,
-#     uncertainty_function,
-#     number_of_tests,
-#     verbose,
-#     device
-# )
+            print(f'Time since start: {time.time() - global_start}')
 
 
-def f(x):
-    """
-    Transforms the string of tensors x into a string of floats.
-    Args:
-        x (str): the string with the word 'tensor' we want to see disappear.
-
-    Returns:
-        str: all 'tensor' strings are gone.
-    """
-    if type(x) == str:
-        if 'tensor' in x:
-            return float(x.replace('tensor', '').replace('(', '').replace(')', ''))
-        else:
-            return x
+if __name__ == '__main__':
+    if torch.cuda.is_available():
+        device = "cuda"
     else:
-        return x
+        device = "cpu"
+    device = torch.device(device)
+    print(device)
 
+    if device == torch.device('cuda'):
+        path_to_exps = GPUPATH
+    elif device == torch.device('cpu'):
+        path_to_exps = CPUPATH
 
-
-
+    main(path_to_exps=path_to_exps, path_to_results=save_csv_path, device=device, )

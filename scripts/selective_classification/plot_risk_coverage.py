@@ -10,15 +10,17 @@ from src.utils import save_to_file
 
 ######## TO CHANGE ###############
 
-exp_nbs = ['4795']
+# exp_nbs = ['14617', '14746', '14681', '14627', '14748', '14689', '14633', '14754', '14695']
+exp_nbs = ['4789', '4795']
 number_of_tests_to_print = [10, 20]
 
-show_fig = True
+show_fig = False
 save_fig = True
 figsize = (10, 6)
 
-save_csv_path = 'results/risk_coverage/cifar10'
-save_fig_path = 'results/risk_coverage/cifar10'
+save_csv_path = 'results/risk_coverage/'
+save_png_path = 'results/risk_coverage/png_figures'
+save_pkl_path = 'results/risk_coverage/pyplot_figures'
 GPUPATH = '/output/sicara/BayesianFewShotExperiments/groups/'
 CPUPATH = 'polyaxon_results/groups'
 ###################################
@@ -38,8 +40,8 @@ else:
     assert False
 
 save_csv_path = pathlib.Path(save_csv_path)
-
-results_train = pd.read_csv(save_csv_path / 'results_train.csv', index_col=False)
+save_png_path = pathlib.Path(save_png_path)
+save_pkl_path = pathlib.Path(save_pkl_path)
 
 
 def plot_acc_cov(number_of_tests_to_print, exp_nb, results, figsize=figsize, ):
@@ -55,10 +57,6 @@ def plot_acc_cov(number_of_tests_to_print, exp_nb, results, figsize=figsize, ):
         matplotlib.figure.Figure: the figure with the plot inside
     """
     fig = plt.figure(figsize=figsize)
-    arguments = get_args(exp_nb, path)
-    fig.suptitle(f'Acc-Coverage, w.r.t. nb of tests and uncertainty measure\n'
-                 f'{dict({k: v for k, v in arguments.items() if k not in ["type_of_unseen", "number_of_tests"]})}',
-                 wrap=True)
     ax = fig.add_subplot(1, 1, 1)
     axs = {
         'vr': ax,
@@ -67,7 +65,7 @@ def plot_acc_cov(number_of_tests_to_print, exp_nb, results, figsize=figsize, ):
     }
     styles = ['dotted', (0, (5, 1)), ]  # size: len(number_of_tests_to_plot)
     # markers = ['D', 'v', ]  # size: len(number_of_tests_to_plot)
-    cmaps = ['autumn', 'winter', 'summer' ]  # size: nb of measures
+    cmaps = ['autumn', 'winter', 'summer']  # size: nb of measures
     cmaps_position = [0.4, 0.7]  # size: len(nb of tests to plot)
     for style, nb_of_test in enumerate(number_of_tests_to_print):
         exp_nb = int(exp_nb)
@@ -98,14 +96,19 @@ def plot_acc_cov(number_of_tests_to_print, exp_nb, results, figsize=figsize, ):
     return fig
 
 
+results_train = pd.read_csv(save_csv_path / 'results_train.csv', index_col=False)
 if show_fig or save_fig:
     for exp_nb in exp_nbs:
         fig = plot_acc_cov(number_of_tests_to_print, exp_nb, results_train, figsize=figsize)
+        arguments = get_args(exp_nb, path)
+        fig.suptitle(f'Trainset: Acc-Coverage, w.r.t. nb of tests and uncertainty measure\n'
+                     f'{dict({k: v for k, v in arguments.items() if k not in ["type_of_unseen", "number_of_tests"]})}',
+                     wrap=True)
         if save_fig:
-            save_fig_path = pathlib.Path(save_fig_path)
-            save_fig_path.mkdir(exist_ok=True, parents=True)
-            fig.savefig(save_fig_path / f'{exp_nb}-acc-coverage-train.png')
-            save_to_file(fig, save_fig_path / f'{exp_nb}-acc-coverage-train.pkl')
+            save_png_path.mkdir(exist_ok=True, parents=True)
+            save_pkl_path.mkdir(exist_ok=True, parents=True)
+            fig.savefig(save_png_path / f'{exp_nb}-acc-coverage-train.png')
+            save_to_file(fig, save_pkl_path / f'{exp_nb}-acc-coverage-train.pkl')
         if show_fig:
             fig.show()
 
@@ -113,10 +116,14 @@ results_eval = pd.read_csv(save_csv_path / 'results_eval.csv')
 if show_fig or save_fig:
     for exp_nb in exp_nbs:
         fig = plot_acc_cov(number_of_tests_to_print, exp_nb, results_eval, figsize=figsize)
+        arguments = get_args(exp_nb, path)
+        fig.suptitle(f'Testset: Acc-Coverage, w.r.t. nb of tests and uncertainty measure\n'
+                     f'{dict({k: v for k, v in arguments.items() if k not in ["type_of_unseen", "number_of_tests"]})}',
+                     wrap=True)
         if save_fig:
-            save_fig_path = pathlib.Path(save_fig_path)
-            save_fig_path.mkdir(exist_ok=True, parents=True)
-            fig.savefig(save_fig_path / f'{exp_nb}-acc-coverage-eval.png')
-            save_to_file(fig, save_fig_path / f'{exp_nb}-acc-coverage-eval.pkl')
+            save_png_path.mkdir(exist_ok=True, parents=True)
+            save_pkl_path.mkdir(exist_ok=True, parents=True)
+            fig.savefig(save_png_path / f'{exp_nb}-acc-coverage-eval.png')
+            save_to_file(fig, save_pkl_path / f'{exp_nb}-acc-coverage-eval.pkl')
         if show_fig:
             fig.show()

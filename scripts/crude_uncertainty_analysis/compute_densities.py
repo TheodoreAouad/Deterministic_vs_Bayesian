@@ -23,7 +23,7 @@ reload(utils)
 #            '3840', '3842', '3851', '3861', '3864']
 # exp_nbs = ['3842', ]  # '3851', '3861', '3864']
 # exp_nbs = ['4792', '4789', '4795']
-exp_nbs = ['3832',]
+exp_nbs = ['14617', '14746', '14681', '14627', '14748', '14689', '14633', '14754', '14695']
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000
@@ -31,16 +31,16 @@ nb_of_random = 5000
 do_computation = True
 save_outputs = True
 
-do_train_seen_unseen = False
-do_train_correct_false = False
-do_seen_correct_false = False
-do_train_seen = False
-do_train_seen_correct_false = False
+do_train_seen_unseen = True
+do_train_correct_false = True
+do_seen_correct_false = True
+do_train_seen = True
+do_train_seen_correct_false = True
 do_train_seen_unseen_correct_false = True
 
 figsize = (12, 12)
-show_fig = True
-save_fig = False
+show_fig = False
+save_fig = True
 do_eval_mnist = True
 save_path = 'results/uncertainty_density/'
 
@@ -134,7 +134,7 @@ for exp_nb in exp_nbs:
             if save_fig:
                 print('Saving figure...')
                 fig1.savefig(save_path_hists)
-                save_to_file(fig1, save_path_hists.replace('png', 'pkl'))
+                save_to_file(fig1, str(save_path_hists).replace('png', 'pkl'))
                 print('Figure saved.')
             if show_fig:
                 print('Showing figures...')
@@ -160,7 +160,7 @@ for exp_nb in exp_nbs:
                 assert save_path is not None
                 print('Saving figure...')
                 fig2.savefig(save_path_hists)
-                save_to_file(fig2, save_path_hists.replace('png', 'pkl'))
+                save_to_file(fig2, str(save_path_hists).replace('png', 'pkl'))
                 print('Figure saved.')
             if show_fig:
                 print('Showing figures...')
@@ -185,7 +185,7 @@ for exp_nb in exp_nbs:
             if save_fig:
                 print('Saving figure...')
                 fig3.savefig(save_path_hists)
-                save_to_file(fig3, save_path_hists.replace('png', 'pkl'))
+                save_to_file(fig3, str(save_path_hists).replace('png', 'pkl'))
                 print('Figure saved.')
             if show_fig:
                 print('Showing figures...')
@@ -211,7 +211,7 @@ for exp_nb in exp_nbs:
             if save_fig:
                 print('Saving figure...')
                 fig4.savefig(save_path_hists)
-                save_to_file(fig4, save_path_hists.replace('png', 'pkl'))
+                save_to_file(fig4, str(save_path_hists).replace('png', 'pkl'))
                 print('Figure saved.')
             if show_fig:
                 print('Showing figures...')
@@ -238,7 +238,7 @@ for exp_nb in exp_nbs:
             if save_fig:
                 print('Saving figure...')
                 fig5.savefig(save_path_hists)
-                save_to_file(fig5, save_path_hists.replace('png', 'pkl'))
+                save_to_file(fig5, str(save_path_hists).replace('png', 'pkl'))
                 print('Figure saved.')
             if show_fig:
                 print('Showing figures...')
@@ -265,7 +265,7 @@ for exp_nb in exp_nbs:
             if save_fig:
                 print('Saving figure...')
                 fig6.savefig(save_path_hists)
-                save_to_file(fig6, save_path_hists.replace('png', 'pkl'))
+                save_to_file(fig6, str(save_path_hists).replace('png', 'pkl'))
                 print('Figure saved.')
             if show_fig:
                 print('Showing figures...')

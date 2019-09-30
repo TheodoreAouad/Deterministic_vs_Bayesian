@@ -10,13 +10,21 @@ from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_all_uncertainty_measures, get_predictions_from_multiple_tests
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
+from scripts.utils import get_trained_model_and_args_and_groupnb, get_seen_outputs_and_labels, get_evalloader_seen
+
 ###### TO CHANGE #########
-group_nb = '172'        ##
-idx_in_group = 0        ##
+exp_nb = '14621'
 threshold = .05         ##
 number_of_batches = 10  ##
+number_of_tests = 10
 ##########################
 
+if torch.cuda.is_available():
+    device = "cuda"
+else:
+    device = "cpu"
+device = torch.device(device)
+print(device)
 
 def write_imgs_in_dir(imgs_dir, number_of_batches, idx_high_unc, type_of_unc):
     """
@@ -36,11 +44,12 @@ def write_imgs_in_dir(imgs_dir, number_of_batches, idx_high_unc, type_of_unc):
                 random_label_with_high_uncertainty = random.choice(idx_high_unc)
                 plt.subplot(3, 3, 3 * k1 + k2 + 1)
                 plt.axis('off')
-                plt.imshow(evalloader.dataset.data[random_label_with_high_uncertainty][0])
+                img = evalloader.dataset.data[random_label_with_high_uncertainty]
+                plt.imshow(img)
                 plt.title(f'------------------'
-                          f'\nVR: {round(vr[random_label_with_high_uncertainty].item(), 2)} || '
-                          f'PE: {round(pe[random_label_with_high_uncertainty].item(), 2)} || '
-                          f'MI: {round(mi[random_label_with_high_uncertainty].item(), 2)}\n'
+                          f'\nVR: {round(vr[random_label_with_high_uncertainty].item(), 4)} || '
+                          f'PE: {round(pe[random_label_with_high_uncertainty].item(), 4)} || '
+                          f'MI: {round(mi[random_label_with_high_uncertainty].item(), 4)}\n'
                           f'True: {evalloader.dataset.targets[random_label_with_high_uncertainty].item()} || '
                           f'Predicted: {predicted_labels[random_label_with_high_uncertainty].item()} || '
                           f'Index: {random_label_with_high_uncertainty.item()}')
@@ -50,26 +59,19 @@ def write_imgs_in_dir(imgs_dir, number_of_batches, idx_high_unc, type_of_unc):
 
 
 exp_path = pathlib.Path('polyaxon_results/groups')
-_, all_dirs = get_file_and_dir_path_in_dir(exp_path/group_nb, 'argum')
-dirpath = all_dirs[idx_in_group]
-exp_nb = dirpath.split('/')[-1]
-dirpath = pathlib.Path(dirpath)
+bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp_nb)
 
-arguments = load_from_file(dirpath/'arguments.pkl')
-final_weigths = torch.load(dirpath/'final_weights.pt', map_location='cpu')
-bay_net_trained = GaussianClassifier(
-    rho=arguments['rho'],
-    stds_prior=(arguments['std_prior'], arguments['std_prior']),
-    number_of_classes=10,
-    dim_input=28,
+print('Testing ...')
+evalloader = get_evalloader_seen(arguments, shuffle=False)
+labels, all_outputs = eval_bayesian(
+    bay_net_trained,
+    evalloader,
+    number_of_tests=number_of_tests,
+    return_accuracy=False,
+    device=device,
+    verbose=True,
 )
-bay_net_trained.load_state_dict(final_weigths)
-
-_, _, evalloader = get_mnist(split_val=0, batch_size=128, shuffle=False)
-
-print('Training ...')
-eval_acc, all_outputs = eval_bayesian(bay_net_trained, evalloader, number_of_tests=arguments['number_of_tests'])
-print('Training finished.')
+print('Testing finished.')
 vr, pe, mi = get_all_uncertainty_measures(all_outputs)
 print('Uncertainty computed.')
 

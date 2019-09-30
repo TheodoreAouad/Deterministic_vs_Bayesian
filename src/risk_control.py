@@ -72,7 +72,7 @@ def bound_animate(rstar, delta, kappa, residuals, verbose=True, **kwargs):
     """
 
     probs = kappa
-    fy = residuals
+    fy = residuals.float()
     m = len(fy)
     probs_idx_sorted = probs.argsort()
 

@@ -1,3 +1,4 @@
+import pathlib
 from math import log, exp
 import argparse
 
@@ -6,6 +7,7 @@ import torch
 import torch.optim as optim
 from torch.nn import CrossEntropyLoss
 import torchvision.transforms as transforms
+import numpy as np
 
 from src.loggers.losses.base_loss import BaseLoss
 from src.loggers.losses.bbb_loss import BBBLoss
@@ -47,33 +49,47 @@ parser.add_argument('--split_train', help='the portion of training data we take'
 
 args = parser.parse_args()
 arguments = vars(args)
-save_to_file(arguments, './output/arguments.pkl')
 
 trainset = args.trainset
 unseen_evalset = args.unseen_evalset
 type_of_unseen = args.type_of_unseen
-split_labels = args.split_labels
+if type_of_unseen == 'unseen_classes':
+    split_labels = args.split_labels
+else:
+    split_labels = 10
+    arguments['split_labels'] = 10
 rho = args.rho
 epoch = args.epoch
 batch_size = args.batch_size
 number_of_tests = args.number_of_tests
 loss_type = args.loss_type
 std_prior = args.std_prior
-split_train = args.split_train
 stds_prior = (std_prior, std_prior)
+split_train = args.split_train
+
+# Fixes rho_init at the std_prior
+# rho = log(exp(std_prior) - 1)
+# arguments['rho'] = rho
+
 
 if args.determinist:
     rho = 'determinist'
     number_of_tests = 1
+    arguments['number_of_tests'] = 1
 
 res = pd.DataFrame()
 
 
 if torch.cuda.is_available():
     device = 'cuda'
+    output_file = './output'
 else:
     device = 'cpu'
+    nb = np.random.randint(100000)
+    output_file = f'./output/{nb}'
+pathlib.Path(output_file).mkdir(exist_ok=True, parents=True)
 device = torch.device(device)
+print(output_file)
 
 def get_evalloader_unseen(arguments):
     type_of_unseen = arguments['type_of_unseen']
@@ -84,7 +100,6 @@ def get_evalloader_unseen(arguments):
         _, _, evalloader_unseen = get_random(number_of_channels=dim_channels, img_dim=dim_input, number_of_classes=10)
     if type_of_unseen == 'unseen_classes':
         _, _, evalloader_unseen = get_trainset(train_labels=(), eval_labels=range(split_labels, 10, ), )
-        res['split_labels'] = split_labels
     if type_of_unseen == 'unseen_dataset':
         res['unseen_dataset'] = unseen_evalset
         assert trainset != unseen_evalset, 'Train Set must be different from Unseen Test Set'
@@ -137,7 +152,10 @@ bay_net = GaussianClassifier(
 bay_net.to(device)
 # Defining loss
 criterion = CrossEntropyLoss()
-if loss_type == 'uniform':
+if args.determinist:
+    loss = BaseLoss(criterion)
+    loss_type = 'criterion'
+elif loss_type == 'uniform':
     step_function = uniform
     loss = BBBLoss(bay_net, criterion, step_function)
 elif loss_type == 'exp':
@@ -166,6 +184,8 @@ train_bayesian_modular(
     verbose=True,
 )
 
+bay_net.load_state_dict(observables.max_weights)
+
 # Evaluation on seen test set
 eval_acc, all_outputs_eval = eval_bayesian(bay_net, evalloader_seen, number_of_tests=number_of_tests, device=device, )
 
@@ -173,27 +193,29 @@ eval_acc, all_outputs_eval = eval_bayesian(bay_net, evalloader_seen, number_of_t
 _, all_outputs_unseen = eval_bayesian(bay_net, evalloader_unseen, number_of_tests=number_of_tests, device=device)
 
 res = pd.concat((res, pd.DataFrame.from_dict({
+    'trainset': [trainset],
+    'split_labels': [split_labels],
     'type_of_unseen': [type_of_unseen],
     'loss_type': [loss_type],
-    'number of epochs': [epoch],
+    'number_of_epochs': [epoch],
     'batch_size': [batch_size],
     'nb_of_data': [len(trainloader_seen.dataset)],
-    'number of tests': [number_of_tests],
+    'number_of_tests': [number_of_tests],
     'seed_model': [seed_model],
     'stds_prior': [std_prior],
     'rho': [rho],
-    'train accuracy': [observables.logs['train_accuracy_on_epoch']],
-    'train max acc': [observables.max_train_accuracy_on_epoch],
-    'train max acc epoch': [observables.epoch_with_max_train_accuracy],
-    'train loss': [loss.logs.get('total_loss', -1)],
-    'train loss llh': [loss.logs.get('likelihood', -1)],
-    'train loss vp': [loss.logs.get('variational_posterior', -1)],
-    'train loss pr': [loss.logs.get('prior', -1)],
-    'val accuracy': [observables.logs['val_accuracy']],
-    'val vr': [observables.logs['val_uncertainty_vr']],
-    'val pe': [observables.logs['val_uncertainty_pe']],
-    'val mi': [observables.logs['val_uncertainty_mi']],
-    'eval accuracy': [eval_acc],
+    'train_accuracy': [observables.logs['train_accuracy_on_epoch']],
+    'train_max_acc': [observables.max_train_accuracy_on_epoch],
+    'train_max_acc_epoch': [observables.epoch_with_max_train_accuracy],
+    'train_loss': [loss.logs.get('total_loss', -1)],
+    'train_loss_llh': [loss.logs.get('likelihood', -1)],
+    'train_loss_vp': [loss.logs.get('variational_posterior', -1)],
+    'train_loss_pr': [loss.logs.get('prior', -1)],
+    'val_accuracy': [observables.logs['val_accuracy']],
+    'val_vr': [observables.logs['val_uncertainty_vr']],
+    'val_pe': [observables.logs['val_uncertainty_pe']],
+    'val_mi': [observables.logs['val_uncertainty_mi']],
+    'eval_accuracy': [eval_acc],
 })), axis=1)
 
 if args.determinist:
@@ -206,10 +228,10 @@ if args.determinist:
           f'Uncertainty Softmax:{unseen_us.mean()}, '
           f'Predictive Entropy:{unseen_pe.mean()}, ')
     res = pd.concat((res, pd.DataFrame.from_dict({
-        'seen uncertainty us': [eval_us],
-        'seen uncertainty pe': [eval_pe],
-        'unseen uncertainty us': [unseen_us],
-        'unseen uncertainty pe': [unseen_pe],
+        'seen_uncertainty_us': [eval_us],
+        'seen_uncertainty_pe': [eval_pe],
+        'unseen_uncertainty_us': [unseen_us],
+        'unseen_uncertainty_pe': [unseen_pe],
     })), axis=1)
 else:
     eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
@@ -223,24 +245,27 @@ else:
           f'Predictive Entropy:{unseen_pe.mean()}, '
           f'Mutual Information:{unseen_mi.mean()}')
     res = pd.concat((res, pd.DataFrame.from_dict({
-        'sigma initial': [log(1 + exp(rho))],
-        'seen uncertainty vr': [eval_vr],
-        'seen uncertainty pe': [eval_pe],
-        'seen uncertainty mi': [eval_mi],
-        'unseen uncertainty vr': [unseen_vr],
-        'unseen uncertainty pe': [unseen_pe],
-        'unseen uncertainty mi': [unseen_mi],
+        'sigma_initial': [log(1 + exp(rho))],
+        'seen_uncertainty_vr': [eval_vr],
+        'seen_uncertainty_pe': [eval_pe],
+        'seen_uncertainty_mi': [eval_mi],
+        'unseen_uncertainty_vr': [unseen_vr],
+        'unseen_uncertainty_pe': [unseen_pe],
+        'unseen_uncertainty_mi': [unseen_mi],
     })), axis=1)
 
 convert_df_to_cpu(res)
 
+save_to_file(arguments, f'{output_file}/arguments.pkl')
 if args.save_loss:
-    save_to_file(loss, './output/loss.pkl')
+    save_to_file(loss, f'{output_file}/loss.pkl')
 if args.save_observables:
-    save_to_file(observables, './output/TrainingLogs.pkl')
+    save_to_file(observables, f'{output_file}/TrainingLogs.pkl')
 if args.save_outputs:
-    torch.save(all_outputs_unseen, './output/unseen_outputs.pt')
-    torch.save(all_outputs_eval, './output/seen_outputs.pt')
-# torch.save(res, './output/results.pt')
-res.to_pickle('./output/results.pkl')
-torch.save(bay_net.state_dict(), './output/final_weights.pt')
+    torch.save(all_outputs_unseen, f'{output_file}/unseen_outputs.pt')
+    torch.save(all_outputs_eval, f'{output_file}/seen_outputs.pt')
+# torch.save(res, f'{output_file}/results.pt')
+res.to_pickle(f'{output_file}/results.pkl')
+torch.save(bay_net.state_dict(), f'{output_file}/final_weights.pt')
+torch.save(observables.max_weights, f'{output_file}/best_weights.pt')
+pd.DataFrame.from_dict({k:[v] for k,v in arguments.items()}).to_csv(f'{output_file}/arguments.csv')

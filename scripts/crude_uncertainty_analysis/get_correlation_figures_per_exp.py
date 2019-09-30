@@ -15,12 +15,15 @@ from scripts.utils import compute_figures, compute_density_train_seen_unseen, ge
 # exp_nbs = ['3713', '3719', '3749', '3778', '3716', '3722', '3752', '3781', '3832', '3834', '3839',
 #            '3840', '3842', '3851', '3861', '3864']
 
-exp_nbs = ['3713', '3832']
+# exp_nbs = ['14619', ]
+# exp_path = 'polyaxon_results/groups'
+exp_path = 'output/'
+exp_nbs = ['determinist_cifar10']
 nb_of_batches = 1000
 size_of_batch = 100
 nb_of_random = 5000
-show_fig = True
-save_fig = False
+show_fig = False
+save_fig = True
 do_eval_mnist = True
 
 
@@ -37,7 +40,7 @@ start_time = time()
 for exp_nb in exp_nbs:
     print(f'{exp_nb}')
 
-    bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp_nb)
+    bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp_nb, exp_path)
 
     all_eval_outputs, true_labels_mnist = get_seen_outputs_and_labels(
         bay_net_trained,

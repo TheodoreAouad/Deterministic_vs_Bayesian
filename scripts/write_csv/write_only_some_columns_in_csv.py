@@ -22,7 +22,8 @@ args = parser.parse_args()
 
 which_parameters = args.which_parameters
 which_values = args.which_values
-results_dir_path = pathlib.Path(args.results_dir_path) / 'raw_results'
+results_dir_path = pathlib.Path(args.results_dir_path) / 'raw_results/all_columns'
+save_dir_path = pathlib.Path(args.results_dir_path) / 'raw_results/specific_columns'
 polyaxon_type = args.polyaxon_type
 exp_nb = args.exp_nb
 extra_info = args.extra_info
@@ -51,8 +52,19 @@ operations.update({
 })
 which_values.add('experiment')
 specific_results = all_results_sorted.groupby(which_parameters,).agg(operations)
+exps = all_results_sorted.groupby(which_parameters,).agg(lambda x: list(x)).experiment
 specific_results = specific_results[which_values]
+specific_results['experiment'] = exps
 specific_results.reset_index(inplace=True)
-specific_results = specific_results.reindex(which_parameters_raw + which_values_raw, axis=1)
-specific_results.to_pickle(results_dir_path / (filename + '_specific_results.pkl'))
-specific_results.to_csv(results_dir_path / (filename + '_specific_results.csv'))
+specific_results = specific_results.reindex(['experiment'] + which_parameters_raw + which_values_raw, axis=1)
+
+if specific_results.rho.iloc[0] == 'determinist':
+    uncs = ['us', 'pe']
+else:
+    uncs = ['vr', 'pe', 'mi']
+for unc in uncs:
+    specific_results[f'{unc}_unseen/seen'] = (specific_results[f'unseen_uncertainty_{unc}-mean'] /
+                                              specific_results[f'seen_uncertainty_{unc}-mean'])
+save_dir_path.mkdir(exist_ok=True, parents=True)
+specific_results.to_pickle(save_dir_path / (filename + '_specific_results.pkl'))
+specific_results.to_csv(save_dir_path / (filename + '_specific_results.csv'))
