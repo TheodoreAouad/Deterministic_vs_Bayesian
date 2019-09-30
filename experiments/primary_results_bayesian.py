@@ -58,7 +58,7 @@ if type_of_unseen == 'unseen_classes':
 else:
     split_labels = 10
     arguments['split_labels'] = 10
-# rho = args.rho
+rho = args.rho
 epoch = args.epoch
 batch_size = args.batch_size
 number_of_tests = args.number_of_tests
@@ -67,8 +67,9 @@ std_prior = args.std_prior
 stds_prior = (std_prior, std_prior)
 split_train = args.split_train
 
-rho = log(exp(std_prior) - 1)
-arguments['rho'] = rho
+# Fixes rho_init at the std_prior
+# rho = log(exp(std_prior) - 1)
+# arguments['rho'] = rho
 
 
 if args.determinist:
@@ -267,4 +268,4 @@ if args.save_outputs:
 res.to_pickle(f'{output_file}/results.pkl')
 torch.save(bay_net.state_dict(), f'{output_file}/final_weights.pt')
 torch.save(observables.max_weights, f'{output_file}/best_weights.pt')
-pd.DataFrame.from_dict(arguments).to_csv(f'{output_file}/arguments.csv')
+pd.DataFrame.from_dict({k:[v] for k,v in arguments.items()}).to_csv(f'{output_file}/arguments.csv')

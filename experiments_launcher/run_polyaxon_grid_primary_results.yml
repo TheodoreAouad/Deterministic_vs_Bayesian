@@ -28,7 +28,7 @@ hptuning:
       values: [''] # If you wish to save outputs, type inside of the '': --save_outputs
 
     type_of_unseen:
-      values: ['unseen_dataset', 'unseen_classes']
+      values: ['unseen_dataset']
 
     trainset:
       values: ['cifar10']
@@ -37,10 +37,10 @@ hptuning:
       values: ['mnist']
 
     split_labels:
-      values: [5]
+      values: [10]
 
     rho:
-      values: [-6]
+      values: [-10, -9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4]
 
     determinist:
       values: [''] # If you wish to do determinist training, type inside of the '': --determinist
@@ -58,10 +58,10 @@ hptuning:
       values: ["exp"]
 
     std_prior:
-      values: [0.001  , 0.00325, 0.0055 , 0.00775, 0.01,
-               0.02  , 0.0325, 0.055 , 0.0775, 0.1   ,
-               0.2  , 0.325, 0.55 , 0.775, 1.   ,
-               2.,  4.,  6.,  8., 10.]
+      values: [0.001  , 0.0055 , 0.01,
+               0.02  , 0.055 , 0.1   ,
+               0.2  , 0.55 , 1.   ,
+               2.,  6., 10.]
 
     split_train:
       values: [10]
