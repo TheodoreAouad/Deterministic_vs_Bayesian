@@ -6,7 +6,7 @@ import pathlib
 import torch
 import pandas as pd
 
-from src.uncertainty_measures import get_all_uncertainty_measures
+from src.uncertainty_measures import get_all_uncertainty_measures_bayesian
 from src.utils import get_interesting_result, write_dict_in_csv, get_file_and_dir_path_in_dir, convert_tensor_to_float
 
 parser = argparse.ArgumentParser()
@@ -50,26 +50,26 @@ for dir_path in all_dirs:
     result['experiment'] = experiment
     if type_of_test == 'random':
         softmax_output = torch.load(dir_path / 'softmax_outputs.pt', map_location='cpu')
-        seen_vr, seen_pe, seen_mi = get_all_uncertainty_measures(softmax_output)
+        seen_vr, seen_pe, seen_mi = get_all_uncertainty_measures_bayesian(softmax_output)
         result['seen uncertainty vr'] = seen_vr
         result['seen uncertainty pe'] = seen_pe
         result['seen uncertainty mi'] = seen_mi
 
         random_output = torch.load(dir_path / 'random_outputs.pt', map_location='cpu')
-        random_vr, random_pe, random_mi = get_all_uncertainty_measures(random_output)
+        random_vr, random_pe, random_mi = get_all_uncertainty_measures_bayesian(random_output)
         result['random uncertainty vr'] = random_vr
         result['random uncertainty pe'] = random_pe
         result['random uncertainty mi'] = random_mi
 
     elif type_of_test in ['unseen_classes', 'unseen_dataset']:
         seen_output = torch.load(dir_path / 'softmax_outputs_eval_seen.pt', map_location='cpu')
-        seen_vr, seen_pe, seen_mi = get_all_uncertainty_measures(seen_output)
+        seen_vr, seen_pe, seen_mi = get_all_uncertainty_measures_bayesian(seen_output)
         result['seen uncertainty vr'] = seen_vr
         result['seen uncertainty pe'] = seen_pe
         result['seen uncertainty mi'] = seen_mi
 
         unseen_output = torch.load(dir_path / 'softmax_outputs_eval_unseen.pt', map_location='cpu')
-        unseen_vr, unseen_pe, unseen_mi = get_all_uncertainty_measures(unseen_output)
+        unseen_vr, unseen_pe, unseen_mi = get_all_uncertainty_measures_bayesian(unseen_output)
         result['unseen uncertainty vr'] = unseen_vr
         result['unseen uncertainty pe'] = unseen_pe
         result['unseen uncertainty mi'] = unseen_mi

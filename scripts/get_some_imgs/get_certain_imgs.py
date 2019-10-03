@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from src.dataset_manager.get_data import get_mnist
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.evals import eval_bayesian
-from src.uncertainty_measures import get_all_uncertainty_measures, get_predictions_from_multiple_tests
+from src.uncertainty_measures import get_all_uncertainty_measures_bayesian, get_predictions_from_multiple_tests
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
 from scripts.utils import get_trained_model_and_args_and_groupnb, get_seen_outputs_and_labels, get_evalloader_seen
@@ -72,7 +72,7 @@ labels, all_outputs = eval_bayesian(
     verbose=True,
 )
 print('Testing finished.')
-vr, pe, mi = get_all_uncertainty_measures(all_outputs)
+vr, pe, mi = get_all_uncertainty_measures_bayesian(all_outputs)
 print('Uncertainty computed.')
 
 predicted_labels = get_predictions_from_multiple_tests(all_outputs)

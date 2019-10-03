@@ -11,7 +11,7 @@ from src.dataset_manager.get_data import get_mnist, get_omniglot, get_cifar10, g
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.evals import eval_bayesian, eval_random
 
-from src.uncertainty_measures import get_predictions_from_multiple_tests, get_all_uncertainty_measures, \
+from src.uncertainty_measures import get_predictions_from_multiple_tests, get_all_uncertainty_measures_bayesian, \
     get_all_uncertainty_measures_not_bayesian
 from src.utils import get_exact_batch_size, get_file_and_dir_path_in_dir, load_from_file, plot_density_on_ax, \
     save_to_file
@@ -95,8 +95,8 @@ def compute_figures(
     is_determinist = arguments.get('rho', 'determinist') or arguments.get('determinist', False)
     # get uncertainties
     if not is_determinist:
-        vr_shuffled, pe_shuffled, mi_shuffled = get_all_uncertainty_measures(all_outputs_shuffled)
-        vr, pe, mi = get_all_uncertainty_measures(all_outputs)
+        vr_shuffled, pe_shuffled, mi_shuffled = get_all_uncertainty_measures_bayesian(all_outputs_shuffled)
+        vr, pe, mi = get_all_uncertainty_measures_bayesian(all_outputs)
         vr_regrouped_shuffled, pe_regrouped_shuffled, mi_regrouped_shuffled = reshape_shuffled(
             (vr_shuffled, pe_shuffled, mi_shuffled), size_of_batch, nb_of_batches,
         )
@@ -305,9 +305,9 @@ def compute_density_train_seen_unseen(arguments, all_outputs_train, all_outputs_
                  wrap=True)
     if 'rho' in arguments.keys():
 
-        vr_train, pe_train, mi_train = get_all_uncertainty_measures(all_outputs_train)
-        vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures(all_outputs_seen)
-        vr_unseen, pe_unseen, mi_unseen = get_all_uncertainty_measures(all_outputs_unseen)
+        vr_train, pe_train, mi_train = get_all_uncertainty_measures_bayesian(all_outputs_train)
+        vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures_bayesian(all_outputs_seen)
+        vr_unseen, pe_unseen, mi_unseen = get_all_uncertainty_measures_bayesian(all_outputs_unseen)
 
         uncs = {
             'VR': (vr_train, vr_seen, vr_unseen),
@@ -376,8 +376,8 @@ def compute_density_train_seen(arguments, all_outputs_train, all_outputs_seen, s
     plt.suptitle(f'Distribution of uncertainties - {arguments["type_of_unseen"]} - train seen\n{arguments}', wrap=True)
     if 'rho' in arguments.keys():
 
-        vr_train, pe_train, mi_train = get_all_uncertainty_measures(all_outputs_train)
-        vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures(all_outputs_seen)
+        vr_train, pe_train, mi_train = get_all_uncertainty_measures_bayesian(all_outputs_train)
+        vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures_bayesian(all_outputs_seen)
 
         uncs = {
             'VR': (vr_train, vr_seen,),
@@ -450,8 +450,8 @@ def compute_density_correct_false(arguments, all_outputs, true_labels, show_fig,
     all_outputs_false = all_outputs[:, correct_preds == 0, :]
     if 'rho' in arguments.keys():
 
-        vr_train, pe_train, mi_train = get_all_uncertainty_measures(all_outputs_correct)
-        vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures(all_outputs_false)
+        vr_train, pe_train, mi_train = get_all_uncertainty_measures_bayesian(all_outputs_correct)
+        vr_seen, pe_seen, mi_seen = get_all_uncertainty_measures_bayesian(all_outputs_false)
 
         uncs = {
             'VR': (vr_train, vr_seen,),
@@ -532,10 +532,12 @@ def compute_density_train_seen_correct_false(arguments, all_outputs_train, true_
 
     if 'rho' in arguments.keys():
 
-        vr_train_correct, pe_train_correct, mi_train_correct = get_all_uncertainty_measures(all_outputs_train_correct)
-        vr_train_false, pe_train_false, mi_train_false = get_all_uncertainty_measures(all_outputs_train_false)
-        vr_seen_correct, pe_seen_correct, mi_seen_correct = get_all_uncertainty_measures(all_outputs_seen_correct)
-        vr_seen_false, pe_seen_false, mi_seen_false = get_all_uncertainty_measures(all_outputs_seen_false)
+        vr_train_correct, pe_train_correct, mi_train_correct = get_all_uncertainty_measures_bayesian(
+            all_outputs_train_correct)
+        vr_train_false, pe_train_false, mi_train_false = get_all_uncertainty_measures_bayesian(all_outputs_train_false)
+        vr_seen_correct, pe_seen_correct, mi_seen_correct = get_all_uncertainty_measures_bayesian(
+            all_outputs_seen_correct)
+        vr_seen_false, pe_seen_false, mi_seen_false = get_all_uncertainty_measures_bayesian(all_outputs_seen_false)
 
         if arguments['loss_type'] == 'bbb' or arguments['loss_type'] == 'uniform':
             axs = {
@@ -640,11 +642,13 @@ def compute_density_train_seen_unseen_correct_false(arguments, all_outputs_train
 
     if 'rho' in arguments.keys():
 
-        vr_train_correct, pe_train_correct, mi_train_correct = get_all_uncertainty_measures(all_outputs_train_correct)
-        vr_train_false, pe_train_false, mi_train_false = get_all_uncertainty_measures(all_outputs_train_false)
-        vr_seen_correct, pe_seen_correct, mi_seen_correct = get_all_uncertainty_measures(all_outputs_seen_correct)
-        vr_seen_false, pe_seen_false, mi_seen_false = get_all_uncertainty_measures(all_outputs_seen_false)
-        vr_unseen, pe_unseen, mi_unseen = get_all_uncertainty_measures(all_outputs_unseen)
+        vr_train_correct, pe_train_correct, mi_train_correct = get_all_uncertainty_measures_bayesian(
+            all_outputs_train_correct)
+        vr_train_false, pe_train_false, mi_train_false = get_all_uncertainty_measures_bayesian(all_outputs_train_false)
+        vr_seen_correct, pe_seen_correct, mi_seen_correct = get_all_uncertainty_measures_bayesian(
+            all_outputs_seen_correct)
+        vr_seen_false, pe_seen_false, mi_seen_false = get_all_uncertainty_measures_bayesian(all_outputs_seen_false)
+        vr_unseen, pe_unseen, mi_unseen = get_all_uncertainty_measures_bayesian(all_outputs_unseen)
 
         uncs = {
             'VR': (vr_train_correct, vr_train_false, vr_seen_correct, vr_seen_false, vr_unseen),
@@ -760,7 +764,7 @@ def get_seen_outputs_and_labels(bay_net_trained, arguments, device='cpu', verbos
 
 
 # TODO: put this function in primary_results_bayesian.py
-def get_evalloader_unseen(arguments, nb_of_batchs=10):
+def get_evalloader_unseen(arguments, nb_of_batchs=10, shuffle=True):
     """
     Returns the unseen evalloader given the arguments.
     Args:
@@ -786,7 +790,11 @@ def get_evalloader_unseen(arguments, nb_of_batchs=10):
                                              img_dim=dim_input, number_of_classes=10)
     if type_of_unseen == 'unseen_classes':
         split_labels = arguments['split_labels']
-        _, _, evalloader_unseen = get_trainset(train_labels=(), eval_labels=range(split_labels, 10, ), )
+        if type(split_labels) == int:
+            test_labels = range(split_labels, 10)
+        else:
+            test_labels = list(set(range(10)) - set(split_labels))
+        _, _, evalloader_unseen = get_trainset(train_labels=(), eval_labels=test_labels, )
     if type_of_unseen == 'unseen_dataset':
         unseen_evalset = arguments.get('unseen_evalset', 'cifar10')
         transform = transforms.Compose([
@@ -795,9 +803,9 @@ def get_evalloader_unseen(arguments, nb_of_batchs=10):
             transforms.ToTensor(),
         ])
         if unseen_evalset == 'cifar10':
-            _, _, evalloader_unseen = get_cifar10(transform=transform)
+            _, _, evalloader_unseen = get_cifar10(transform=transform, shuffle=shuffle)
         if unseen_evalset == 'mnist':
-            _, _, evalloader_unseen = get_mnist(transform=transform)
+            _, _, evalloader_unseen = get_mnist(transform=transform, shuffle=shuffle)
         if unseen_evalset == 'omniglot':
             _, _, evalloader_unseen = get_omniglot(transform=transform, download=False)
     return evalloader_unseen
@@ -1012,10 +1020,21 @@ def get_evalloader_seen(arguments, shuffle=True):
 
     """
     trainset = arguments.get('trainset', 'mnist')
-    split_labels = arguments.get('split_labels', 10)
+    split_labels = arguments.get('split_labels', range(10))
+    if type(split_labels) == int:
+        split_labels = range(split_labels)
     if trainset == 'mnist':
         get_trainset = get_mnist
     elif trainset == 'cifar10':
         get_trainset = get_cifar10
-    _, _, evalloader_seen = get_trainset(train_labels=(), eval_labels=range(split_labels), split_val=0, shuffle=shuffle)
+    _, _, evalloader_seen = get_trainset(
+        train_labels=(),
+        eval_labels=split_labels,
+        split_val=0,
+        shuffle=shuffle
+    )
     return evalloader_seen
+
+
+def get_determinism(arguments):
+    return arguments.get('determinist', False) or arguments.get('rho', 'determinist') == 'determinist'

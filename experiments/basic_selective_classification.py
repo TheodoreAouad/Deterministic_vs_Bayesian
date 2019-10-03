@@ -15,7 +15,7 @@ from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.risk_control import get_selection_threshold_all_unc
 from src.tasks.trains import train_bayesian_modular, uniform
 from src.tasks.evals import eval_bayesian
-from src.uncertainty_measures import get_all_uncertainty_measures, get_predictions_from_multiple_tests
+from src.uncertainty_measures import get_all_uncertainty_measures_bayesian, get_predictions_from_multiple_tests
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist, get_cifar10
 
@@ -104,7 +104,7 @@ true_train_labels, all_outputs_train = eval_bayesian(
     device=device,
 )
 
-train_vr, train_pe, train_mi = get_all_uncertainty_measures(all_outputs_train)
+train_vr, train_pe, train_mi = get_all_uncertainty_measures_bayesian(all_outputs_train)
 
 true_eval_labels, all_outputs_eval = eval_bayesian(
     bay_net,
@@ -113,7 +113,7 @@ true_eval_labels, all_outputs_eval = eval_bayesian(
     number_of_tests=number_of_tests,
     device=device,
 )
-eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
+eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures_bayesian(all_outputs_eval)
 eval_preds = get_predictions_from_multiple_tests(all_outputs_eval)
 eval_correct_preds = (eval_preds.float() == true_eval_labels.float()).float()
 

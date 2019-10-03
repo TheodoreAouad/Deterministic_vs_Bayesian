@@ -56,7 +56,7 @@ def aggregate_data(data):
     return predicted, uncertainty, torch.tensor(dkls).float().to(data.device)
 
 
-def uncertainty_softmax(data):
+def compute_softmax_response(data):
     """
     Computes the variation ratio for each sample. It computes the frequency of the most predicted label,
     then returns 1-this frquency.
@@ -67,7 +67,7 @@ def uncertainty_softmax(data):
         torch.Tensor: size (batch_size). The variation-ratio uncertainty measure for each sample.
 
     """
-    data = data.squeeze(0)
+    data = data.mean(0)
     return 1 - data.max(1).values
 
 
@@ -85,7 +85,11 @@ def compute_variation_ratio(data):
     """
     batch_size = data.size(1)
     variation_ratios = torch.Tensor(batch_size).detach()
-    predicted_labels = torch.transpose(data.argmax(2), 0, 1).to('cpu')
+    # predicted_labels = torch.transpose(data.argmax(2), 0, 1).to('cpu')
+    predicted_labels = torch.Tensor(batch_size, data.size(0),)
+    for i in range(batch_size):
+        predicted_labels[i] = torch.multinomial(data[:, i, :], 1).squeeze()
+
     for img_idx, img_labels in enumerate(predicted_labels):
         labels, counts = np.unique(img_labels, return_counts=True)
         highest_label_freq = counts.max() / counts.sum()
@@ -132,11 +136,12 @@ def compute_mutual_information_uncertainty(data):
     # put NaN values to 0
     x[x != x] = 0
     mutual_information_uncertainties = predictive_entropies + 1 / number_of_tests * x.sum(2).sum(0)
+    mutual_information_uncertainties[mutual_information_uncertainties < 0] = 0
 
     return mutual_information_uncertainties.float()
 
 
-def get_all_uncertainty_measures(data):
+def get_all_uncertainty_measures_bayesian(data):
     """
     Gets all the uncertainty measures in this order: Variation-Ratio, Predictive entropy, Mutual information
     Args:
@@ -159,4 +164,18 @@ def get_all_uncertainty_measures_not_bayesian(data):
             Tuple (torch.Tensor, torch.Tensor, torch.Tensor: all tensors are of size batch_size (=data.size(1))
 
         """
-    return uncertainty_softmax(data), compute_predictive_entropy(data)
+    return compute_softmax_response(data), compute_predictive_entropy(data)
+
+
+def get_all_uncertainty_measures(data):
+    """
+    Gets all the uncertainty measures in this order: Softmax-response, Variation-Ratio, Predictive entropy, Mutual information
+    Args:
+        data (torch.Tensor): size (1, batch_size, number_of_classes). The output of the test on a batch.
+
+    Returns:
+        Tuple (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor: all tensors are of size batch_size (=data.size(1))
+
+    """
+    vr, pe, mi = get_all_uncertainty_measures_bayesian(data)
+    return compute_softmax_response(data), vr, pe, mi

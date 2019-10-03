@@ -27,6 +27,7 @@ class BBBLoss(BaseLoss):
         }
 
     # TODO: do we have to divide the loss by the batch size?
+    #  Answer: No, the cross entropy loss of PyTorch already performs a mean over the batch.
     def compute(self, outputs, labels):
         """
         Compute the loss L = kl_weight * KL[q(w | theta) || P(w)] - E_q(w)(logP(D|W))

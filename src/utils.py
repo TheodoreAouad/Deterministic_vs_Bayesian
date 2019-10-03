@@ -395,6 +395,27 @@ def plot_density_on_ax(ax, uncs, labels, hist=False, **kwargs):
         ax.set_xlim(left=0)
 
 
+def plot_hist_on_ax(ax, uncs, labels, **kwargs):
+    """
+    Plots density uncertainty on the given ax using kde smoothing.
+    Args:
+        ax (matplotlib.axes._subplots.AxesSubplot): ax on which to plot the density
+        uncs (tuple): tuple of arrays of the uncertainties. The number of elements is the number of uncertainties.
+        labels (tuple): tuple of string. Each element is the label of the corresponding element of 'uncs'.
+        **kwargs: kwargs to change the distplot.
+
+    """
+
+
+
+    for unc, label in zip(uncs, labels):
+        ax.hist(unc, label=label, **kwargs)
+        # sns.distplot(unc, hist=hist, kde_kws={"shade": True}, label=label, ax=ax, **kwargs)
+        ax.set_xlim(left=0)
+
+
+
+
 def get_fig_size(ax):
     return ax.figure.get_size_inches()*ax.figure.dpi
 

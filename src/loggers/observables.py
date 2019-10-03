@@ -1,6 +1,6 @@
 from src.loggers.logger import Logger
 from src.tasks.evals import eval_bayesian
-from src.uncertainty_measures import get_all_uncertainty_measures
+from src.uncertainty_measures import get_all_uncertainty_measures_bayesian
 
 
 class Observables(Logger):
@@ -101,7 +101,7 @@ class AccuracyAndUncertainty(Observables):
             self.logs['val_uncertainty_vr'],
             self.logs['val_uncertainty_pe'],
             self.logs['val_uncertainty_mi'],
-        ) = get_all_uncertainty_measures(val_outputs)
+        ) = get_all_uncertainty_measures_bayesian(val_outputs)
         self.add_to_history([
             'val_accuracy',
             'val_uncertainty_vr',

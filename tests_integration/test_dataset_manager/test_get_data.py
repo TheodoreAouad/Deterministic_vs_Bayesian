@@ -48,7 +48,7 @@ class TestGetMnist:
         assert size_full_test == len(valloader.dataset) + len(evalloader.dataset)
 
     @staticmethod
-    def test_number_number_of_train(data_folder_teardown):
+    def test_number_of_train(data_folder_teardown):
         dir_path = os.path.dirname(os.path.realpath(__file__))
         dir_path = os.path.join(dir_path, 'data')
 
@@ -65,8 +65,8 @@ class TestGetCifar10:
         # dir_path = os.path.join(dir_path, 'data')
         dir_path = '/Users/theodore/Documents/StageRecherche/BayesBackprop/BayesianFewShotExperiments/data'
 
-        train_labels = np.random.randint(0, 10, 5)
-        eval_labels = np.random.randint(0, 10, 5)
+        train_labels = (np.random.randint(0, 10, 5))
+        eval_labels = (np.random.randint(0, 10, 5))
 
         trainloader, valloader, evalloader = get_cifar10(root=dir_path, train_labels=train_labels, split_val=0,
                                                          eval_labels=eval_labels, download=False, )
@@ -88,10 +88,11 @@ class TestGetCifar10:
         assert size_full_test == len(valloader.dataset) + len(evalloader.dataset)
 
     @staticmethod
-    def test_number_number_of_train(data_folder_teardown):
+    def test_number_of_train(data_folder_teardown):
         # dir_path = os.path.dirname(os.path.realpath(__file__))
         # dir_path = os.path.join(dir_path, 'data')
         dir_path = '/Users/theodore/Documents/StageRecherche/BayesBackprop/BayesianFewShotExperiments/data'
 
         trainloader, evalloader, evalloader = get_cifar10(root=dir_path, split_train=5)
         assert len(trainloader.dataset) == 5
+
