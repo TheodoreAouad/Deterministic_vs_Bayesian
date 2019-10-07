@@ -31,7 +31,7 @@ hptuning:
       values: ['unseen_classes']
 
     trainset:
-      values: ['mnist']
+      values: ['mnist', 'cifar10']
 
     unseen_evalset:
       values: ['mnist']
@@ -40,10 +40,10 @@ hptuning:
       values: [10]
 
     rho:
-      values: [-8]
+      values: [-10]
 
     determinist:
-      values: [--determinist] # If you wish to do determinist training, type inside of the '': --determinist
+      values: [''] # If you wish to do determinist training, type inside of the '': --determinist
 
     epoch:
       values: [15]
@@ -55,7 +55,7 @@ hptuning:
       values: [5]
 
     loss_type:
-      values: ["criterion"]
+      values: ["criterion", 'exp', 'uniform']
 
     std_prior:
       values: [0.55]

@@ -5,9 +5,10 @@ from scripts.utils import get_args, get_res_args_groupnb, get_trained_model_and_
 ####### TO CHANGE ########
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
-group = 313
+group = 315
 # rho = -10
-loss_type = 'criterion'
+loss_type = 'exp'
+trainset = 'cifar10'
 # type_of_unseen_list = ['random', 'unseen_classes', 'unseen_dataset']
 # loss_type_list = ['exp', 'criterion', 'uniform']
 type_of_unseen_list = ['']
@@ -28,6 +29,7 @@ my_exps = (df.query(
     f'loss_type == "{loss_type}" '
     # f'& batch_size == {batch_size}'
     # f'stds_prior == {stds_prior}'
-).experiment)
+    f'& trainset == "{trainset}"'
+).experiment.astype(int))
 
-print(my_exps.values)
+print(list(my_exps.values))

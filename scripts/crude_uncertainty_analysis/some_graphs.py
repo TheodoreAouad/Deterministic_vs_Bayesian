@@ -106,7 +106,7 @@ path_to_results = 'results/raw_results/all_columns/group297.pkl'
 df_ini = pd.read_pickle(path_to_results)
 df = df_ini.groupby(['rho', 'stds_prior']).mean().reset_index()
 
-df = df.loc[df['stds_prior'] < 5]
+# df = df.loc[df['stds_prior'] < 5]
 
 max_acc_params = df.sort_values('eval_accuracy').iloc[-1]
 rho_star = max_acc_params.rho
@@ -135,8 +135,6 @@ fig.show()
 
 #%% Plot density
 
-#NOTABLES:
-# CIFAR10: 98, (604, 6),
 
 
 reload_modules()
@@ -145,8 +143,8 @@ exp_nbs = ['14621', '14744', '14683', '14625', '14750', '14685', '14631', '14756
 # exp = '3713'
 # path_to_res = f'output/'
 # exp = f'determinist_{trainset}' # DETERMINIST
-# exp = '20321' # BAYESIAN
-exp = 14621
+exp = '20321' # BAYESIAN
+# exp = 14621
 path_to_res = 'polyaxon_results/groups'
 verbose = True
 number_of_tests = 20
@@ -411,7 +409,7 @@ res_unseen_bay = {}
 # exp = '3713'
 reload_modules()
 verbose = True
-list_of_nb_of_tests = [1, 2, 3, 4, 5, 15, 20, 100]
+list_of_nb_of_tests = [10]
 
 bay_net_trained, arguments, _ = su.get_trained_model_and_args_and_groupnb(exp, path_to_res)
 evalloader_seen = su.get_evalloader_seen(arguments, shuffle=False)
@@ -639,6 +637,8 @@ fig.suptitle(f'Uncertainty Repartition. Exp:{exp}. T={number_of_tests}'
              # wrap=True
              , y=1)
 axs = {}
+if not show_determinist:
+    unc_names = ['sr','pe', 'vr', 'mi']
 for idx, unc_name in enumerate(unc_names):
     to_plot_unc = to_plot.loc[to_plot.unc_name == unc_name]
     # initiate axes
@@ -656,8 +656,9 @@ for idx, unc_name in enumerate(unc_names):
     ax_median.set_xlabel(unc_name)
     ax_median.set_ylabel('acc')
     # set frame
-    ax_mean.set_xlim(left=0)
-    ax_median.set_xlim(left=-0.001)
+    xmax = max(to_plot_unc.unc_mean.max(), to_plot_unc.unc_median.max())
+    ax_mean.set_xlim(left=0, right=xmax)
+    ax_median.set_xlim(left=0, right=xmax)
     # but colorbars
     cbar_mean = plt.colorbar(scat_mean, ax=ax_mean)
     cbar_mean.set_label(f'std', rotation=270)

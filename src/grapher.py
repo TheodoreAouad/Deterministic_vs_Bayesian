@@ -27,9 +27,9 @@ def plot_general(ax, uncs, unc_labels, **kwargs):
         uncs,
         unc_labels,
         alpha=0.5,
-        bins=30,
-        stacked=True,
+        # stacked=True,
         density=True,
+        same_size=True,
         **kwargs,
     )
 
@@ -41,10 +41,12 @@ def plot_sr(ax, uncs, unc_labels, **kwargs):
 def plot_vr(ax, uncs, unc_labels, **kwargs):
     ax.set_ylabel('freq')
     ax.set_xlabel('uncertainty')
-    for unc_label, unc in zip(unc_labels, uncs):
+    ax.set_xlim(left=0)
+    width = 0.06 / len(uncs)
+    for idx, (unc_label, unc) in enumerate(zip(unc_labels, uncs)):
         unc, fq = np.unique(unc, return_counts=True)
         fq = fq / fq.sum()
-        ax.plot(unc, fq, label=unc_label, **kwargs)
+        ax.bar(unc+width*(idx+1), fq, label=unc_label, width=width, **kwargs)
 
 
 def plot_pe(ax, uncs, unc_labels, **kwargs):
