@@ -25,25 +25,25 @@ hptuning:
       values: [''] # If you wish to save observables, type inside of the '': --save_observables
 
     save_outputs:
-      values: ['', '', '', '', ''] # If you wish to save outputs, type inside of the '': --save_outputs
+      values: [''] # If you wish to save outputs, type inside of the '': --save_outputs
 
     type_of_unseen:
-      values: ['unseen_classes']
+      values: ['unseen_dataset']
 
     trainset:
-      values: ['mnist', 'cifar10']
+      values: ['mnist']
 
     unseen_evalset:
-      values: ['mnist']
+      values: ['cifar10']
 
     split_labels:
       values: [10]
 
     rho:
-      values: [-10]
+      values: [-10.0, -9.0, -8.0, -7.0, -6.0, -5.0, -4.0, -3.0, -2.0, -1.0, 0.0]
 
     determinist:
-      values: [''] # If you wish to do determinist training, type inside of the '': --determinist
+      values: [''] # If you wish to do determinist training, type instead of the '': --determinist
 
     epoch:
       values: [15]
@@ -55,10 +55,10 @@ hptuning:
       values: [5]
 
     loss_type:
-      values: ["criterion", 'exp', 'uniform']
+      values: ["uniform"]
 
     std_prior:
-      values: [0.55]
+      values: [0.001, 0.0055, 0.01, 0.02, 0.055, 0.1, 0.2, 0.55, 1, 2, 6, 10]
 
     split_train:
       values: [0.6]

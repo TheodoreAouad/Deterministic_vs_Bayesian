@@ -5,7 +5,7 @@ from scripts.utils import get_args, get_res_args_groupnb, get_trained_model_and_
 ####### TO CHANGE ########
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
-group = 315
+group = 300
 # rho = -10
 loss_type = 'exp'
 trainset = 'cifar10'

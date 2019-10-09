@@ -101,7 +101,7 @@ pass
 
 #%% 3d plot accuracy vs (rho / std_prior)
 
-path_to_results = 'results/raw_results/all_columns/group297.pkl'
+path_to_results = 'results/raw_results/all_columns/group301.pkl'
 
 df_ini = pd.read_pickle(path_to_results)
 df = df_ini.groupby(['rho', 'stds_prior']).mean().reset_index()
@@ -130,6 +130,42 @@ ax3d.set_zlabel('acc')
 #               xytext=(1, 1), textcoords='offset points')
 ax3d.view_init(15, 50)
 fig.suptitle('Accuracy w.r.t. initial variance of posterior and prior')
+fig.show()
+
+#%% 3d plot ratio vs (rho / std_prior)
+
+path_to_results = 'results/raw_results/specific_columns/group301_specific_results.pkl'
+
+unc= 'vr'
+param = f'{unc}_unseen/seen'
+df_ini = pd.read_pickle(path_to_results)
+df = df_ini.groupby(['rho', 'stds_prior']).mean().reset_index()
+
+# df = df.loc[df['stds_prior'] < 5]
+
+max_params = df.sort_values(param).iloc[-1]
+rho_star = max_params.rho
+std_star = max_params.stds_prior
+eval_star = max_params[param]
+
+
+xs = df.stds_prior
+ys = df.rho
+zs = df[param]
+
+fig = plt.figure()
+ax3d = fig.add_subplot(111, projection='3d')
+ax3d.plot((std_star, std_star), (rho_star, rho_star), (eval_star, 0.8), zorder=0, linestyle='solid', linewidth=5)
+ax3d.text(10, 0, 0.8, f' Ratio={round(eval_star,2)}, Rho={rho_star}, Std_prior={std_star}')
+ax3d.plot_trisurf(xs, ys, zs, zorder=-1)
+ax3d.set_xlabel('std prior')
+ax3d.set_ylabel('rho')
+ax3d.set_zlabel(param)
+# ax3d.annotate(f'Max Values: rho {max_params.rho}, std prior {max_params.stds_prior}',
+#               xy=(max_params.rho, max_params.stds_prior), xycoords='data',
+#               xytext=(1, 1), textcoords='offset points')
+ax3d.view_init(15, 50)
+fig.suptitle(f'{param} w.r.t. initial variance of posterior and prior')
 fig.show()
 
 
@@ -416,6 +452,8 @@ evalloader_seen = su.get_evalloader_seen(arguments, shuffle=False)
 arguments['type_of_unseen'] = 'unseen_dataset'
 evalloader_unseen = su.get_evalloader_unseen(arguments, shuffle=False)
 
+unc_names_bay = ['sr', 'vr', 'pe', 'mi', 'au', 'eu',]
+
 dont_show = ['save_loss', 'save_observables', 'save_outputs', 'type_of_unseen', 'unseen_evalset',
              'split_labels', 'number_of_tests', 'split_train', 'exp_nb']
 
@@ -434,17 +472,15 @@ for number_of_tests in list_of_nb_of_tests:
     preds = um.get_predictions_from_multiple_tests(all_outputs)
 
     res[number_of_tests] = pd.DataFrame()
-    sr, vr, pe, mi = um.get_all_uncertainty_measures(all_outputs)
+    uncs = um.get_all_uncertainty_measures(all_outputs)
     res[number_of_tests] = (
         res[number_of_tests]
         .assign(true=labels)
         .assign(preds=preds)
         .assign(correct_pred=lambda df: (df.true == df.preds))
-        .assign(sr=sr)
-        .assign(vr=vr)
-        .assign(pe=pe)
-        .assign(mi=mi)
     )
+    for unc, unc_name in zip(uncs, unc_names_bay):
+        res[number_of_tests][unc_name] = unc
 
     _, all_outputs_unseen = e.eval_bayesian(
         bay_net_trained,
@@ -454,18 +490,10 @@ for number_of_tests in list_of_nb_of_tests:
         verbose=True,
     )
 
-
     res_unseen_bay[number_of_tests] = pd.DataFrame()
-    sr_unseen, vr_unseen, pe_unseen, mi_unseen = um.get_all_uncertainty_measures(all_outputs_unseen)
-    res_unseen_bay[number_of_tests] = (
-        res_unseen_bay[number_of_tests]
-        .assign(sr=sr_unseen)
-        .assign(vr=vr_unseen)
-        .assign(pe=pe_unseen)
-        .assign(mi=mi_unseen)
-    )
-
-
+    uncs_unseen = um.get_all_uncertainty_measures(all_outputs_unseen)
+    for unc, unc_name in zip(uncs, unc_names_bay):
+        res_unseen_bay[number_of_tests][unc_name] = unc
 
     print(f'Nb Of Tests: {number_of_tests}. Accuracy: ', res[number_of_tests].correct_pred.mean())
 
@@ -474,7 +502,7 @@ for number_of_tests in list_of_nb_of_tests:
 reload_modules()
 
 show_determinist = False
-number_of_tests = 10
+number_of_tests = 100
 # show_determinist = True
 
 res_correct = res[number_of_tests].loc[res[number_of_tests].correct_pred == True]
@@ -494,7 +522,7 @@ save_fig = False
 if show_determinist:
     unc_names = ['sr', 'pe']
 else:
-    unc_names = ['sr', 'vr', 'pe', 'mi']
+    unc_names = ['sr', 'vr', 'pe', 'mi', 'au', 'eu']
 all_uncs = [[res_correct[unc_name], res_false[unc_name], res_unseen[unc_name]] for unc_name in unc_names]
 
 unc_labels = ('true', 'false', 'unseen')
@@ -546,7 +574,7 @@ else:
 
 res[number_of_tests].sample(frac=1)
 
-fig = plt.figure(figsize=(5, 4))
+fig = plt.figure(figsize=(5, 8))
 axs = {}
 for idx, unc_name in enumerate(unc_names):
     to_plot_true = res_correct[unc_name]
@@ -561,10 +589,10 @@ for idx, unc_name in enumerate(unc_names):
     ax.set_yticks(range(3))
     ax.set_yticklabels(['MNIST', 'CIFAR - False', 'CIFAR - True'])
 
-fig.suptitle(f'Uncertainty Repartition. Exp:{exp}. T={number_of_tests}'
-             # f'\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
-             # wrap=True
-             )
+# fig.suptitle(f'Uncertainty Repartition.  T={number_of_tests}'
+#              # f'\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
+#              # wrap=True
+#              , y=1)
 fig.show()
 
 if save_fig:
@@ -579,21 +607,24 @@ show_determinist = False
 number_of_tests = 10
 # show_determinist = True
 
-res_correct = res[number_of_tests].loc[res[number_of_tests].correct_pred == True]
-res_false = res[number_of_tests].loc[res[number_of_tests].correct_pred == False]
+x_size = 12
+y_size = 7
+
 
 if show_determinist:
     save_path = 'rapport/determinist_failure/'
     res_correct = res_det.loc[res_det.correct_pred == True]
     res_false = res_det.loc[res_det.correct_pred == False]
 else:
+    res_correct = res[number_of_tests].loc[res[number_of_tests].correct_pred == True]
+    res_false = res[number_of_tests].loc[res[number_of_tests].correct_pred == False]
     save_path = f'rapport/bayesian_results/{exp}'
 
 save_path = pathlib.Path(save_path)
 save_fig = False
 
 nb_of_points = 10000
-size_of_points = 30
+size_of_points = 50
 
 interval = 50
 nb_of_ratios = nb_of_points // interval
@@ -610,7 +641,7 @@ to_plot = pd.DataFrame(columns=[
 if show_determinist:
     unc_names = ['sr', 'pe']
 else:
-    unc_names = ['sr', 'vr', 'pe', 'mi']
+    unc_names = ['sr', 'vr', 'pe', 'mi']#, 'au', 'eu',]
 
 for ratio in tqdm(ratios):
     nb_of_correct = int(ratio*size_of_points)
@@ -630,23 +661,26 @@ for ratio in tqdm(ratios):
             'size_of_points': [size_of_points],
         }), sort=True)
 
-fig = plt.figure(figsize=(12, 10))
+if show_determinist:
+    fig = plt.figure(figsize=(x_size, y_size))
+else:
+    fig = plt.figure(figsize=(x_size, 2*y_size))
 
-fig.suptitle(f'Uncertainty Repartition. Exp:{exp}. T={number_of_tests}'
-             # f'\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
-             # wrap=True
-             , y=1)
+# fig.suptitle(f'Uncertainty Repartition. Exp:{exp}. T={number_of_tests}'
+#              # f'\n {dict({k:v for k,v in arguments.items() if k not in dont_show})}',
+#              # wrap=True
+#              , y=1)
 axs = {}
 if not show_determinist:
-    unc_names = ['sr','pe', 'vr', 'mi']
+    unc_names = ['sr','pe', 'vr', 'mi']#, 'au', 'eu']
 for idx, unc_name in enumerate(unc_names):
     to_plot_unc = to_plot.loc[to_plot.unc_name == unc_name]
     # initiate axes
     ax_mean = fig.add_subplot(len(unc_names), 2, 2*idx+1)
     ax_median = fig.add_subplot(len(unc_names), 2, 2*idx+2)
     # set titles
-    ax_mean.set_title(f'{unc_name} - mean of {size_of_points} imgs')
-    ax_median.set_title(f'{unc_name} - median of {size_of_points} imgs')
+    ax_mean.set_title(f'{unc_name} - mean of {size_of_points} imgs - cor: {round(np.corrcoef(to_plot_unc.unc_mean, to_plot_unc.acc)[0,1], 2)}')
+    ax_median.set_title(f'{unc_name} - median of {size_of_points} imgs - cor: {round(np.corrcoef(to_plot_unc.unc_median, to_plot_unc.acc)[0,1], 2)}')
     # plot scatterplots
     scat_mean = ax_mean.scatter(to_plot_unc.unc_mean, to_plot_unc.acc, c=to_plot_unc.unc_std)
     scat_median = ax_median.scatter(to_plot_unc.unc_median, to_plot_unc.acc, c=to_plot_unc.unc_std)
@@ -857,7 +891,7 @@ if show_determinist:
 else:
     save_path = f'rapport/bayesian_results/{exp}'
     # unc_names = ['sr', 'vr', 'pe', 'mi']
-unc_names = ['sr', 'pe', 'vr', 'mi']
+unc_names = ['sr', 'pe', 'vr', 'mi', 'au', 'eu']
 unc_names_det = ['sr', 'pe']
 save_path = pathlib.Path(save_path)
 save_fig = False
@@ -869,7 +903,7 @@ coverage_array = np.arange(1, 1+len(res[number_of_tests]))/len(res[number_of_tes
 model_acc = res[number_of_tests].correct_pred.mean()
 det_acc = res_det.correct_pred.mean()
 
-cmaps = ['autumn', 'winter', 'Greys', 'RdGy']  # size: nb of measures
+cmaps = ['Reds', 'Blues', 'Greys', 'RdGy', 'Greens', 'Purples']  # size: nb of measures
 cmaps_position = [0.4, 0.7]  # size: len(nb of tests to plot)
 
 fig = plt.figure(figsize=(8, 6))
@@ -990,7 +1024,7 @@ for idx, unc_name in enumerate(unc_names):
         ).reset_index()
 
         cmap = cm.get_cmap(cmaps[idx])
-        axs[idx].plot(to_plot.coverage, to_plot.cum_accs, label=number_of_tests, c=cmap(cmaps_position[nb_test_idx]))
+        axs[idx].plot(to_plot.coverage, to_plot.cum_accs, label=f'T={number_of_tests}', c=cmap(cmaps_position[nb_test_idx]))
         axs[idx].plot(
             [0, to_plot.coverage[0]], [to_plot.cum_accs[0], to_plot.cum_accs[0]],
             c=cmap(cmaps_position[nb_test_idx]),
@@ -1180,35 +1214,41 @@ if save_fig:
     print(f'Saved to {save_path/f"acc_cov_{exp}.png"}')
 # %%
 
-number_of_tests = 100
-unc_name = 'pe'
-frac_of_data = 1
+det_acc = res_det.correct_pred.mean()
+path_to_results = 'results/raw_results/specific_columns/group297_specific_results.pkl'
 
-grps = res[number_of_tests].groupby(unc_name)
-# grps = res_det.groupby(unc_name)
-mlp = (
-    grps
-        .sum()
-        .assign(den=grps.apply(lambda df: len(df)))
-        .assign(cum_accs=lambda df: df.correct_pred.cumsum() / df.n.cumsum())
-        .assign(coverage=lambda df: df.n.cumsum() / df.n.sum())
+unc= 'vr'
+param = f'{unc}_unseen/seen'
+df_ini = pd.read_pickle(path_to_results)
+df = df_ini.groupby(['rho', 'stds_prior']).mean().reset_index()
 
-).reset_index()
+df['dist'] = (df.eval_accuracy - det_acc).abs()
+mlp = df.sort_values('dist').iloc[0]
 
-mlp = mlp.loc[mlp.coverage < frac_of_data]
+std_star = mlp.stds_prior
+rho_star = mlp.rho
+eval_star = mlp.eval_accuracy
+dist_star = mlp.dist
 
-fig, axs = plt.subplots(3,1, figsize=(10, 10))
+xs = df.stds_prior
+ys = df.rho
+zs = df.dist
 
-axs[0].plot(mlp.coverage, mlp.cum_accs)
-axs[0].set_xlabel('coverage')
-axs[0].set_ylabel('accuracy')
-
-axs[1].plot(mlp.coverage, mlp[unc_name])
-axs[1].set_xlabel('coverage')
-axs[1].set_ylabel('uncertainty')
-
-axs[2].plot(mlp[unc_name], mlp.cum_accs, marker='.')
-axs[2].set_xlabel('uncertainty')
-axs[2].set_ylabel('accuracy')
-
+fig = plt.figure(figsize=(9,5))
+ax3d = fig.add_subplot(111, projection='3d')
+ax3d.plot((std_star, std_star), (rho_star, rho_star), (dist_star, 0.8), zorder=0, linestyle='solid', linewidth=5)
+ax3d.text(std_star, rho_star, 1.4, f' Acc={round(100*eval_star, 2)}%, Rho={rho_star}, Std={std_star}')
+ax3d.plot_trisurf(xs, ys, zs, zorder=-1)
+ax3d.scatter(std_star, rho_star, dist_star, zorder=0, linestyle='solid', linewidth=5)
+ax3d.set_xlabel('std prior')
+ax3d.set_ylabel('rho')
+ax3d.set_zlabel('acc')
+# ax3d.annotate(f'Max Values: rho {max_acc_params.rho}, std prior {max_acc_params.stds_prior}',
+#               xy=(max_acc_params.rho, max_acc_params.stds_prior), xycoords='data',
+#               xytext=(1, 1), textcoords='offset points')
+ax3d.view_init(40, 230)
+fig.suptitle('Accuracy w.r.t. initial variance of posterior and prior')
 fig.show()
+
+print(mlp.stds_prior, mlp.rho)
+

@@ -43,7 +43,7 @@ class BBBLoss(BaseLoss):
         self.logs['likelihood'] = self.criterion(outputs, labels)
         self.logs['variational_posterior'] = kl_weight * self.model.variational_posterior(weights_used,
                                                                                           bias_used)
-        self.logs['prior'] = -kl_weight * self.model.prior(weights_used, bias_used)
+        self.logs['prior'] = -kl_weight * self.model.logprior(weights_used, bias_used)
         self.logs['total_loss'] = (self.logs['variational_posterior'] + self.logs['prior'] +
                                    self.logs['likelihood'])
         self.add_to_history()

@@ -33,20 +33,23 @@ from src.utils import save_to_file
 # exp_nbs_det = [20724, 20723, 20722, 20725, 20726]    # cifar10 determinist
 # exp_nbs = [20709, 20707, 20706, 20708, 20705]    # mnist criterion
 # exp_nbs = [20715, 20716, 20718, 20719, 20717]    # mnist uniform
-exp_nbs = [20712, 20713, 20714, 20711, 20710]    # mnist exponential
-exp_nbs_det = [20736, 20738, 20739, 20737, 20735]    # mnist determinist
+# exp_nbs = [20712, 20713, 20714, 20711, 20710]    # mnist exponential
+# exp_nbs_det = [20736, 20738, 20739, 20737, 20735]    # mnist determinist
 
 ################## RHO = -10 STD_PRIOR = 0.55 ################
 # These experiments consider the hyperparameters that match the determinist accuracy for CIFAR10
 
 # exp_nbs = [20765, 20764, 20768, 20766, 20767]   # cifar10 criterion
 # exp_nbs =  20777, 20778, 20776, 20774, 20775]   # cifar10 uniform
-# exp_nbs = [20770, 20771, 20773, 20772, 20769]   # cifar10 exponential
+exp_nbs = [20770, 20771, 20773, 20772, 20769]   # cifar10 exponential
 # exp_nbs_det = [20724, 20723, 20722, 20725, 20726]    # cifar10 determinist
 # exp_nbs = [20749, 20753, 20752, 20750, 20751]    # mnist criterion
 # exp_nbs = [20762, 20763, 20761, 20759, 20760]    # mnist uniform
 # exp_nbs = [20754, 20755, 20757, 20758, 20756]    # mnist exponential
 # exp_nbs_det = [20736, 20738, 20739, 20737, 20735]    # mnist determinist
+
+# exp_nbs_det = ['20869', '20867', '20866', '20868', '20870'] # mnist det no batch norm
+exp_nbs_det = ['20872', '20875', '20874', '20873', '20871'] # cifar10 det no batch norm
 
 
 show_fig = True
@@ -60,8 +63,8 @@ show_fig = True
 path_to_res = 'polyaxon_results/groups'
 number_of_tests = 20
 
-only_ood = False
-only_wrong = True
+only_ood = True
+only_wrong = False
 
 if torch.cuda.is_available():
     device = "cuda"

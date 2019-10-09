@@ -12,7 +12,7 @@ import numpy as np
 from src.loggers.losses.base_loss import BaseLoss
 from src.loggers.losses.bbb_loss import BBBLoss
 from src.loggers.observables import AccuracyAndUncertainty
-from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
+from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier, GaussianClassifierNoBatchNorm
 from src.tasks.trains import train_bayesian_modular, uniform
 from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_all_uncertainty_measures_bayesian, get_all_uncertainty_measures_not_bayesian
@@ -69,10 +69,11 @@ split_train = args.split_train
 
 # test_labels = range(split_labels, 10, )
 # train_labels = range(split_labels)
-all_labels = np.arange(10)
-np.random.shuffle(all_labels)
-train_labels = all_labels[:6]
-test_labels = all_labels[-4:]
+# all_labels = np.arange(10)
+# np.random.shuffle(all_labels)
+# train_labels = all_labels[:6]
+# test_labels = all_labels[-4:]
+train_labels = range(10)
 
 arguments['split_labels'] = train_labels
 

@@ -71,7 +71,6 @@ def compute_softmax_response(data):
     return 1 - data.max(1).values
 
 
-
 def compute_variation_ratio(data):
     """
     Computes the variation ratio for each sample. It computes the frequency of the most predicted label,
@@ -86,7 +85,7 @@ def compute_variation_ratio(data):
     batch_size = data.size(1)
     variation_ratios = torch.Tensor(batch_size).detach()
     # predicted_labels = torch.transpose(data.argmax(2), 0, 1).to('cpu')
-    predicted_labels = torch.Tensor(batch_size, data.size(0),)
+    predicted_labels = torch.Tensor(batch_size, data.size(0), )
     for i in range(batch_size):
         predicted_labels[i] = torch.multinomial(data[:, i, :], 1).squeeze()
 
@@ -171,11 +170,47 @@ def get_all_uncertainty_measures(data):
     """
     Gets all the uncertainty measures in this order: Softmax-response, Variation-Ratio, Predictive entropy, Mutual information
     Args:
-        data (torch.Tensor): size (1, batch_size, number_of_classes). The output of the test on a batch.
+        data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes). The output of the test on a batch.
 
     Returns:
         Tuple (torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor: all tensors are of size batch_size (=data.size(1))
 
     """
+    sr = compute_softmax_response(data)
     vr, pe, mi = get_all_uncertainty_measures_bayesian(data)
-    return compute_softmax_response(data), vr, pe, mi
+    au = compute_aleatoric_uncertainty(data)
+    eu = compute_epistemic_uncertainty(data)
+    return sr, vr, pe, mi, au, eu
+
+
+def compute_aleatoric_uncertainty(data):
+    """
+    Computes aleatoric uncertainty approximation as defined in Kwon et al (2018)
+    Args:
+        data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes)
+
+    Returns:
+        torch.Tensor: size (batch_size)
+
+    """
+    data_copy = data
+    au = (1 / data_copy.shape[0]) * (torch.diag_embed(data_copy.sum(0)) -
+                                 torch.matmul(data_copy.transpose(0, 1).transpose(1, 2), data_copy.transpose(0, 1))).sum(1).sum(1)
+    # au[au < 0] = 0
+    return au
+
+def compute_epistemic_uncertainty(data):
+    """
+    Computes epistemic uncertainty approximation as defined in Kwon et al (2018)
+    Args:
+        data (torch.Tensor): size (number_of_tests, batch_size, number_of_classes)
+
+    Returns:
+        torch.Tensor: size (batch_size)
+
+    """
+    data_copy = data
+    x = (data_copy - data_copy.mean(0)).transpose(0, 1)
+    eu = (1 / data_copy.shape[0]) * (torch.matmul(x.transpose(1, 2), x)).sum(1).sum(1)
+    eu[eu < 0] = 0
+    return eu

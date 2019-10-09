@@ -395,7 +395,7 @@ def plot_density_on_ax(ax, uncs, labels, hist=False, **kwargs):
         ax.set_xlim(left=0)
 
 
-def plot_hist_on_ax(ax, uncs, labels, same_size=True, width_func='min', **kwargs):
+def plot_hist_on_ax(ax, uncs, labels, bins=None, **kwargs):
     """
     Plots density uncertainty on the given ax using kde smoothing.
     Args:
@@ -407,7 +407,7 @@ def plot_hist_on_ax(ax, uncs, labels, same_size=True, width_func='min', **kwargs
         **kwargs: kwargs to change the distplot.
 
     """
-    if same_size:
+    if not bins:
         widths = np.ones(len(uncs))
         all_bins = []
         for idx, unc in enumerate(uncs):
@@ -416,30 +416,8 @@ def plot_hist_on_ax(ax, uncs, labels, same_size=True, width_func='min', **kwargs
             all_bins.append(this_bin)
         bins = list(all_bins[widths.argmin()])
         bins[0] = 0
-        # width = width_func([x.get_width() for x in ax.patches])
-        for idx_unc, (unc, label) in enumerate(zip(uncs, labels)):
-            rects = ax.hist(unc, label=label, bins=bins, **kwargs)
-            max_height = max(rects[0])
-            for idx_rect, (height, x) in enumerate(zip(rects[0], rects[1][:-1])):
-                height_norm = height * (rects[1][idx_rect+1] -x)
-                abs = (x + rects[1][idx_rect+1])/2
-                text = ax.annotate(f'{label[0]}: {round(100*height_norm, 2)}%', xy=(abs, height),
-                            xytext = (abs, max_height*(1 - idx_unc/8)), textcoords="data", ha="center", va='bottom',
-                            rotation=45)
-                text.set_fontsize(8)
+    ax.hist(uncs, label=labels, bins=bins, weights=[np.zeros_like(unc) + 1/unc.size for unc in uncs])
 
-
-    else:
-        for idx_unc, (unc, label) in enumerate(zip(uncs, labels)):
-            rects = ax.hist(unc, label=label, **kwargs)
-            max_height = max(rects[0])
-            for idx_rect, (height, x) in enumerate(zip(rects[0], rects[1][:-1])):
-                height_norm = height * (rects[1][idx_rect+1] -x)
-                abs = (x + rects[1][idx_rect+1])/2
-                text = ax.annotate(f'{label[0]}: {round(100*height_norm, 2)}%', xy=(abs, height),
-                            xytext = (abs, max_height*(1 - idx_unc/8)), textcoords="data", ha="center", va='bottom',
-                            rotation=45)
-                text.set_fontsize(8)
 
     ax.set_xlim(left=0)
 
@@ -448,14 +426,25 @@ def get_hist_widths(xs):
     """
     Computes the width of histogram.
     Args:
-        xs (array-like): absisses of the bins
+        xs (nd.array): absisses of the bins
 
     Returns:
-        float: size of the first bar
+        nd.array: size of the first bar
 
     """
     size = xs.shape[0]
     return (xs[np.arange(1, size)] - xs[np.arange(size-1)])
+
+def get_hist_heights(ys):
+    """
+    Computes the max height of histogram
+    Args:
+        ys (nd.array): bins heights
+
+    Returns:
+        float: max height
+    """
+    return ys.max()
 
 def get_fig_size(ax):
     return ax.figure.get_size_inches()*ax.figure.dpi

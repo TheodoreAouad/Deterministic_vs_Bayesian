@@ -1,3 +1,6 @@
+"""
+Gaussian Classifiers
+"""
 import math
 
 import torch
@@ -10,11 +13,12 @@ from src.utils import vectorize
 
 class GaussianClassifier(nn.Module):
     """
-    Bayesian classifier on the dataset MNIST with gaussian weights.
+    Bayesian classifier on the dataset MNIST with gaussian weights. 2 conv + 1 dense.
     """
 
     def __init__(self, rho=-5, mus_prior=(0, 0), stds_prior=None,
-                 number_of_classes=10, dim_input=28, dim_channels=1,):
+                 number_of_classes=10, dim_input=28, dim_channels=1,
+                 hidden_activation=F.relu, last_activation=F.softmax):
         """
 
         Args:
@@ -25,6 +29,10 @@ class GaussianClassifier(nn.Module):
             dim_input (int): dimension of a size of a squared image
         """
         super().__init__()
+
+        self.hidden_activation = hidden_activation
+        self.last_activation = last_activation
+
         self.mu_prior = None
         self.std_prior = None
         self.mu_bias_prior = None
@@ -67,6 +75,15 @@ class GaussianClassifier(nn.Module):
         self.init_prior()
 
     def init_prior(self, mu_prior=None, std_prior=None, mu_bias_prior=None, std_bias_prior=None):
+        """
+        Initializes the prior P
+        Args:
+            mu_prior (torch.Tensor): mean of the parameters
+            std_prior (torch.Tensor): std of the parameters
+            mu_bias_prior (torch.Tensor): mean for the bias of the parameters
+            std_bias_prior (torch.Tensor): std for the bias of the parameters
+
+        """
         if self.determinist:
             return 0
 
@@ -91,26 +108,45 @@ class GaussianClassifier(nn.Module):
         self.mu_bias_prior = self.mu_bias_prior_init * torch.ones(dim_bias, requires_grad=False).to(self.device)
         self.std_bias_prior = self.std_bias_prior_init * torch.ones(dim_bias, requires_grad=False).to(self.device)
 
-    def forward_before_softmax(self, x, determinist=None):
+    def forward_before_activation(self, x, determinist=None):
+        """
+        Performs forward through the network but before the last activation
+        Args:
+            x (torch.Tensor): batch input
+            determinist (bool): whether to perform deterministic pass or not
+
+        Returns:
+            torch.Tensor: batch input to the last activation
+
+        """
         if determinist is not None:
             is_forward_determinist = determinist
         else:
             is_forward_determinist = self.determinist
         output = self.bn1(self.gaussian_conv1(x, determinist=is_forward_determinist))
-        output = self.pool1(F.relu(output))
+        output = self.pool1(self.hidden_activation(output))
         output = self.bn2(self.gaussian_conv2(output, determinist=is_forward_determinist))
-        output = self.pool2(F.relu(output))
+        output = self.pool2(self.hidden_activation(output))
         output = output.view(-1, 32 * self.dim_input // 4 * self.dim_input // 4)
 
         return self.gaussian_linear(output, determinist=is_forward_determinist)
 
     def forward(self, x, determinist=None):
+        """
+        Performs the whole forward through the network
+        Args:
+            x (torch.Tensor): batch input
+            determinist (bool): whether to perform deterministic pass or not
+
+        Returns:
+            torch.Tensor: the output of the network for the batch of inputs
+        """
         if determinist is not None:
             is_forward_determinist = determinist
         else:
             is_forward_determinist = self.determinist
-        output = self.forward_before_softmax(x, is_forward_determinist)
-        output = F.softmax(output, dim=1)
+        output = self.forward_before_activation(x, is_forward_determinist)
+        output = self.last_activation(output, dim=1)
 
         return output
 
@@ -148,7 +184,7 @@ class GaussianClassifier(nn.Module):
         return -1 / 2 * ((torch.sum((weights - mu) ** 2 / std) + torch.sum((bias - mu_bias) ** 2 / std_bias)) +
                          2 * torch.sum(torch.log(std)) + 2 * torch.sum(torch.log(std_bias)))
 
-    def prior(self, weights, bias):
+    def logprior(self, weights, bias):
         """
         logP(W). We choose the prior to be gaussian.
         Args:
@@ -192,6 +228,12 @@ class GaussianClassifier(nn.Module):
             return weights, bias
 
     def get_bayesian_number_of_weights_and_bias(self):
+        """
+        Gets the number of bayesian weights and number of bayesian biases of the model
+        Returns:
+            (int, int): number of bayesian weights, number of bayesian biases
+
+        """
         number_of_weights = 0
         number_of_bias = 0
         for name, param in self.named_bayesian_parameters():
@@ -202,19 +244,42 @@ class GaussianClassifier(nn.Module):
         return number_of_weights, number_of_bias
 
     def n_bayesian_element(self):
+        """
+        Gets the number of bayesian parameters
+        Returns:
+            int: the number of bayesian parameters
+        """
         return sum(self.get_bayesian_number_of_weights_and_bias())
 
     def bayesian_parameters(self):
+        """
+        Get the parameters of only bayesian parameters
+        Returns:
+            generator: the same way parameters work
+
+        """
         for params in self.parameters():
             if getattr(params, "bayesian", False):
                 yield params
 
     def named_bayesian_parameters(self):
+        """
+        Get the named parameters of only bayesian parameters
+        Returns:
+            generator: the same way named_parameters work
+
+        """
         for name, params in self.named_parameters():
             if getattr(params, "bayesian", False):
                 yield name, params
 
     def to(self, device):
+        """
+        Adds a parameter self.device to get the device of the model
+        Args:
+            device (torch.device): cpu or gpu
+
+        """
         super().to(device)
         self.device = device
         self.init_prior()
@@ -225,8 +290,9 @@ class GaussianClassifierNoBatchNorm(GaussianClassifier):
     Same as GaussianClassifier but without batch norm layers
     """
 
-    def __init__(self, rho, mus_prior=(0, 0), stds_prior=None,
-                 number_of_classes=10, dim_input=28):
+    def __init__(self, rho=-5, mus_prior=(0, 0), stds_prior=None,
+                 number_of_classes=10, dim_input=28, dim_channels=1,
+                 hidden_activation=F.relu, last_activation=F.softmax):
         """
 
         Args:
@@ -236,7 +302,10 @@ class GaussianClassifierNoBatchNorm(GaussianClassifier):
             number_of_classes (int): number of different classes in the problem
             dim_input (int): dimension of a size of a squared image
         """
-        super().__init__()
+        super().__init__(rho=rho, mus_prior=mus_prior, stds_prior=stds_prior,
+                         number_of_classes=number_of_classes, dim_input=dim_input,
+                         dim_channels=dim_channels, hidden_activation=hidden_activation,
+                         last_activation=last_activation,)
         if rho == "determinist":
             self.determinist = True
         elif type(rho) in [int, float]:
@@ -248,6 +317,7 @@ class GaussianClassifierNoBatchNorm(GaussianClassifier):
 
         self.device = "cpu"
         self.dim_input = dim_input
+        self.dim_channels = dim_channels
         self.number_of_classes = number_of_classes
 
         mu_prior, mu_bias_prior = mus_prior
@@ -261,7 +331,7 @@ class GaussianClassifierNoBatchNorm(GaussianClassifier):
         self.std_prior_init = std_prior
         self.std_bias_prior_init = std_bias_prior
 
-        self.gaussian_conv1 = GaussianCNN(rho, 1, 16, 3, padding=1)
+        self.gaussian_conv1 = GaussianCNN(rho, dim_channels, 16, 3, padding=1)
         self.pool1 = nn.MaxPool2d(2, 2)
         self.gaussian_conv2 = GaussianCNN(rho, 16, 32, 3, padding=1)
         self.pool2 = nn.MaxPool2d(2, 2)
@@ -269,15 +339,27 @@ class GaussianClassifierNoBatchNorm(GaussianClassifier):
 
         self.init_prior()
 
-    def forward_before_softmax(self, x, determinist=None):
+    def forward_before_activation(self, x, determinist=None):
+        """
+        Performs forward through the network but before the last activation
+        Args:
+            x (torch.Tensor): batch input
+            determinist (bool): whether to perform deterministic pass or not
+
+        Returns:
+            torch.Tensor: batch input to the last activation
+
+        """
         if determinist is not None:
             is_forward_determinist = determinist
         else:
             is_forward_determinist = self.determinist
         output = self.gaussian_conv1(x, determinist=is_forward_determinist)
-        output = self.pool1(F.relu(output))
+        output = self.pool1(self.last_activation(output))
         output = self.gaussian_conv2(output, determinist=is_forward_determinist)
-        output = self.pool2(F.relu(output))
+        output = self.pool2(self.last_activation(output))
         output = output.view(-1, 32 * self.dim_input // 4 * self.dim_input // 4)
 
         return self.gaussian_linear(output, determinist=is_forward_determinist)
+
+
