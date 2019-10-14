@@ -1,13 +1,13 @@
 # %% Imports
 import pathlib
 from importlib import reload
+import os
 
 import pandas as pd
 import numpy as np
 import torch
 from torchvision import transforms as transforms
 from PIL import Image
-import cv2
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.cm as cm
@@ -30,8 +30,10 @@ reload_modules()
 
 if torch.cuda.is_available():
     device = "cuda"
+    path_to_res = '/output/sicara/BayesianFewShotExperiments/groups/'
 else:
     device = "cpu"
+    path_to_res = 'polyaxon_results/groups'
 device = torch.device(device)
 print(device)
 
@@ -438,11 +440,16 @@ res_det_unseen = (
 
 # %% Get bayesian args.
 exp = '20273' # BAYESIAN
-path_to_res = 'polyaxon_results/groups'
+all_exps = [
+    20263, 20269, 20275, 20284, 20290, 20296, 20381, 20384, 20387,
+    20397, 20403, 20409, 20418, 20424, 20430, 20515, 20518, 20521,
+    20529, 20535, 20541, 20550, 20556, 20562, 20647, 20650, 20653,
+]
 res = {}
 res_unseen_bay = {}
 #%% Compute all outputs
 # exp = '3713'
+path_to_outputs = pathlib.Path(f'temp/softmax_outputs/')
 reload_modules()
 verbose = True
 list_of_nb_of_tests = [10]
@@ -461,34 +468,80 @@ is_determinist = arguments.get('determinist', False) or arguments.get('rho', 'de
 assert not is_determinist, 'network determinist'
 
 for number_of_tests in list_of_nb_of_tests:
-    labels, all_outputs = e.eval_bayesian(
-        bay_net_trained,
-        evalloader_seen,
-        number_of_tests=number_of_tests,
-        return_accuracy=False,
-        verbose=True,
-    )
 
-    preds = um.get_predictions_from_multiple_tests(all_outputs)
+    bay_net_trained, arguments, _ = su.get_trained_model_and_args_and_groupnb(exp, path_to_res)
+    bay_net_trained.to(device)
+    if number_of_tests < 100 and os.path.exists(path_to_outputs / '100' / f'{exp}/true_labels_seen.pt'):
+
+        true_labels_seen = torch.load(path_to_outputs / f'100' / f'{exp}/true_labels_seen.pt')
+        all_outputs_seen = torch.load(path_to_outputs / f'100' / f'{exp}/all_outputs_seen.pt')
+        all_outputs_unseen = torch.load(path_to_outputs / f'100' / f'{exp}/all_outputs_unseen.pt')
+
+        random_idx = np.arange(100)
+        np.random.shuffle(random_idx)
+        random_idx = random_idx[:number_of_tests]
+        all_outputs_seen = all_outputs_seen[random_idx]
+        all_outputs_unseen = all_outputs_unseen[random_idx]
+    elif os.path.exists(path_to_outputs / f'{number_of_tests}' / f'{exp}/true_labels_seen.pt'):
+        true_labels_seen = torch.load(path_to_outputs / f'{number_of_tests}' / f'{exp}/true_labels_seen.pt')
+        all_outputs_seen = torch.load(path_to_outputs / f'{number_of_tests}' / f'{exp}/all_outputs_seen.pt')
+        all_outputs_unseen = torch.load(path_to_outputs / f'{number_of_tests}' / f'{exp}/all_outputs_unseen.pt')
+    else:
+        (path_to_outputs / f'{number_of_tests}' / f'{exp}').mkdir(exist_ok=True, parents=True)
+        evalloader_seen = su.get_evalloader_seen(arguments)
+        # BE CAREFUL: in the paper, the process is tested on the enterity of the unseen classes
+        evalloader_unseen = su.get_evalloader_unseen(arguments)
+        true_labels_seen, all_outputs_seen = e.eval_bayesian(
+            model=bay_net_trained,
+            evalloader=evalloader_seen,
+            number_of_tests=number_of_tests,
+            return_accuracy=False,
+            device=device,
+            verbose=True,
+        )
+
+        _, all_outputs_unseen = e.eval_bayesian(
+            model=bay_net_trained,
+            evalloader=evalloader_unseen,
+            number_of_tests=number_of_tests,
+            device=device,
+            verbose=True,
+        )
+
+        torch.save(true_labels_seen, path_to_outputs / f'{number_of_tests}' / f'{exp}/true_labels_seen.pt')
+        torch.save(all_outputs_seen, path_to_outputs / f'{number_of_tests}' / f'{exp}/all_outputs_seen.pt')
+        torch.save(all_outputs_unseen, path_to_outputs / f'{number_of_tests}' / f'{exp}/all_outputs_unseen.pt')
+    #
+    # true_labels_seen, all_outputs_seen = e.eval_bayesian(
+    #     bay_net_trained,
+    #     evalloader_seen,
+    #     number_of_tests=number_of_tests,
+    #     return_accuracy=False,
+    #     verbose=True,
+    # )
+
+    all_outputs_seen, all_outputs_unseen = all_outputs_seen.cpu(), all_outputs_unseen.cpu()
+    true_labels_seen = true_labels_seen.cpu()
+    preds = um.get_predictions_from_multiple_tests(all_outputs_seen)
 
     res[number_of_tests] = pd.DataFrame()
-    uncs = um.get_all_uncertainty_measures(all_outputs)
+    uncs = um.get_all_uncertainty_measures(all_outputs_seen)
     res[number_of_tests] = (
         res[number_of_tests]
-        .assign(true=labels)
+        .assign(true=true_labels_seen)
         .assign(preds=preds)
         .assign(correct_pred=lambda df: (df.true == df.preds))
     )
     for unc, unc_name in zip(uncs, unc_names_bay):
         res[number_of_tests][unc_name] = unc
-
-    _, all_outputs_unseen = e.eval_bayesian(
-        bay_net_trained,
-        evalloader_unseen,
-        number_of_tests=number_of_tests,
-        return_accuracy=False,
-        verbose=True,
-    )
+    #
+    # _, all_outputs_unseen = e.eval_bayesian(
+    #     bay_net_trained,
+    #     evalloader_unseen,
+    #     number_of_tests=number_of_tests,
+    #     return_accuracy=False,
+    #     verbose=True,
+    # )
 
     res_unseen_bay[number_of_tests] = pd.DataFrame()
     uncs_unseen = um.get_all_uncertainty_measures(all_outputs_unseen)

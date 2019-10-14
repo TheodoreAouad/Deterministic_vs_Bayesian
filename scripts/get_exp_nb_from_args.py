@@ -5,31 +5,39 @@ from scripts.utils import get_args, get_res_args_groupnb, get_trained_model_and_
 ####### TO CHANGE ########
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
-group = 300
-# rho = -10
-loss_type = 'exp'
-trainset = 'cifar10'
+groups = [322, 323, 324]
+rhos = [-10, -5, 0]
+stds_prior = [0.01, 0.1, 1]
+loss_type = 'criterion'
+trainset = 'mnist'
 # type_of_unseen_list = ['random', 'unseen_classes', 'unseen_dataset']
 # loss_type_list = ['exp', 'criterion', 'uniform']
 type_of_unseen_list = ['']
 loss_type_list = ['']
 batch_size = 32
-stds_prior = 0.55
 
-path_to_results = f'results/raw_results/all_columns/group{group}.pkl'
-##########################
+all_exps = []
+for group in groups:
+    for rho in rhos:
+        for std in stds_prior:
 
-df = pd.read_pickle(path_to_results)
+            path_to_results = f'results/raw_results/all_columns/group{group}.pkl'
+            ##########################
 
-my_exps = []
+            df = pd.read_pickle(path_to_results)
 
-my_exps = (df.query(
-    # f'rho == {rho} & '
-    # f'type_of_unseen == "{type_of_unseen}" & '
-    f'loss_type == "{loss_type}" '
-    # f'& batch_size == {batch_size}'
-    # f'stds_prior == {stds_prior}'
-    f'& trainset == "{trainset}"'
-).experiment.astype(int))
+            my_exps = []
 
-print(list(my_exps.values))
+            my_exps = (df.query(
+                f'rho == {rho} '
+                # f'type_of_unseen == "{type_of_unseen}" & '
+                # f'& loss_type == "{loss_type}" '
+                f'& batch_size == {batch_size}'
+                f'& stds_prior == {std}'
+                f'& trainset == "{trainset}"'
+            ).experiment.astype(int))
+
+            all_exps += list(my_exps.values)
+
+print(len(all_exps))
+print(len(set(all_exps)))
