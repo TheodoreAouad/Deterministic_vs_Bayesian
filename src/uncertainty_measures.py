@@ -180,7 +180,7 @@ def get_all_uncertainty_measures(data):
     vr, pe, mi = get_all_uncertainty_measures_bayesian(data)
     au = compute_aleatoric_uncertainty(data)
     eu = compute_epistemic_uncertainty(data)
-    return sr, vr, pe, mi, au, eu
+    return sr, vr, pe, mi#, au, eu
 
 
 def compute_aleatoric_uncertainty(data):

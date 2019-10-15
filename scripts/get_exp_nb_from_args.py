@@ -5,9 +5,9 @@ from scripts.utils import get_args, get_res_args_groupnb, get_trained_model_and_
 ####### TO CHANGE ########
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
-groups = [322, 323, 324]
-rhos = [-10, -5, 0]
-stds_prior = [0.01, 0.1, 1]
+groups = [323]
+rhos = [-10,]
+stds_prior = [0.055]
 loss_type = 'criterion'
 trainset = 'mnist'
 # type_of_unseen_list = ['random', 'unseen_classes', 'unseen_dataset']
@@ -41,3 +41,4 @@ for group in groups:
 
 print(len(all_exps))
 print(len(set(all_exps)))
+print(all_exps)
