@@ -54,7 +54,6 @@ def get_mnist(
         evalloader: loader of eval data
 
     """
-    print(root)
     trainloader, valloader, evalloader = EmptyLoader(), EmptyLoader(), EmptyLoader()
     if len(train_labels) > 0:
         trainset = MNISTSpecificLabels(root=root, labels=train_labels, train=True, split=split_train,
@@ -102,7 +101,6 @@ def get_cifar10(
     global download_path
     if root is None:
         root = download_path
-    print(root)
     #
     # trainset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=True, transform=transform, download=download, shuffle_d  ataset=shuffle)
     # trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size, shuffle=shuffle)
@@ -110,7 +108,6 @@ def get_cifar10(
     # testset = CIFAR10SpecificLabels(root=root, labels=eval_labels, train=False, transform=transform, download=download, shuffle_dataset=shuffle)
     # evalloader = torch.utils.data.DataLoader(testset, batch_size=batch_size, shuffle=shuffle)
 
-    print(root)
     trainloader, valloader, evalloader = EmptyLoader(), EmptyLoader(), EmptyLoader()
     if len(train_labels) > 0:
         trainset = CIFAR10SpecificLabels(root=root, labels=train_labels, train=True, split=split_train,

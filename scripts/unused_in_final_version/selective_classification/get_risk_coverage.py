@@ -21,7 +21,7 @@ from src.dataset_manager.get_data import get_mnist, get_cifar10
 from src.risk_control import bound_animate
 from src.tasks.evals import eval_bayesian
 from src.uncertainty_measures import get_predictions_from_multiple_tests, \
-    get_all_uncertainty_measures
+    get_all_uncertainty_measures_bayesian
 from src.utils import convert_tensor_to_float, plot_density_on_ax
 
 ###### TO CHANGE ######################################################
@@ -210,8 +210,8 @@ def main(
             residuals = 1 - correct_preds_train
             correct_preds_eval = (labels_predicted_eval == true_labels_eval).float()
 
-            uncs_train = get_all_uncertainty_measures(all_outputs_train)
-            uncs_eval = get_all_uncertainty_measures(all_outputs_eval)
+            uncs_train = get_all_uncertainty_measures_bayesian(all_outputs_train)
+            uncs_eval = get_all_uncertainty_measures_bayesian(all_outputs_eval)
             for idx_risk, rstar in enumerate(tqdm(rstars)):
                 for unc_train, unc_eval, unc_name in zip(uncs_train, uncs_eval, ['vr', 'pe', 'mi']):
                     start = time.time()

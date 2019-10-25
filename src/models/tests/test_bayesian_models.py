@@ -32,6 +32,20 @@ class TestBayesianCNN:
 
         assert torch.sum(torch.abs(output1 - output2)) == 0
 
+
+    @staticmethod
+    def test_determinist_forward_and_init():
+        seed1 = set_and_print_random_seed()
+        DetCNN = nn.Conv2d(1, 16, 3)
+        BayCNN = GaussianCNN('determinist', 1, 16, 3)
+        set_and_print_random_seed(seed1)
+        BayCNN.reset_parameters()
+        image = torch.rand(1, 1, 28, 28)
+        output1 = BayCNN(image)
+        output2 = DetCNN(image)
+
+        assert torch.sum(torch.abs(output1 - output2)) == 0
+
     @staticmethod
     def test_bayesian_parameters_determinist():
         bay_cnn = GaussianCNN("determinist", 1, 16, 3)
@@ -67,6 +81,20 @@ class TestBayesianLinear:
         BayLin.reset_parameters()
         image = torch.rand(1, 32*7*7)
         output1 = BayLin(image, determinist=True)
+        output2 = DetLin(image)
+
+        assert torch.sum(torch.abs(output1 - output2)) == 0
+
+
+    @staticmethod
+    def test_determinist_forward_and_init():
+        seed1 = set_and_print_random_seed()
+        DetLin = nn.Linear(32*7*7, 10)
+        BayLin = GaussianLinear('determinist', 32 * 7 * 7, 10)
+        set_and_print_random_seed(seed1)
+        BayLin.reset_parameters()
+        image = torch.rand(1, 32*7*7)
+        output1 = BayLin(image)
         output2 = DetLin(image)
 
         assert torch.sum(torch.abs(output1 - output2)) == 0

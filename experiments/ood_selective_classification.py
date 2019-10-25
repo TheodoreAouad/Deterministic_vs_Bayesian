@@ -16,7 +16,7 @@ from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.risk_control import get_selection_threshold_all_unc
 from src.tasks.trains import train_bayesian_modular, uniform
 from src.tasks.evals import eval_bayesian
-from src.uncertainty_measures import get_all_uncertainty_measures, get_predictions_from_multiple_tests
+from src.uncertainty_measures import get_all_uncertainty_measures_bayesian, get_predictions_from_multiple_tests
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist, get_cifar10, get_random, get_omniglot
 
@@ -156,7 +156,7 @@ true_labels_train, all_outputs_train = eval_bayesian(
     number_of_tests=number_of_tests,
     device=device,
 )
-train_vr, train_pe, train_mi = get_all_uncertainty_measures(all_outputs_train)
+train_vr, train_pe, train_mi = get_all_uncertainty_measures_bayesian(all_outputs_train)
 
 # Get uncertainty on seen
 true_seen_labels, all_outputs_seen = eval_bayesian(
@@ -181,7 +181,7 @@ _, all_outputs_unseen = eval_bayesian(
 idx = int(len(evalloader_seen.dataset) * ratio_unseen / (1 - ratio_unseen))
 all_outputs_eval = torch.cat((all_outputs_seen, all_outputs_unseen[:, :idx, :]), 1)
 true_eval_labels = torch.cat((true_seen_labels, -1 + torch.zeros(min(idx, all_outputs_unseen.size(1)))))
-eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
+eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures_bayesian(all_outputs_eval)
 
 # Computing predictions
 eval_preds = get_predictions_from_multiple_tests(all_outputs_eval)

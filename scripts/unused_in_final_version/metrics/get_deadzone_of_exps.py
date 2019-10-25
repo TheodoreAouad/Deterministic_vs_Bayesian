@@ -15,7 +15,7 @@ from math import sqrt
 
 from scripts.utils import get_trained_model_and_args_and_groupnb, get_seen_outputs_and_labels, get_unseen_outputs, \
     get_res_args_groupnb, get_args
-from src.uncertainty_measures import get_all_uncertainty_measures, get_all_uncertainty_measures_not_bayesian
+from src.uncertainty_measures import get_all_uncertainty_measures_bayesian, get_all_uncertainty_measures_not_bayesian
 from src.uncertainty_metric import get_deadzones, get_deadzone_from_unc
 from src.utils import set_and_print_random_seed, get_unc_key, save_to_file, load_from_file
 
@@ -107,7 +107,7 @@ def main(
                     dzs = get_deadzones(all_eval_outputs, all_outputs_unseen, get_all_uncertainty_measures_not_bayesian, n)
                     iterator = zip(['us', 'pe'], dzs)
                 else:
-                    dzs = get_deadzones(all_eval_outputs, all_outputs_unseen, get_all_uncertainty_measures, n)
+                    dzs = get_deadzones(all_eval_outputs, all_outputs_unseen, get_all_uncertainty_measures_bayesian, n)
                     iterator = zip(['vr', 'pe', 'mi'], dzs)
                 for unc_name, dz in iterator:
                     deadzones = deadzones.append(pd.DataFrame.from_dict({

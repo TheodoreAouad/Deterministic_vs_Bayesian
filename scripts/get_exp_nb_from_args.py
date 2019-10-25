@@ -5,28 +5,40 @@ from scripts.utils import get_args, get_res_args_groupnb, get_trained_model_and_
 ####### TO CHANGE ########
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
-group = 226
-rho = -6
-
-type_of_unseen_list = ['random', 'unseen_classes', 'unseen_dataset']
-loss_type_list = ['exp', 'criterion', 'uniform']
+groups = [323]
+rhos = [-8]
+stds_prior = [0.55]
+loss_type = 'exp'
+trainset = 'mnist'
+# type_of_unseen_list = ['random', 'unseen_classes', 'unseen_dataset']
+# loss_type_list = ['exp', 'criterion', 'uniform']
+type_of_unseen_list = ['']
+loss_type_list = ['']
 batch_size = 32
-stds_prior = 0.1
 
-path_to_results = f'results/raw_results/all_columns/group{group}.pkl'
-##########################
+all_exps = []
+for group in groups:
+    for rho in rhos:
+        for std in stds_prior:
 
-df = pd.read_pickle(path_to_results)
+            path_to_results = f'results/raw_results/all_columns/group{group}.pkl'
+            ##########################
 
-my_exps = []
-for type_of_unseen in type_of_unseen_list:
-    for loss_type in loss_type_list:
-        my_exps.append(df.query(
-            f'rho == {rho} & '
-            f'type_of_unseen == "{type_of_unseen}" & '
-            f'loss_type == "{loss_type}" & '
-            f'batch_size == {batch_size} & '
-            f'stds_prior == {stds_prior}'
-        ).experiment.iloc[2])
+            df = pd.read_pickle(path_to_results)
 
-print(my_exps)
+            my_exps = []
+
+            my_exps = (df.query(
+                f'rho == {rho} '
+                # f'type_of_unseen == "{type_of_unseen}" & '
+                # f'& loss_type == "{loss_type}" '
+                f'& batch_size == {batch_size}'
+                f'& stds_prior == {std}'
+                f'& trainset == "{trainset}"'
+            ).experiment.astype(int))
+
+            all_exps += list(my_exps.values)
+
+print(len(all_exps))
+print(len(set(all_exps)))
+print(all_exps)

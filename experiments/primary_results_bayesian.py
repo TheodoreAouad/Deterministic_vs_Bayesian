@@ -12,10 +12,10 @@ import numpy as np
 from src.loggers.losses.base_loss import BaseLoss
 from src.loggers.losses.bbb_loss import BBBLoss
 from src.loggers.observables import AccuracyAndUncertainty
-from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
+from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier, GaussianClassifierNoBatchNorm
 from src.tasks.trains import train_bayesian_modular, uniform
 from src.tasks.evals import eval_bayesian
-from src.uncertainty_measures import get_all_uncertainty_measures, get_all_uncertainty_measures_not_bayesian
+from src.uncertainty_measures import get_all_uncertainty_measures_bayesian, get_all_uncertainty_measures_not_bayesian
 from src.utils import set_and_print_random_seed, save_to_file, convert_df_to_cpu
 from src.dataset_manager.get_data import get_mnist, get_cifar10, get_random, get_omniglot
 
@@ -45,7 +45,7 @@ parser.add_argument('--number_of_tests', help='number of evaluations to perform 
 parser.add_argument('--loss_type', help='which loss to use', choices=['uniform', 'exp', 'criterion'], type=str,
                     default='exp')
 parser.add_argument('--std_prior', help='the standard deviation of the prior', type=float, default=1)
-parser.add_argument('--split_train', help='the portion of training data we take', type=int)
+parser.add_argument('--split_train', help='the portion of training data we take', type=float)
 
 args = parser.parse_args()
 arguments = vars(args)
@@ -66,6 +66,16 @@ loss_type = args.loss_type
 std_prior = args.std_prior
 stds_prior = (std_prior, std_prior)
 split_train = args.split_train
+
+# test_labels = range(split_labels, 10, )
+# train_labels = range(split_labels)
+# all_labels = np.arange(10)
+# np.random.shuffle(all_labels)
+# train_labels = all_labels[:6]
+# test_labels = all_labels[-4:]
+train_labels = range(10)
+
+arguments['split_labels'] = train_labels
 
 # Fixes rho_init at the std_prior
 # rho = log(exp(std_prior) - 1)
@@ -99,7 +109,7 @@ def get_evalloader_unseen(arguments):
     if type_of_unseen == 'random':
         _, _, evalloader_unseen = get_random(number_of_channels=dim_channels, img_dim=dim_input, number_of_classes=10)
     if type_of_unseen == 'unseen_classes':
-        _, _, evalloader_unseen = get_trainset(train_labels=(), eval_labels=range(split_labels, 10, ), )
+        _, _, evalloader_unseen = get_trainset(train_labels=(), eval_labels=test_labels, )
     if type_of_unseen == 'unseen_dataset':
         res['unseen_dataset'] = unseen_evalset
         assert trainset != unseen_evalset, 'Train Set must be different from Unseen Test Set'
@@ -132,9 +142,10 @@ if type_of_unseen != 'unseen_classes':
     split_labels = 10
 
 trainloader_seen, valloader_seen, evalloader_seen = get_trainset(
-    train_labels=range(split_labels),
-    eval_labels=range(split_labels),
+    train_labels=train_labels,
+    eval_labels=train_labels,
     batch_size=batch_size,
+    split_train=(0, split_train)
 )
 
 # Defining unseen evaluation set
@@ -234,8 +245,8 @@ if args.determinist:
         'unseen_uncertainty_pe': [unseen_pe],
     })), axis=1)
 else:
-    eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures(all_outputs_eval)
-    unseen_vr, unseen_pe, unseen_mi = get_all_uncertainty_measures(all_outputs_unseen)
+    eval_vr, eval_pe, eval_mi = get_all_uncertainty_measures_bayesian(all_outputs_eval)
+    unseen_vr, unseen_pe, unseen_mi = get_all_uncertainty_measures_bayesian(all_outputs_unseen)
     print(f'Eval acc: {round(100 * eval_acc, 2)} %, '
           f'Variation-Ratio:{eval_vr.mean()}, '
           f'Predictive Entropy:{eval_pe.mean()}, '

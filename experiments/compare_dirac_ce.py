@@ -33,7 +33,7 @@ from src.loggers.observables import AccuracyAndUncertainty
 from src.models.bayesian_models.gaussian_classifiers import GaussianClassifier
 from src.tasks.evals import eval_bayesian
 from src.tasks.trains import train_bayesian_modular
-from src.uncertainty_measures import get_all_uncertainty_measures
+from src.uncertainty_measures import get_all_uncertainty_measures_bayesian
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--nb_of_runs', help='nb of runs for stat test', type=int)
@@ -245,8 +245,8 @@ for i in tqdm(range(nb_of_runs)):
     eval_acc2, eval_output2 = do_train_ce(verbose)
     accs1[i] = eval_acc1
     accs2[i] = eval_acc2
-    uncs1[i] = np.array([unc.mean() for unc in get_all_uncertainty_measures(eval_output1)])
-    uncs2[i] = np.array([unc.mean() for unc in get_all_uncertainty_measures(eval_output2)])
+    uncs1[i] = np.array([unc.mean() for unc in get_all_uncertainty_measures_bayesian(eval_output1)])
+    uncs2[i] = np.array([unc.mean() for unc in get_all_uncertainty_measures_bayesian(eval_output2)])
 
 # Do T test
 pvalues = pd.DataFrame(columns=['acc'] + [f'unc_{i}' for i in range(uncs1.shape[1])], index=['ttest', 'chisquare'])

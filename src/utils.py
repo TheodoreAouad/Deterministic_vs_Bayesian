@@ -395,6 +395,57 @@ def plot_density_on_ax(ax, uncs, labels, hist=False, **kwargs):
         ax.set_xlim(left=0)
 
 
+def plot_hist_on_ax(ax, uncs, labels, bins=None, **kwargs):
+    """
+    Plots density uncertainty on the given ax using kde smoothing.
+    Args:
+        ax (matplotlib.axes._subplots.AxesSubplot): ax on which to plot the density
+        uncs (tuple): tuple of arrays of the uncertainties. The number of elements is the number of uncertainties.
+        labels (tuple): tuple of string. Each element is the label of the corresponding element of 'uncs'.
+        same_size (Bool): whether we have the same width for the histograms for each plot
+        width_func (str): how to aggregate the widths of all the plots
+        **kwargs: kwargs to change the distplot.
+
+    """
+    if not bins:
+        widths = np.ones(len(uncs))
+        all_bins = []
+        for idx, unc in enumerate(uncs):
+            _, this_bin = np.histogram(unc)
+            widths[idx] = get_hist_widths(this_bin).min()
+            all_bins.append(this_bin)
+        bins = list(all_bins[widths.argmin()])
+        bins[0] = 0
+    ax.hist(uncs, label=labels, bins=bins, weights=[np.zeros_like(unc) + 1/unc.size for unc in uncs], **kwargs)
+
+
+    ax.set_xlim(left=0)
+
+
+def get_hist_widths(xs):
+    """
+    Computes the width of histogram.
+    Args:
+        xs (nd.array): absisses of the bins
+
+    Returns:
+        nd.array: size of the first bar
+
+    """
+    size = xs.shape[0]
+    return (xs[np.arange(1, size)] - xs[np.arange(size-1)])
+
+def get_hist_heights(ys):
+    """
+    Computes the max height of histogram
+    Args:
+        ys (nd.array): bins heights
+
+    Returns:
+        float: max height
+    """
+    return ys.max()
+
 def get_fig_size(ax):
     return ax.figure.get_size_inches()*ax.figure.dpi
 

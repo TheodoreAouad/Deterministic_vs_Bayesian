@@ -3,9 +3,9 @@ import pathlib
 import pandas as pd
 import sklearn.metrics as metrics
 
+from scripts.utils import get_res_args_groupnb
 
 ###### TO CHANGE ########
-from scripts.utils import get_res_args_groupnb
 
 path_to_results = 'results/risk_coverage/cifar10'
 local_path = 'polyaxon_results/groups'

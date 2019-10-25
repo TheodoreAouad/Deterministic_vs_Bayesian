@@ -7,7 +7,7 @@ import torch
 from scripts.utils import get_trained_model_and_args_and_groupnb, get_evalloader_unseen
 from src.dataset_manager.get_data import get_cifar10, get_mnist
 from src.tasks.evals import eval_bayesian
-from src.uncertainty_measures import get_all_uncertainty_measures_not_bayesian, get_all_uncertainty_measures
+from src.uncertainty_measures import get_all_uncertainty_measures_not_bayesian, get_all_uncertainty_measures_bayesian
 from src.utils import save_to_file, load_from_file, convert_tensor_to_float
 
 CPUPATH = 'polyaxon_results/groups'
@@ -120,7 +120,7 @@ def main(
                 get_unc_func = get_all_uncertainty_measures_not_bayesian
                 unc_names = ['us', 'pe']
             else:
-                get_unc_func = get_all_uncertainty_measures
+                get_unc_func = get_all_uncertainty_measures_bayesian
                 unc_names = ['vr', 'pe', 'mi']
 
             all_uncs_mean_seen = get_unc_func(all_outputs_seen)
