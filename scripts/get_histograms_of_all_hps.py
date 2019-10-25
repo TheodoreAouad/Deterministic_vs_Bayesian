@@ -12,7 +12,7 @@ import scripts.utils as su
 import src.uncertainty_measures as um
 import src.utils as u
 import src.tasks.evals as e
-import src.grapher as g
+import scripts.grapher as g
 
 def reload_modules():
     modules_to_reload = [su, u, um, e, g]
@@ -32,33 +32,33 @@ device = torch.device(device)
 print(device)
 
 
-
-def get_ratio(df_det, unc_name):
-    return df_det[f'unseen_uncertainty_{unc_name}'].iloc[0].mean() / df_det[f'seen_uncertainty_{unc_name}'].iloc[0].mean()
-
-
 # %% Get bayesian args.
 
 #CIFAR 10
-# all_exps = [
-#     20263, 20269, 20275, 20284, 20290, 20296, 20381, 20384, 20387,
-#     20397, 20403, 20409, 20418, 20424, 20430, 20515, 20518, 20521,
-#     20529, 20535, 20541, 20550, 20556, 20562, 20647, 20650, 20653,
-# ]
+all_exps_cifar = [
+    20263, 20269, 20275, 20284, 20290, 20296, 20381, 20384, 20387,
+    20397, 20403, 20409, 20418, 20424, 20430, 20515, 20518, 20521,
+    20529, 20535, 20541, 20550, 20556, 20562, 20647, 20650, 20653,
+]
 
 #MNIST
-all_exps = [
+all_exps_mnist = [
     21276, 21282, 21288, 21296, 21302, 21308, 21394, 21399, 21405,
     21400, 21406, 21412, 21438, 21444, 21450, 21526, 21531, 21537,
     21532, 21538, 21544, 21571, 21577, 21583, 21658, 21661, 21664,
 ]
-# all_exps = [20263, 20269]
-list_of_nb_of_tests = [10]
+
+influence_of_t_cifar = [20269, 20403, 20535,]
+
+all_exps = all_exps_cifar + all_exps_mnist
+# all_exps = influence_of_t_cifar
+
+list_of_nb_of_tests = [100]
 save_fig = True
 path_to_outputs = pathlib.Path(f'temp/softmax_outputs/')
 save_path = f'rapport/bayesian_results/histograms/'
 save_path = pathlib.Path(save_path)
-unc_names = ['sr', 'vr', 'pe', 'mi', 'au', 'eu']
+unc_names = ['sr', 'vr', 'pe', 'mi']#, 'au', 'eu']
 
 start_tot = time()
 start_exp = start_tot
@@ -144,42 +144,39 @@ for exp_idx, exp in enumerate(all_exps):
 
         res_unseen_bay[number_of_tests] = pd.DataFrame()
         uncs_unseen = um.get_all_uncertainty_measures(all_outputs_unseen)
-        for unc, unc_name in zip(uncs, unc_names):
+        for unc, unc_name in zip(uncs_unseen, unc_names):
             res_unseen_bay[number_of_tests][unc_name] = unc
 
         print(f'Nb Of Tests: {number_of_tests}. Accuracy: ', res[number_of_tests].correct_pred.mean())
 
-    reload_modules()
+        res_correct = res[number_of_tests].loc[res[number_of_tests].correct_pred == True]
+        res_false = res[number_of_tests].loc[res[number_of_tests].correct_pred == False]
+        res_unseen = res_unseen_bay[number_of_tests]
 
+        all_uncs = [[res_correct[unc_name], res_false[unc_name], res_unseen[unc_name]] for unc_name in unc_names]
 
-    res_correct = res[number_of_tests].loc[res[number_of_tests].correct_pred == True]
-    res_false = res[number_of_tests].loc[res[number_of_tests].correct_pred == False]
-    res_unseen = res_unseen_bay[number_of_tests]
+        unc_labels = ('true', 'false', 'unseen')
+        for idx, (unc_name, uncs) in enumerate(zip(unc_names, all_uncs)):
+            fig = plt.figure(figsize=(7, 5))
+            # ax = fig.add_subplot(len(unc_names), 1, idx+1)
+            ax = fig.add_subplot(111)
+            ax.set_title(f'{unc_name}, rho={arguments["rho"]}, std={arguments["std_prior"]}, T={number_of_tests}, {arguments["loss_type"]}\n'
+                         f'Accuracy: {round(res[number_of_tests].correct_pred.mean()*100, 2)}%')
+            uncs_to_show = [unc.loc[unc < 1*unc.max()] for unc in uncs]
+            g.plot_uncertainty(
+                ax,
+                unc_name,
+                uncs,
+                unc_labels,
+            )
+            ax.legend()
 
-    all_uncs = [[res_correct[unc_name], res_false[unc_name], res_unseen[unc_name]] for unc_name in unc_names]
+            (save_path / f'{arguments["trainset"]}/images/{arguments["loss_type"]}/{unc_name}/').mkdir(exist_ok=True, parents=True)
+            fig.savefig(save_path/f'{arguments["trainset"]}/images/{arguments["loss_type"]}/{unc_name}/{arguments["loss_type"]}_{unc_name}_rho{arguments["rho"]}_std{arguments["std_prior"]}_T{number_of_tests}.png')
+            (save_path / f'{arguments["trainset"]}/pickles/{arguments["loss_type"]}/{unc_name}/').mkdir(exist_ok=True, parents=True)
+            u.save_to_file(fig, save_path/f'{arguments["trainset"]}/pickles/{arguments["loss_type"]}/{unc_name}/{arguments["loss_type"]}_{unc_name}_rho{arguments["rho"]}_std{arguments["std_prior"]}_T{number_of_tests}.pkl')
+            plt.close(fig)
 
-    unc_labels = ('true', 'false', 'unseen')
-    for idx, (unc_name, uncs) in enumerate(zip(unc_names, all_uncs)):
-        fig = plt.figure(figsize=(7, 5))
-        # ax = fig.add_subplot(len(unc_names), 1, idx+1)
-        ax = fig.add_subplot(111)
-        ax.set_title(f'{unc_name}, rho={arguments["rho"]}, std={arguments["std_prior"]}, T={number_of_tests}, {arguments["loss_type"]}\n'
-                     f'Accuracy: {round(res[number_of_tests].correct_pred.mean()*100, 2)}%')
-        uncs_to_show = [unc.loc[unc < 1*unc.max()] for unc in uncs]
-        g.plot_uncertainty(
-            ax,
-            unc_name,
-            uncs,
-            unc_labels,
-        )
-        ax.legend()
-
-        (save_path / f'{arguments["trainset"]}/images/{arguments["loss_type"]}/{unc_name}/').mkdir(exist_ok=True, parents=True)
-        fig.savefig(save_path/f'{arguments["trainset"]}/images/{arguments["loss_type"]}/{unc_name}/{arguments["loss_type"]}_{unc_name}_rho{arguments["rho"]}_std{arguments["std_prior"]}_T{number_of_tests}.png')
-        (save_path / f'{arguments["trainset"]}/pickles/{arguments["loss_type"]}/{unc_name}/').mkdir(exist_ok=True, parents=True)
-        u.save_to_file(fig, save_path/f'{arguments["trainset"]}/pickles/{arguments["loss_type"]}/{unc_name}/{arguments["loss_type"]}_{unc_name}_rho{arguments["rho"]}_std{arguments["std_prior"]}_T{number_of_tests}.pkl')
-        plt.close(fig)
-
-    print('This exp time elapsed:', round(time() - start_exp), 's')
-    print('Total time elapsed:', round(time() - start_tot), 's')
-    start_exp = time()
+        print('This exp time elapsed:', round(time() - start_exp), 's')
+        print('Total time elapsed:', round(time() - start_tot), 's')
+        start_exp = time()

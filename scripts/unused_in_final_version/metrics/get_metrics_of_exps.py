@@ -3,11 +3,11 @@
 import numpy as np
 import torch
 
-from scripts.metrics.evaluate_acc_unc import main as main_eval_accs
-from scripts.metrics.get_deadzone_of_exps import main as main_dzs
-from scripts.selective_classification.get_risk_coverage import main as main_rc
-from scripts.metrics.compute_auc import main as main_auc
-from scripts.metrics.merge_csv_results import main as main_merge
+from scripts.unused_in_final_version.metrics.evaluate_acc_unc import main as main_eval_accs
+from scripts.unused_in_final_version.metrics.get_deadzone_of_exps import main as main_dzs
+from scripts.unused_in_final_version.selective_classification.get_risk_coverage import main as main_rc
+from scripts.unused_in_final_version.metrics.compute_auc import main as main_auc
+from scripts.unused_in_final_version.metrics.merge_csv_results import main as main_merge
 
 
 CPUPATH = 'polyaxon_results/groups'

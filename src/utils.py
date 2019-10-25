@@ -416,7 +416,7 @@ def plot_hist_on_ax(ax, uncs, labels, bins=None, **kwargs):
             all_bins.append(this_bin)
         bins = list(all_bins[widths.argmin()])
         bins[0] = 0
-    ax.hist(uncs, label=labels, bins=bins, weights=[np.zeros_like(unc) + 1/unc.size for unc in uncs])
+    ax.hist(uncs, label=labels, bins=bins, weights=[np.zeros_like(unc) + 1/unc.size for unc in uncs], **kwargs)
 
 
     ax.set_xlim(left=0)

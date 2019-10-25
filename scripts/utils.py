@@ -1039,6 +1039,7 @@ def get_evalloader_seen(arguments, shuffle=True):
 def get_saved_outputs_labels_seen_unseen(
         exp_nb,
         number_of_tests,
+        max_number_of_tests=100,
         device='cpu',
         path_to_exps=pathlib.Path('polyaxon_results/groups'),
         path_to_outputs=pathlib.Path(f'temp/softmax_outputs/'),
@@ -1049,33 +1050,49 @@ def get_saved_outputs_labels_seen_unseen(
     Args:
         exp_nb (str || int): number of the experiment
         number_of_tests (int): number of samples of weights
+        max_number_of_tests (int): the size of the larger outputs already computed to sample from
         device (torch.device): device on which to compute the evaluation
         path_to_exps (pathlib.PosixPath): path to the experiment
         path_to_outputs (pathlib.PosixPath): path to save the outputs or to the saved outputs
+        shuffle (bool): whether or not we shuffle the evalloader, therefore whether or not we shuffle the outputs
 
     Returns:
-        torch.Tensor, torch.Tensor, torch.Tensor: size (size_of_batch), 2*size(nb of tests, size_of_batch, nb_of_classes)
+        torch.Tensor, torch.Tensor, torch.Tensor: size (size_of_batch),
+                                                  2*size(nb of tests, size_of_batch, nb_of_classes)
 
     """
     bay_net_trained, arguments, group_nb = get_trained_model_and_args_and_groupnb(exp_nb, path_to_exps)
     if arguments['determinist'] or arguments.get('rho', 'determinist') == 'determinist':
         number_of_tests = 1
 
-    if number_of_tests < 100 and os.path.exists(path_to_outputs / '100' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt'):
+    if (number_of_tests < max_number_of_tests and
+            os.path.exists(path_to_outputs / 'max_number_of_tests' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt')):
 
-        true_labels_seen = torch.load(path_to_outputs / f'100' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt')
-        all_outputs_seen = torch.load(path_to_outputs / f'100' / f'{exp_nb}/all_outputs_seen_shuffled{shuffle}.pt')
-        all_outputs_unseen = torch.load(path_to_outputs / f'100' / f'{exp_nb}/all_outputs_unseen_shuffled{shuffle}.pt')
+        true_labels_seen = torch.load(
+            path_to_outputs / f'{max_number_of_tests}' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt'
+        )
+        all_outputs_seen = torch.load(
+            path_to_outputs / f'{max_number_of_tests}' / f'{exp_nb}/all_outputs_seen_shuffled{shuffle}.pt'
+        )
+        all_outputs_unseen = torch.load(
+            path_to_outputs / f'{max_number_of_tests}' / f'{exp_nb}/all_outputs_unseen_shuffled{shuffle}.pt'
+        )
 
-        random_idx = np.arange(100)
+        random_idx = np.arange(max_number_of_tests)
         np.random.shuffle(random_idx)
         random_idx = random_idx[:number_of_tests]
         all_outputs_seen = all_outputs_seen[random_idx]
         all_outputs_unseen = all_outputs_unseen[random_idx]
     elif os.path.exists(path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt'):
-        true_labels_seen = torch.load(path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt')
-        all_outputs_seen = torch.load(path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/all_outputs_seen_shuffled{shuffle}.pt')
-        all_outputs_unseen = torch.load(path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/all_outputs_unseen_shuffled{shuffle}.pt')
+        true_labels_seen = torch.load(
+            path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt'
+        )
+        all_outputs_seen = torch.load(
+            path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/all_outputs_seen_shuffled{shuffle}.pt'
+        )
+        all_outputs_unseen = torch.load(
+            path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/all_outputs_unseen_shuffled{shuffle}.pt'
+        )
     else:
         (path_to_outputs / f'{number_of_tests}' / f'{exp_nb}').mkdir(exist_ok=True, parents=True)
         evalloader_seen = get_evalloader_seen(arguments, shuffle=shuffle)
@@ -1098,8 +1115,14 @@ def get_saved_outputs_labels_seen_unseen(
             verbose=True,
         )
 
-        torch.save(true_labels_seen, path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt')
-        torch.save(all_outputs_seen, path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/all_outputs_seen_shuffled{shuffle}.pt')
-        torch.save(all_outputs_unseen, path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/all_outputs_unseen_shuffled{shuffle}.pt')
+        torch.save(true_labels_seen,
+                   path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/true_labels_seen_shuffled{shuffle}.pt'
+                   )
+        torch.save(all_outputs_seen,
+                   path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/all_outputs_seen_shuffled{shuffle}.pt'
+                   )
+        torch.save(all_outputs_unseen,
+                   path_to_outputs / f'{number_of_tests}' / f'{exp_nb}/all_outputs_unseen_shuffled{shuffle}.pt'
+                   )
 
     return true_labels_seen, all_outputs_seen, all_outputs_unseen

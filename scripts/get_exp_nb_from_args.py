@@ -6,9 +6,9 @@ from scripts.utils import get_args, get_res_args_groupnb, get_trained_model_and_
 from src.utils import get_file_and_dir_path_in_dir, load_from_file
 
 groups = [323]
-rhos = [-10,]
-stds_prior = [0.055]
-loss_type = 'criterion'
+rhos = [-8]
+stds_prior = [0.55]
+loss_type = 'exp'
 trainset = 'mnist'
 # type_of_unseen_list = ['random', 'unseen_classes', 'unseen_dataset']
 # loss_type_list = ['exp', 'criterion', 'uniform']
